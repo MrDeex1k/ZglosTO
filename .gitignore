@@ -2,5 +2,6 @@
 .env
 frontend/package-lock.json
 frontend/node_modules/
+frontend/dist/
 serwer/package-lock.json
-serwer/node_modules 
+serwer/node_modules/
