@@ -1,0 +1,6 @@
+.DS_Store
+.env
+frontend/package-lock.json
+frontend/node_modules/
+serwer/package-lock.json
+serwer/node_modules 
