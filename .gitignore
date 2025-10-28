@@ -1,5 +1,6 @@
 .DS_Store
 .env
+*.rtf
 frontend/package-lock.json
 frontend/node_modules/
 frontend/dist/
