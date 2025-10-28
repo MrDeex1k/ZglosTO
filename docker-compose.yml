@@ -12,10 +12,19 @@ services:
   frontend:
     build:
       context: ./frontend
+    depends_on:
+      - backend
+    networks:
+      - zglosto-net
+
+  nginx:
+    build:
+      context: ./nginx
     ports:
       - "1235:1235"
     depends_on:
       - backend
+      - frontend
     networks:
       - zglosto-net
 

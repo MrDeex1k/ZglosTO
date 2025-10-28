@@ -17,14 +17,14 @@ RUN bun install
 COPY . .
 RUN bun run build
 
-### Production stage (nginx serwuje statyczne pliki)
+### Production stage
 FROM nginx:stable-alpine
 
-# Kopiujemy zbudowane pliki do katalogu nginx
+# Kopiujemy zbudowane pliki z buildera
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Kopia konfiguracji nginx (zapewnia obsługę SPA - fallback na index.html)
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Kopiujemy konfigurację nginx (jeśli jest potrzebna)
+# COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 
