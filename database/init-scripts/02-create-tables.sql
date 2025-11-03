@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS incydenty (
 	id_zgloszenia uuid PRIMARY KEY DEFAULT uuidv7(),
 	opis_zgloszenia varchar(255) NOT NULL,
 	mail_zglaszajacego varchar(50) NOT NULL,
-	zdjecie_incydentu bytea,
+	zdjecie_incydentu_zglaszanego bytea,
+	zdjecie_incydentu_rozwiazanego bytea,
 	sprawdzenie_incydentu boolean NOT NULL DEFAULT FALSE,
 	status_incydentu status_incydentu_enum NOT NULL DEFAULT 'ZGŁOSZONY',
 	typ_sluzby typ_sluzby_enum
