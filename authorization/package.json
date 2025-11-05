@@ -1,0 +1,17 @@
+{
+  "name": "serwer-zglosto",
+  "version": "0.0.0",
+  "description": "Backend serwera dla aplikacji ZglosTO",
+  "main": "index.js",
+  "scripts": {
+    "start": "bun index.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "author": "",
+  "license": "MIT"
+}

@@ -5,6 +5,7 @@ Serwis umożliwiający zgłaszanie incydentów w mieście
 ## Porty  
 
 ```
+:9955 - authorization
 :3000 - backend  
 :1235 - frontend  
 ```

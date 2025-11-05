@@ -23,6 +23,19 @@ services:
       timeout: 5s
       retries: 5
 
+  authorization:
+    build:
+      context: ./authorization
+    ports:
+      - "9955:9955"
+    env_file:
+      - .env
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - zglosto-net
+  
   backend:
     build:
       context: ./backend
