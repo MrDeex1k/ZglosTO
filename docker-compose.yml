@@ -19,8 +19,8 @@ services:
       - zglosto-net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -p ${POSTGRES_PORT} -U ${POSTGRES_USER:-zglosto_user} -d ${POSTGRES_DB:-zglosto_db}"]
-      interval: 5s
-      timeout: 5s
+      interval: 4s
+      timeout: 4s
       retries: 5
 
   authorization:

@@ -12,7 +12,7 @@ ENV PATH="/root/.bun/bin:${PATH}"
 
 # Kopiuj tylko pliki zależności i zainstaluj produkcyjne zależności przez bun
 COPY package*.json ./
-RUN bun install --production
+RUN bun install
 
 # Skopiuj resztę plików aplikacji
 COPY . .
