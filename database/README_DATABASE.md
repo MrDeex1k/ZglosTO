@@ -33,7 +33,7 @@ Poniżej znajduje się opis struktury bazy (PostgreSQL 18) używanej przez aplik
 ### Tabela: incydenty
 
 Kolumny:
-- `id_zgloszenia` uuid PRIMARY KEY — domyślnie generowane funkcją `uuidv7()` (Postgres 18)
+- `id_zgloszenia` uuid PRIMARY KEY — domyślnie generowane funkcją `uuidv7()`
 - `opis_zgloszenia` varchar(255) NOT NULL — opis zgłoszenia (max 255 znaków)
 - `mail_zglaszajacego` varchar(50) NOT NULL — adres mailowy zgłaszającego (max 50 znaków)
 - `zdjecie_incydentu` bytea — opcjonalne zdjęcie incydentu
@@ -46,8 +46,9 @@ Kolumny:
 Kolumny:
 - `id_uzytkownika` uuid PRIMARY KEY — domyślnie `uuidv7()`
 - `mail` varchar(50) NOT NULL UNIQUE — adres e-mail użytkownika
-- `haslo` varchar(40) NOT NULL — hasło (wymagane: min 10, max 40 znaków). Uwaga: w aplikacji rekomendowane przechowywanie hasła w formie zahashowanej (bcrypt/argon2).
+- `haslo` varchar(40) NOT NULL — hasło (wymagane: min 10, max 40 znaków).
 - `uprawnienia` `uprawnienia_enum` NOT NULL DEFAULT 'mieszkaniec'
+- `typ_uprawnien` `typ_sluzby_enum` — opcjonalne; może być NULL (domyślnie NULL). Jeżeli pole jest ustawione, wartość musi pochodzić z `typ_sluzby_enum` i może być ustawiona tylko gdy `uprawnienia = 'sluzby'` (weryfikowane na poziomie bazy przez constraint CHECK).
 
 ## Inicjalizacja bazy danych
 

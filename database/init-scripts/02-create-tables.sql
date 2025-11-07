@@ -37,7 +37,9 @@ CREATE TABLE IF NOT EXISTS uzytkownicy (
 	id_uzytkownika uuid PRIMARY KEY DEFAULT uuidv7(),
 	mail varchar(50) NOT NULL UNIQUE,
 	haslo varchar(40) NOT NULL CHECK (char_length(haslo) >= 10 AND char_length(haslo) <= 40),
-	uprawnienia uprawnienia_enum NOT NULL DEFAULT 'mieszkaniec'
+	uprawnienia uprawnienia_enum NOT NULL DEFAULT 'mieszkaniec',
+	typ_uprawnien typ_sluzby_enum DEFAULT NULL,
+	CHECK (uprawnienia = 'sluzby' OR typ_uprawnien IS NULL)
 );
 
 CREATE INDEX IF NOT EXISTS idx_incydenty_mail_zglaszajacego ON incydenty (mail_zglaszajacego);
