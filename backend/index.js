@@ -1,12 +1,24 @@
 const express = require('express');
 const path = require('path');
 const app = express();
+const bodyParser = require('body-parser');
+const cors = require('cors');
+const db = require('./database')
+const mieszkaniecRouter = require('./routes/mieszkaniec')
+const sluzbyRouter = require("./routes/sluzby")
+const adminRouter = require("./routes/admin")
 
-// Ścieżka do zbudowanego folderu Reacta (po `bun run build`)
-const buildPath = path.join(__dirname, '../frontend/dist');
+db.testConnection()
 
 // Serwowanie statycznych plików Reacta
 app.use(express.static(buildPath));
+
+app.use(cors());
+app.use(bodyParser.json({ limit: '10mb' })); // zdjęcia base64 mogą być duże
+
+app.use("/mieszkaniec", mieszkaniecRouter)
+app.use("/sluzby", sluzbyRouter)
+app.use("/admin", adminRouter)
 
 // API endpointy
 app.get('/api/some-endpoint', (req, res) => {
