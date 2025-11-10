@@ -1,7 +1,6 @@
 -- Trzeci skrypt inicjalizacyjny - tworzenie tabel dla Better Auth
 
--- Tabela użytkowników
-CREATE TABLE IF NOT EXISTS user (
+CREATE TABLE IF NOT EXISTS "user" (
 	id text PRIMARY KEY,
 	name text,
 	email text NOT NULL UNIQUE,
@@ -12,12 +11,12 @@ CREATE TABLE IF NOT EXISTS user (
 	updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_user_email_lower ON user (LOWER(email));
+CREATE INDEX IF NOT EXISTS idx_user_email_lower ON "user" (LOWER(email));
 
 -- Tabela sesji zgodna z Better Auth
 CREATE TABLE IF NOT EXISTS session (
 	id text PRIMARY KEY,
-	user_id text NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+	user_id text NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
 	token text NOT NULL UNIQUE,
 	expires_at timestamptz NOT NULL,
 	ip_address text,
@@ -29,7 +28,7 @@ CREATE TABLE IF NOT EXISTS session (
 -- Tabela kont (np. lokalne hasła, providerzy zewnętrzni)
 CREATE TABLE IF NOT EXISTS account (
 	id text PRIMARY KEY,
-	user_id text NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+	user_id text NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
 	account_id text NOT NULL,
 	provider_id text NOT NULL,
 	access_token text,
@@ -50,7 +49,7 @@ CREATE TABLE IF NOT EXISTS verification (
 	identifier text NOT NULL,
 	value text NOT NULL,
 	expires_at timestamptz NOT NULL,
-	user_id text REFERENCES user(id) ON DELETE CASCADE,
+	user_id text REFERENCES "user"(id) ON DELETE CASCADE,
 	created_at timestamptz NOT NULL DEFAULT now(),
 	updated_at timestamptz NOT NULL DEFAULT now()
 );
@@ -64,9 +63,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS set_timestamp ON user;
+DROP TRIGGER IF EXISTS set_timestamp ON "user";
 CREATE TRIGGER set_timestamp
-BEFORE UPDATE ON user
+BEFORE UPDATE ON "user"
 FOR EACH ROW
 EXECUTE FUNCTION trigger_set_timestamp();
 
@@ -89,7 +88,7 @@ FOR EACH ROW
 EXECUTE FUNCTION trigger_set_timestamp();
 
 -- Informacja końcowa
-COMMENT ON TABLE user IS 'Tabela użytkowników dla Better Auth';
+COMMENT ON TABLE "user" IS 'Tabela użytkowników dla Better Auth';
 COMMENT ON TABLE session IS 'Tabela sesji zgodna z Better Auth';
 COMMENT ON TABLE account IS 'Tabela kont (lokalne i providerzy) zgodna z Better Auth';
 COMMENT ON TABLE verification IS 'Tabela wartości weryfikacyjnych (reset hasła, potwierdzenie email)';

@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS incydenty (
 
 -- Tabela uzytkownicy
 CREATE TABLE IF NOT EXISTS uzytkownicy (
-	id_uzytkownika uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+	id_uzytkownika text PRIMARY KEY REFERENCES "user"(id) ON DELETE CASCADE,
 	uprawnienia uprawnienia_enum NOT NULL DEFAULT 'mieszkaniec',
 	typ_uprawnien typ_sluzby_enum DEFAULT NULL,
 	CHECK (uprawnienia = 'sluzby' OR typ_uprawnien IS NULL)
