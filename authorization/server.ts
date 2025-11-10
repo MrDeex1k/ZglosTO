@@ -23,6 +23,28 @@ app.use(
 // Example health endpoint
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
+// Session verification endpoint for backend services
+app.get('/api/verify-session', async (req, res) => {
+  try {
+    const session = await auth.api.getSession({
+      headers: req.headers as any,
+    });
+
+    if (!session) {
+      return res.status(401).json({ error: 'Unauthorized', session: null });
+    }
+
+    return res.json({ 
+      success: true, 
+      session: session.session,
+      user: session.user 
+    });
+  } catch (error) {
+    console.error('Session verification error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Serwer autoryzacji działa na porcie ${PORT}`);
 });

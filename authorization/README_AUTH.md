@@ -421,7 +421,56 @@ console.log(data);
 
 ---
 
-### 7. Health Check
+### 7. Weryfikacja sesji (dla serwisów backendowych)
+
+**Endpoint:** `GET /api/verify-session`
+
+**Opis:** Weryfikuje sesję użytkownika na podstawie przekazanych nagłówków (cookies). Używane przez backend do weryfikacji sesji.
+
+**Headers:**
+```
+Cookie: better_auth.session_token=...
+```
+
+**Przykład curl:**
+```bash
+curl http://localhost:9955/api/verify-session \
+  -H "Cookie: better_auth.session_token=YOUR_SESSION_TOKEN"
+```
+
+**Response (Success):**
+```json
+{
+  "success": true,
+  "session": {
+    "id": "session-id",
+    "userId": "550e8400-e29b-41d4-a716-446655440001",
+    "expiresAt": "2024-12-10T10:00:00.000Z",
+    "token": "..."
+  },
+  "user": {
+    "id": "550e8400-e29b-41d4-a716-446655440001",
+    "name": "Jan Kowalski",
+    "email": "jan.kowalski@example.com",
+    "emailVerified": false,
+    "image": null
+  }
+}
+```
+
+**Response (Error - Unauthorized):**
+```json
+{
+  "error": "Unauthorized",
+  "session": null
+}
+```
+
+**Uwaga:** Ten endpoint jest przeznaczony głównie dla komunikacji między serwisami (backend → authorization). Frontend powinien używać standardowych endpointów Better Auth.
+
+---
+
+### 8. Health Check
 
 **Endpoint:** `GET /health`
 
