@@ -34,9 +34,6 @@ CREATE TABLE IF NOT EXISTS incydenty (
 
 -- Tabela uzytkownicy
 CREATE TABLE IF NOT EXISTS uzytkownicy (
-	-- id_uzytkownika powinno być tym samym identyfikatorem, co users.id
-	-- nie ustawiamy domyślnego generatora tutaj; aplikacja powinna wstawić
-	-- ten sam uuid co w tabeli users. Dodatkowo zapewniamy referencyjność.
 	id_uzytkownika uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
 	uprawnienia uprawnienia_enum NOT NULL DEFAULT 'mieszkaniec',
 	typ_uprawnien typ_sluzby_enum DEFAULT NULL,

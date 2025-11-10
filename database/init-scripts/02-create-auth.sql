@@ -1,9 +1,8 @@
 -- Trzeci skrypt inicjalizacyjny - tworzenie tabel dla Better Auth
--- Tworzy podstawowe tabele zgodne z aktualnymi wytycznymi Better Auth (v1.3.x)
 
 -- Tabela użytkowników
-CREATE TABLE IF NOT EXISTS users (
-	id uuid PRIMARY KEY DEFAULT uuidv7(),
+CREATE TABLE IF NOT EXISTS user (
+	id text PRIMARY KEY,
 	name text,
 	email text NOT NULL UNIQUE,
 	email_verified boolean NOT NULL DEFAULT false,
@@ -13,12 +12,12 @@ CREATE TABLE IF NOT EXISTS users (
 	updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_users_email_lower ON users (LOWER(email));
+CREATE INDEX IF NOT EXISTS idx_user_email_lower ON user (LOWER(email));
 
 -- Tabela sesji zgodna z Better Auth
-CREATE TABLE IF NOT EXISTS sessions (
-	id uuid PRIMARY KEY DEFAULT uuidv7(),
-	user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+CREATE TABLE IF NOT EXISTS session (
+	id text PRIMARY KEY,
+	user_id text NOT NULL REFERENCES user(id) ON DELETE CASCADE,
 	token text NOT NULL UNIQUE,
 	expires_at timestamptz NOT NULL,
 	ip_address text,
@@ -28,9 +27,9 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 
 -- Tabela kont (np. lokalne hasła, providerzy zewnętrzni)
-CREATE TABLE IF NOT EXISTS accounts (
-	id uuid PRIMARY KEY DEFAULT uuidv7(),
-	user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+CREATE TABLE IF NOT EXISTS account (
+	id text PRIMARY KEY,
+	user_id text NOT NULL REFERENCES user(id) ON DELETE CASCADE,
 	account_id text NOT NULL,
 	provider_id text NOT NULL,
 	access_token text,
@@ -47,11 +46,11 @@ CREATE TABLE IF NOT EXISTS accounts (
 
 -- Tabela weryfikacji (zarówno hasła, jak i maila)
 CREATE TABLE IF NOT EXISTS verification (
-	id uuid PRIMARY KEY DEFAULT uuidv7(),
+	id text PRIMARY KEY,
 	identifier text NOT NULL,
 	value text NOT NULL,
 	expires_at timestamptz NOT NULL,
-	user_id uuid REFERENCES users(id) ON DELETE CASCADE,
+	user_id text REFERENCES user(id) ON DELETE CASCADE,
 	created_at timestamptz NOT NULL DEFAULT now(),
 	updated_at timestamptz NOT NULL DEFAULT now()
 );
@@ -65,21 +64,21 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS set_timestamp ON users;
+DROP TRIGGER IF EXISTS set_timestamp ON user;
 CREATE TRIGGER set_timestamp
-BEFORE UPDATE ON users
+BEFORE UPDATE ON user
 FOR EACH ROW
 EXECUTE FUNCTION trigger_set_timestamp();
 
-DROP TRIGGER IF EXISTS set_timestamp ON sessions;
+DROP TRIGGER IF EXISTS set_timestamp ON session;
 CREATE TRIGGER set_timestamp
-BEFORE UPDATE ON sessions
+BEFORE UPDATE ON session
 FOR EACH ROW
 EXECUTE FUNCTION trigger_set_timestamp();
 
-DROP TRIGGER IF EXISTS set_timestamp ON accounts;
+DROP TRIGGER IF EXISTS set_timestamp ON account;
 CREATE TRIGGER set_timestamp
-BEFORE UPDATE ON accounts
+BEFORE UPDATE ON account
 FOR EACH ROW
 EXECUTE FUNCTION trigger_set_timestamp();
 
@@ -90,7 +89,7 @@ FOR EACH ROW
 EXECUTE FUNCTION trigger_set_timestamp();
 
 -- Informacja końcowa
-COMMENT ON TABLE users IS 'Tabela użytkowników dla Better Auth';
-COMMENT ON TABLE sessions IS 'Tabela sesji zgodna z Better Auth';
-COMMENT ON TABLE accounts IS 'Tabela kont (lokalne i providerzy) zgodna z Better Auth';
+COMMENT ON TABLE user IS 'Tabela użytkowników dla Better Auth';
+COMMENT ON TABLE session IS 'Tabela sesji zgodna z Better Auth';
+COMMENT ON TABLE account IS 'Tabela kont (lokalne i providerzy) zgodna z Better Auth';
 COMMENT ON TABLE verification IS 'Tabela wartości weryfikacyjnych (reset hasła, potwierdzenie email)';
