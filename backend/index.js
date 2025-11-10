@@ -10,6 +10,9 @@ const adminRouter = require("./routes/admin")
 
 db.testConnection()
 
+// Ścieżka do zbudowanego folderu Reacta (po `bun run build`)
+const buildPath = path.join(__dirname, '../frontend/dist');
+
 // Serwowanie statycznych plików Reacta
 app.use(express.static(buildPath));
 

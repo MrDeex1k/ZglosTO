@@ -7,7 +7,6 @@ const app = express();
 const PORT = Number(process.env.PORT) || 9955;
 
 // Mount Better Auth handler as a catch-all for auth routes
-// zgodnie z dokumentacją lepiej-montować handler przed express.json()
 app.all('/api/auth/*splat', toNodeHandler(auth));
 
 // JSON middleware for non-auth routes
