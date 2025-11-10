@@ -24,7 +24,7 @@ database/
 Baza danych składa się z trzech głównych części inicjalizowanych w kolejności:
 
 1. **Rozszerzenia i konfiguracja bazy** (`01-init.sql`) - rozszerzenia PostgreSQL, tworzenie roli administratora i bazy danych
-2. **Tabele autoryzacji** (`02-create-auth.sql`) - tabele dla systemu Better Auth (użytkownicy, sesje, tokeny)
+2. **Tabele autoryzacji** (`02-create-auth.sql`) - tabele dla systemu Better Auth zgodnie z najnowszymi standardami
 3. **Tabele aplikacji** (`03-create-dbtables.sql`) - tabele biznesowe (incydenty, użytkownicy rozszerzeni)
 4. **Przykładowe dane testowe** (`05-08-*.sql`) - opcjonalne dane do celów testowania i demonstracji
 
@@ -46,7 +46,7 @@ Kolumny:
 - `name` text — opcjonalne imię/nazwisko użytkownika
 - `email` text NOT NULL UNIQUE — adres e-mail użytkownika
 - `email_verified` boolean NOT NULL DEFAULT false — czy adres email został zweryfikowany
-- `password_hash` text — zahashowane hasło użytkownika
+- `image` text — opcjonalne URL zdjęcia profilowego użytkownika
 - `is_active` boolean NOT NULL DEFAULT true — czy konto jest aktywne
 - `created_at` timestamptz NOT NULL DEFAULT now() — data utworzenia konta
 - `updated_at` timestamptz NOT NULL DEFAULT now() — data ostatniej aktualizacji
@@ -56,38 +56,52 @@ Indeksy:
 
 #### Tabela: sessions
 
-Tabela przechowująca aktywne sesje użytkowników.
+Tabela przechowująca aktywne sesje użytkowników zgodna z Better Auth.
 
 Kolumny:
 - `id` uuid PRIMARY KEY — domyślnie generowane funkcją `uuidv7()`
 - `user_id` uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE — referencja do użytkownika
 - `token` text NOT NULL UNIQUE — unikalny token sesji
-- `expires_at` timestamptz — data wygaśnięcia sesji (opcjonalne)
+- `expires_at` timestamptz NOT NULL — data wygaśnięcia sesji
+- `ip_address` text — adres IP użytkownika podczas logowania
+- `user_agent` text — informacje o przeglądarce/użądzeniu użytkownika
 - `created_at` timestamptz NOT NULL DEFAULT now() — data utworzenia sesji
+- `updated_at` timestamptz NOT NULL DEFAULT now() — data ostatniej aktualizacji sesji
 
-#### Tabela: password_reset_tokens
+#### Tabela: accounts
 
-Tabela przechowująca tokeny do resetowania hasła.
-
-Kolumny:
-- `id` uuid PRIMARY KEY — domyślnie generowane funkcją `uuidv7()`
-- `user_id` uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE — referencja do użytkownika
-- `token` text NOT NULL UNIQUE — unikalny token resetowania
-- `expires_at` timestamptz NOT NULL — data wygaśnięcia tokenu
-- `used` boolean NOT NULL DEFAULT false — czy token został już wykorzystany
-- `created_at` timestamptz NOT NULL DEFAULT now() — data utworzenia tokenu
-
-#### Tabela: email_verification_tokens
-
-Tabela przechowująca tokeny do weryfikacji adresów email.
+Tabela przechowująca konta użytkowników (lokalne hasła i providerzy zewnętrzni) zgodna z Better Auth.
 
 Kolumny:
 - `id` uuid PRIMARY KEY — domyślnie generowane funkcją `uuidv7()`
 - `user_id` uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE — referencja do użytkownika
-- `token` text NOT NULL UNIQUE — unikalny token weryfikacji
-- `expires_at` timestamptz NOT NULL — data wygaśnięcia tokenu
-- `used` boolean NOT NULL DEFAULT false — czy token został już wykorzystany
-- `created_at` timestamptz NOT NULL DEFAULT now() — data utworzenia tokenu
+- `account_id` text NOT NULL — identyfikator konta (np. email dla lokalnego logowania)
+- `provider_id` text NOT NULL — identyfikator providera (np. "email-password", "google", "github")
+- `access_token` text — token dostępu od providera zewnętrznego
+- `refresh_token` text — token odświeżania od providera zewnętrznego
+- `id_token` text — ID token od providera zewnętrznego (np. JWT)
+- `access_token_expires_at` timestamptz — data wygaśnięcia tokenu dostępu
+- `refresh_token_expires_at` timestamptz — data wygaśnięcia tokenu odświeżania
+- `scope` text — zakres uprawnień dla providera zewnętrznego
+- `password` text — zahashowane hasło dla lokalnego logowania (konto email-password)
+- `created_at` timestamptz NOT NULL DEFAULT now() — data utworzenia konta
+- `updated_at` timestamptz NOT NULL DEFAULT now() — data ostatniej aktualizacji konta
+
+Constraints:
+- UNIQUE (provider_id, account_id) — unikalność kombinacji providera i identyfikatora konta
+
+#### Tabela: verification
+
+Tabela przechowująca wartości weryfikacyjne (reset hasła, potwierdzenie email itp.) zgodna z Better Auth.
+
+Kolumny:
+- `id` uuid PRIMARY KEY — domyślnie generowane funkcją `uuidv7()`
+- `identifier` text NOT NULL — identyfikator weryfikacji (np. email lub user ID)
+- `value` text NOT NULL — wartość weryfikacyjna (token, kod itp.)
+- `expires_at` timestamptz NOT NULL — data wygaśnięcia wartości weryfikacyjnej
+- `user_id` uuid REFERENCES users(id) ON DELETE CASCADE — opcjonalna referencja do użytkownika
+- `created_at` timestamptz NOT NULL DEFAULT now() — data utworzenia wartości weryfikacyjnej
+- `updated_at` timestamptz NOT NULL DEFAULT now() — data ostatniej aktualizacji wartości weryfikacyjnej
 
 ### Tabele aplikacji
 
@@ -133,8 +147,8 @@ Obecnie dostępne skrypty:
    - Tworzy rolę administratora `zglosto_admin`
    - Tworzy bazę danych `zglosto_db` z właścicielem `zglosto_admin`
 
-2. **`02-create-auth.sql`** - tabele autoryzacji dla Better Auth
-   - Tworzy tabele: `users`, `sessions`, `password_reset_tokens`, `email_verification_tokens`
+2. **`02-create-auth.sql`** - tabele autoryzacji dla Better Auth zgodnie z najnowszymi standardami
+   - Tworzy tabele: `users`, `sessions`, `accounts`, `verification`
    - Dodaje indeksy i triggery do automatycznej aktualizacji `updated_at`
 
 3. **`03-create-dbtables.sql`** - tabele aplikacji biznesowej
@@ -143,7 +157,8 @@ Obecnie dostępne skrypty:
    - Dodaje indeksy optymalizacyjne
 
 4. **`05-insert-example-users.sql`** - przykładowe dane użytkowników (opcjonalne)
-   - Wstawia 10 przykładowych użytkowników z różnymi rolami
+   - Wstawia 10 przykładowych użytkowników z różnymi rolami do tabeli `users`
+   - Tworzy odpowiadające im konta w tabeli `accounts` z zahashowanymi hasłami
    - Używane tylko do celów testowych/demo
 
 5. **`06-insert-example-uzytkownicy.sql`** - rozszerzone dane użytkowników (opcjonalne)
@@ -154,9 +169,9 @@ Obecnie dostępne skrypty:
    - Wstawia 13 przykładowych zgłoszeń w różnych statusach
    - Zawiera realistyczne dane testowe
 
-7. **`08-insert-example-sessions-tokens.sql`** - przykładowe sesje i tokeny (opcjonalne)
-   - Wstawia sesje użytkowników i tokeny bezpieczeństwa
-   - Różne stany tokenów (aktywne, wygasłe, zużyte)
+7. **`08-insert-example-sessions-tokens.sql`** - przykładowe sesje i wartości weryfikacyjne (opcjonalne)
+   - Wstawia sesje użytkowników i wartości weryfikacyjne (reset hasła, weryfikacja email)
+   - Różne stany wartości weryfikacyjnych (aktywne, wygasłe)
 
 #### Jak dodać nowy skrypt?
 
