@@ -1,4 +1,4 @@
--- Drugi skrypt inicjalizacyjny - tworzenie tabel aplikacji
+-- Trzeci skrypt inicjalizacyjny - tworzenie tabel aplikacji
 
 -- Typy enumeracyjne
 DO $$

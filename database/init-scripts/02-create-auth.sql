@@ -1,4 +1,4 @@
--- Trzeci skrypt inicjalizacyjny - tworzenie tabel dla Better Auth
+-- Drugi skrypt inicjalizacyjny - tworzenie tabel dla Better Auth
 
 CREATE TABLE IF NOT EXISTS "user" (
 	id text PRIMARY KEY,
@@ -12,8 +12,6 @@ CREATE TABLE IF NOT EXISTS "user" (
 );
 
 CREATE INDEX IF NOT EXISTS idx_user_email_lower ON "user" (LOWER(email));
-
--- Tabela sesji zgodna z Better Auth
 CREATE TABLE IF NOT EXISTS session (
 	id text PRIMARY KEY,
 	user_id text NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
@@ -25,7 +23,6 @@ CREATE TABLE IF NOT EXISTS session (
 	updated_at timestamptz NOT NULL DEFAULT now()
 );
 
--- Tabela kont (np. lokalne hasła, providerzy zewnętrzni)
 CREATE TABLE IF NOT EXISTS account (
 	id text PRIMARY KEY,
 	user_id text NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
@@ -43,7 +40,6 @@ CREATE TABLE IF NOT EXISTS account (
 	UNIQUE (provider_id, account_id)
 );
 
--- Tabela weryfikacji (zarówno hasła, jak i maila)
 CREATE TABLE IF NOT EXISTS verification (
 	id text PRIMARY KEY,
 	identifier text NOT NULL,
@@ -86,9 +82,3 @@ CREATE TRIGGER set_timestamp
 BEFORE UPDATE ON verification
 FOR EACH ROW
 EXECUTE FUNCTION trigger_set_timestamp();
-
--- Informacja końcowa
-COMMENT ON TABLE "user" IS 'Tabela użytkowników dla Better Auth';
-COMMENT ON TABLE session IS 'Tabela sesji zgodna z Better Auth';
-COMMENT ON TABLE account IS 'Tabela kont (lokalne i providerzy) zgodna z Better Auth';
-COMMENT ON TABLE verification IS 'Tabela wartości weryfikacyjnych (reset hasła, potwierdzenie email)';

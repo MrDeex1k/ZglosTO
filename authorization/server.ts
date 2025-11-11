@@ -6,13 +6,12 @@ import { auth } from './src/auth';
 const app = express();
 const PORT = Number(process.env.PORT) || 9955;
 
-// Mount Better Auth handler as a catch-all for auth routes
 app.all('/api/auth/*splat', toNodeHandler(auth));
 
 // JSON middleware for non-auth routes
 app.use(express.json());
 
-// CORS - dostosuj FRONTEND_ORIGIN w .env jeśli potrzeba
+// CORS - dostosuj FRONTEND_ORIGIN w .env
 app.use(
   cors({
     origin: process.env.FRONTEND_ORIGIN || 'http://localhost:5173',
