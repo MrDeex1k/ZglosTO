@@ -1,9 +1,13 @@
 import { betterAuth } from "better-auth";
+import { customSession } from "better-auth/plugins";
 import { Pool } from "pg";
+
+// Pool do zapytań do bazy danych
+const dbPool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 // Konfiguracja Better Auth
 export const auth = betterAuth({
-  database: new Pool({ connectionString: process.env.DATABASE_URL }),
+  database: dbPool,
   secret: process.env.BETTER_AUTH_SECRET,
 
   // Włącz autoryzację email + password
@@ -61,4 +65,40 @@ export const auth = betterAuth({
       updatedAt: "updated_at",
     },
   },
+
+  plugins: [
+    // Plugin rozszerzający dane użytkownika o uprawnienia z tabeli uzytkownicy
+    customSession(async ({ user, session }) => {
+      if (!user?.id) {
+        return { user, session };
+      }
+
+      try {
+        const result = await dbPool.query(
+          'SELECT uprawnienia, typ_uprawnien FROM uzytkownicy WHERE id_uzytkownika = $1',
+          [user.id]
+        );
+
+        // Jeśli użytkownik ma wpis w tabeli uzytkownicy, dodaj uprawnienia
+        if (result.rows.length > 0) {
+          const { uprawnienia, typ_uprawnien } = result.rows[0];
+          return {
+            user: {
+              ...user,
+              uprawnienia: uprawnienia || null,
+              typ_uprawnien: typ_uprawnien || null,
+            },
+            session,
+          };
+        }
+
+        // Jeśli nie ma wpisu, zwróć bez zmian (użytkownik może nie mieć jeszcze wpisu)
+        return { user, session };
+      } catch (error) {
+        console.error('Error fetching user permissions:', error);
+        // W przypadku błędu zwróć bez zmian
+        return { user, session };
+      }
+    }),
+  ],
 });
