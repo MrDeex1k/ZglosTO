@@ -1,6 +1,8 @@
 import { betterAuth } from "better-auth";
 import { customSession } from "better-auth/plugins";
 import { Pool } from "pg";
+import { createAuthMiddleware } from "better-auth/api";
+import { logAuthOperation } from "./logger";
 
 // Pool do zapytań do bazy danych
 const dbPool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -66,6 +68,87 @@ export const auth = betterAuth({
     },
   },
 
+  // Hook automatycznie tworzący wpis w tabeli uzytkownicy po rejestracji
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (user) => {
+          try {
+            // Tworzenie wpisu w tabeli uzytkownicy z domyślnymi wartościami
+            await dbPool.query(
+              `INSERT INTO uzytkownicy (id_uzytkownika, uprawnienia, typ_uprawnien)
+               VALUES ($1, 'mieszkaniec', NULL)
+               ON CONFLICT (id_uzytkownika) DO NOTHING`,
+              [user.id]
+            );
+            await logAuthOperation(
+              'Rejestracja użytkownika',
+              true,
+              `Email: ${user.email || 'N/A'}, ID: ${user.id} | Utworzono wpis w tabeli uzytkownicy`
+            );
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            await logAuthOperation(
+              'Rejestracja użytkownika',
+              false,
+              `Email: ${user.email || 'N/A'}, ID: ${user.id}`,
+              errorMessage
+            );
+          }
+        },
+      },
+    },
+  },
+
+  // Hooki do logowania operacji autoryzacyjnych
+  hooks: {
+    after: createAuthMiddleware(async (ctx) => {
+      // Logowanie po zakończeniu operacji autoryzacyjnych
+      if (ctx.path.startsWith("/sign-up")) {
+        const newSession = ctx.context.newSession;
+        if (newSession) {
+          await logAuthOperation(
+            'Rejestracja',
+            true,
+            `Email: ${newSession.user?.email || 'N/A'}, ID: ${newSession.user?.id || 'N/A'}`
+          );
+        } else {
+          await logAuthOperation('Rejestracja', false, undefined, 'Nie utworzono sesji');
+        }
+      } else if (ctx.path.startsWith("/sign-in")) {
+        const newSession = ctx.context.newSession;
+        if (newSession) {
+          await logAuthOperation(
+            'Logowanie',
+            true,
+            `Email: ${newSession.user?.email || 'N/A'}, ID: ${newSession.user?.id || 'N/A'}`
+          );
+        } else {
+          await logAuthOperation('Logowanie', false, undefined, 'Nie utworzono sesji');
+        }
+      } else if (ctx.path.startsWith("/sign-out")) {
+        const session = ctx.context.session;
+        if (session) {
+          await logAuthOperation(
+            'Wylogowanie',
+            true,
+            `User ID: ${session.user?.id || 'N/A'}`
+          );
+        } else {
+          await logAuthOperation('Wylogowanie', false, undefined, 'Brak sesji');
+        }
+      }
+    }),
+    before: createAuthMiddleware(async (ctx) => {
+      // Logowanie prób rejestracji/logowania przed wykonaniem
+      if (ctx.path.startsWith("/sign-up") || ctx.path.startsWith("/sign-in")) {
+        const operation = ctx.path.startsWith("/sign-up") ? 'Próba rejestracji' : 'Próba logowania';
+        const email = (ctx.body as any)?.email || 'N/A';
+        await logAuthOperation(operation, true, `Email: ${email}`);
+      }
+    }),
+  },
+
   plugins: [
     // Plugin rozszerzający dane użytkownika o uprawnienia z tabeli uzytkownicy
     customSession(async ({ user, session }) => {
@@ -95,7 +178,13 @@ export const auth = betterAuth({
         // Jeśli nie ma wpisu, zwróć bez zmian (użytkownik może nie mieć jeszcze wpisu)
         return { user, session };
       } catch (error) {
-        console.error('Error fetching user permissions:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        await logAuthOperation(
+          'Pobieranie uprawnień użytkownika',
+          false,
+          `User ID: ${user?.id || 'N/A'}`,
+          errorMessage
+        );
         // W przypadku błędu zwróć bez zmian
         return { user, session };
       }
