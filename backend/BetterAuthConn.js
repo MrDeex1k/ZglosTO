@@ -38,12 +38,13 @@ function requireAuth(...allowedRoles)
             req.user = user;
             req.session = session;
             if(allowedRoles.includes(user.uprawnienia)) next();
-            return res.status(401).json({ error: 'Niewystarczające uprawnienia' });
+            else return res.status(401).json({ error: 'Niewystarczające uprawnienia' });
         } catch (err) {
             console.error('Błąd autoryzacji:', err);
             res.status(500).json({ error: 'Błąd wewnętrzny autoryzacji' });
         }
     }
 }
+
 
 module.exports = { requireAuth };
