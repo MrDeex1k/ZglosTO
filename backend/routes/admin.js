@@ -97,6 +97,7 @@ router.post('/uzytkownicy', async (req, res) => {
  * Body: { typ_uprawnien } - przypisuje użytkownika do konkretnej służby (typ_uprawnien = typ_sluzby_enum).
  * (W starcie serwera dodaliśmy kolumnę jeśli jej nie było.)
  */
+/*
 router.patch('/uzytkownicy/:id/typ_uprawnien', async (req, res) => {
   try {
     const { id } = req.params;
@@ -111,7 +112,59 @@ router.patch('/uzytkownicy/:id/typ_uprawnien', async (req, res) => {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
   }
+});*/
+router.patch('/uzytkownicy/typ_uprawnien', async (req, res) => {
+  try {
+    const { typ_uprawnien, email } = req.body;
+
+    if (!typ_uprawnien) {
+      return res.status(400).json({ error: 'typ_uprawnien required' });
+    }
+
+    // 1. Pobieramy ID użytkownika z tabeli BetterAuth
+    const qUser = `
+      SELECT id 
+      FROM "user"
+      WHERE email = $1;
+    `;
+    const userResult = await db.query(qUser, [email]);
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found in BetterAuth' });
+    }
+
+    const betterAuthUserId = userResult.rows[0].id;
+
+    // 2. Aktualizujemy odpowiedni rekord w tabeli uzytkownicy
+    const qUpdate = `
+      UPDATE uzytkownicy
+      SET typ_uprawnien = $1
+      WHERE id_uzytkownika = $2
+      RETURNING *;
+    `;
+
+    const updated = await db.query(qUpdate, [
+      typ_uprawnien,
+      betterAuthUserId
+    ]);
+
+    if (updated.rows.length === 0) {
+      return res.status(404).json({
+        error: 'User exists in BetterAuth but not in uzytkownicy'
+      });
+    }
+
+    res.json({
+      success: true,
+      updated: updated.rows[0]
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
+
 
 
 
