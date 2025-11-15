@@ -64,55 +64,10 @@ router.patch('/incydenty/:id/status', async (req, res) => {
 });
 
 /**
- * POST /admin/uzytkownicy
- * Dodaje użytkownika służby / admina.
- * Body: { mail, uprawnienia }  // uprawnienia: 'mieszkaniec' | 'sluzby' | 'admin'
- * Przy pierwszym logowaniu hasło domyślne to adres e-mail (zgodnie ze specyfikacją).
- */
-/*
-router.post('/uzytkownicy', async (req, res) => {
-  try {
-    const { mail, uprawnienia } = req.body;
-    if (!mail || !uprawnienia) return res.status(400).json({ error: 'mail and uprawnienia required' });
-
-    // default password to mail (char_length constraint requires >=10 -> if mail <10 pad with '#')
-    let defaultPassword = mail;
-    if (defaultPassword.length < 10) defaultPassword = defaultPassword.padEnd(10, '#');
-    if (defaultPassword.length > 40) defaultPassword = defaultPassword.slice(0,40);
-
-    const q = `INSERT INTO uzytkownicy (mail, haslo, uprawnienia) VALUES ($1, $2, $3) RETURNING *;`;
-    const { rows } = await db.query(q, [mail, defaultPassword, uprawnienia]);
-    res.status(201).json({ success: true, uzytkownik: rows[0] });
-  } catch (err) {
-    console.error(err);
-    // unique violation
-    if (err.code === '23505') return res.status(409).json({ error: 'user already exists' });
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-*/
-
-/**
- * PATCH /admin/uzytkownicy/:id/typ_uprawnien
- * Body: { typ_uprawnien } - przypisuje użytkownika do konkretnej służby (typ_uprawnien = typ_sluzby_enum).
+ * PATCH /admin/uzytkownicy/typ_uprawnien
+ * Body: { typ_uprawnien, email } - przypisuje użytkownika do konkretnej służby (typ_uprawnien = typ_sluzby_enum).
  * (W starcie serwera dodaliśmy kolumnę jeśli jej nie było.)
  */
-/*
-router.patch('/uzytkownicy/:id/typ_uprawnien', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { typ_uprawnien } = req.body;
-    if (!typ_uprawnien) return res.status(400).json({ error: 'typ_uprawnien required' });
-
-    const q = `UPDATE uzytkownicy SET typ_uprawnien = $1 WHERE id_uzytkownika = $2 RETURNING *;`;
-    const { rows } = await db.query(q, [typ_uprawnien, id]);
-    if (rows.length === 0) return res.status(404).json({ error: 'user not found' });
-    res.json({ success: true, uzytkownik: rows[0] });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});*/
 router.patch('/uzytkownicy/typ_uprawnien', async (req, res) => {
   try {
     const { typ_uprawnien, email } = req.body;

@@ -4,12 +4,14 @@ const router = express.Router();
 const db = require('../database');
 
 /**
- * GET /sluzby/:typ/incydenty
- * Pobiera zgłoszenia przypisane do danej służby (parametr :typ - dokładna nazwa enum)
+ * GET /sluzby/incydenty
+ * Pobiera zgłoszenia przypisane do danej służby
  */
-router.get('/:typ/incydenty', async (req, res) => {
+router.get('/incydenty', async (req, res) => {
   try {
-    const { typ } = req.params;
+    console.log(req.user)
+    //const { typ } = req.params;
+    const typ = req.user.typ_uprawnien;
     const q = `SELECT * FROM incydenty WHERE typ_sluzby = $1 ORDER BY status_incydentu, id_zgloszenia`;
     const { rows } = await db.query(q, [typ]);
     res.json(rows);
@@ -20,12 +22,13 @@ router.get('/:typ/incydenty', async (req, res) => {
 });
 
 /**
- * GET /sluzby/:typ/statystyki
+ * GET /sluzby/statystyki
  * Zwraca podstawowe statystyki (liczba zgłoszeń wg statusów) dla danej służby.
  */
-router.get('/:typ/statystyki', async (req, res) => {
+router.get('/statystyki', async (req, res) => {
   try {
-    const { typ } = req.params;
+    const typ = req.user.typ_uprawnien;
+    //const { typ } = req.params;
     const q = `
       SELECT status_incydentu, count(*)::int AS liczba
       FROM incydenty
