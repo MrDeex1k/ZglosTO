@@ -37,12 +37,12 @@ Poniżej znajduje się opis struktury bazy (PostgreSQL 18) używanej przez aplik
 
 ### Tabele autoryzacji (Better Auth)
 
-#### Tabela: users
+#### Tabela: "user"
 
 Podstawowa tabela użytkowników dla systemu autoryzacji Better Auth.
 
 Kolumny:
-- `id` uuid PRIMARY KEY — domyślnie generowane funkcją `uuidv7()`
+- `id` text PRIMARY KEY — unikalny identyfikator użytkownika
 - `name` text — opcjonalne imię/nazwisko użytkownika
 - `email` text NOT NULL UNIQUE — adres e-mail użytkownika
 - `email_verified` boolean NOT NULL DEFAULT false — czy adres email został zweryfikowany
@@ -52,15 +52,15 @@ Kolumny:
 - `updated_at` timestamptz NOT NULL DEFAULT now() — data ostatniej aktualizacji
 
 Indeksy:
-- `idx_users_email_lower` — indeks na LOWER(email) dla wyszukiwania bez uwzględniania wielkości liter
+- `idx_user_email_lower` — indeks na LOWER(email) dla wyszukiwania bez uwzględniania wielkości liter
 
-#### Tabela: sessions
+#### Tabela: session
 
 Tabela przechowująca aktywne sesje użytkowników zgodna z Better Auth.
 
 Kolumny:
-- `id` uuid PRIMARY KEY — domyślnie generowane funkcją `uuidv7()`
-- `user_id` uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE — referencja do użytkownika
+- `id` text PRIMARY KEY — unikalny identyfikator sesji
+- `user_id` text NOT NULL REFERENCES "user"(id) ON DELETE CASCADE — referencja do użytkownika
 - `token` text NOT NULL UNIQUE — unikalny token sesji
 - `expires_at` timestamptz NOT NULL — data wygaśnięcia sesji
 - `ip_address` text — adres IP użytkownika podczas logowania
@@ -68,13 +68,13 @@ Kolumny:
 - `created_at` timestamptz NOT NULL DEFAULT now() — data utworzenia sesji
 - `updated_at` timestamptz NOT NULL DEFAULT now() — data ostatniej aktualizacji sesji
 
-#### Tabela: accounts
+#### Tabela: account
 
 Tabela przechowująca konta użytkowników (lokalne hasła i providerzy zewnętrzni) zgodna z Better Auth.
 
 Kolumny:
-- `id` uuid PRIMARY KEY — domyślnie generowane funkcją `uuidv7()`
-- `user_id` uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE — referencja do użytkownika
+- `id` text PRIMARY KEY — unikalny identyfikator konta
+- `user_id` text NOT NULL REFERENCES "user"(id) ON DELETE CASCADE — referencja do użytkownika
 - `account_id` text NOT NULL — identyfikator konta (np. email dla lokalnego logowania)
 - `provider_id` text NOT NULL — identyfikator providera (np. "email-password", "google", "github")
 - `access_token` text — token dostępu od providera zewnętrznego
@@ -95,11 +95,11 @@ Constraints:
 Tabela przechowująca wartości weryfikacyjne (reset hasła, potwierdzenie email itp.) zgodna z Better Auth.
 
 Kolumny:
-- `id` uuid PRIMARY KEY — domyślnie generowane funkcją `uuidv7()`
+- `id` text PRIMARY KEY — unikalny identyfikator wartości weryfikacyjnej
 - `identifier` text NOT NULL — identyfikator weryfikacji (np. email lub user ID)
 - `value` text NOT NULL — wartość weryfikacyjna (token, kod itp.)
 - `expires_at` timestamptz NOT NULL — data wygaśnięcia wartości weryfikacyjnej
-- `user_id` uuid REFERENCES users(id) ON DELETE CASCADE — opcjonalna referencja do użytkownika
+- `user_id` text REFERENCES "user"(id) ON DELETE CASCADE — opcjonalna referencja do użytkownika
 - `created_at` timestamptz NOT NULL DEFAULT now() — data utworzenia wartości weryfikacyjnej
 - `updated_at` timestamptz NOT NULL DEFAULT now() — data ostatniej aktualizacji wartości weryfikacyjnej
 
@@ -110,7 +110,7 @@ Kolumny:
 Tabela przechowująca zgłoszenia incydentów/ulicznych problemów.
 
 Kolumny:
-- `id_zgloszenia` uuid PRIMARY KEY — domyślnie generowane funkcją `uuidv7()`
+- `id_zgloszenia` uuid PRIMARY KEY DEFAULT uuidv7() — domyślnie generowane funkcją `uuidv7()`
 - `opis_zgloszenia` varchar(255) NOT NULL — opis zgłoszenia (max 255 znaków)
 - `mail_zglaszajacego` varchar(50) NOT NULL — adres mailowy zgłaszającego (max 50 znaków)
 - `zdjecie_incydentu_zglaszanego` bytea — opcjonalne zdjęcie incydentu zgłoszonego przez mieszkańca
@@ -118,6 +118,10 @@ Kolumny:
 - `sprawdzenie_incydentu` boolean NOT NULL DEFAULT FALSE — czy incydent został sprawdzony
 - `status_incydentu` `status_incydentu_enum` NOT NULL DEFAULT 'ZGŁOSZONY'
 - `typ_sluzby` `typ_sluzby_enum` — typ służby odpowiedzialnej (opcjonalne)
+- `data_zgloszenia` date DEFAULT now() — data zgłoszenia domyślnie teraz
+- `godzina_zgloszenia` time DEFAULT now() — godzina zgłoszenia domyślnie teraz
+- `data_rozwiazania` date DEFAULT NULL — data rozwiązania domyślnie NULL
+- `godzina_rozwiazania` time DEFAULT NULL — godzina rozwiązania domyślnie NULL
 
 Indeksy:
 - `idx_incydenty_mail_zglaszajacego` — indeks na adres email zgłaszającego
@@ -126,10 +130,10 @@ Indeksy:
 
 #### Tabela: uzytkownicy
 
-Rozszerzona tabela użytkowników zawierająca informacje o rolach i uprawnieniach w systemie ZglosTO. Jest powiązana z tabelą `users` przez klucz obcy.
+Rozszerzona tabela użytkowników zawierająca informacje o rolach i uprawnieniach w systemie ZglosTO. Jest powiązana z tabelą `"user"` przez klucz obcy.
 
 Kolumny:
-- `id_uzytkownika` uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE — referencja do tabeli users (ten sam identyfikator)
+- `id_uzytkownika` text PRIMARY KEY REFERENCES "user"(id) ON DELETE CASCADE — referencja do tabeli "user" (ten sam identyfikator)
 - `uprawnienia` `uprawnienia_enum` NOT NULL DEFAULT 'mieszkaniec' — poziom uprawnień użytkownika
 - `typ_uprawnien` `typ_sluzby_enum` DEFAULT NULL — typ służby (tylko gdy uprawnienia = 'sluzby')
 
@@ -148,7 +152,7 @@ Obecnie dostępne skrypty:
    - Tworzy bazę danych `zglosto_db` z właścicielem `zglosto_admin`
 
 2. **`02-create-auth.sql`** - tabele autoryzacji dla Better Auth zgodnie z najnowszymi standardami
-   - Tworzy tabele: `users`, `sessions`, `accounts`, `verification`
+   - Tworzy tabele: `"user"`, `session`, `account`, `verification`
    - Dodaje indeksy i triggery do automatycznej aktualizacji `updated_at`
 
 3. **`03-create-dbtables.sql`** - tabele aplikacji biznesowej

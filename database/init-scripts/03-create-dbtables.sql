@@ -30,10 +30,10 @@ CREATE TABLE IF NOT EXISTS incydenty (
 	sprawdzenie_incydentu boolean NOT NULL DEFAULT FALSE,
 	status_incydentu status_incydentu_enum NOT NULL DEFAULT 'ZGŁOSZONY',
 	typ_sluzby typ_sluzby_enum,
-	data_zgloszenia date,
-	godzina_zgloszenia time,
-	data_rozwiazania date,
-	godzina_rozwiazania time
+	data_zgloszenia date default now(),
+	godzina_zgloszenia time default now(),
+	data_rozwiazania date default null,
+	godzina_rozwiazania time default null,
 );
 
 -- Tabela uzytkownicy
