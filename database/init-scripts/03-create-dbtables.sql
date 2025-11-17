@@ -8,6 +8,7 @@ BEGIN
 	END IF;
 	IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'typ_sluzby_enum') THEN
 		CREATE TYPE typ_sluzby_enum AS ENUM (
+			'Miejskie Przedsiębiorstwo Energetyki Cieplnej',
 			'Miejskie Przedsiębiorstwo Komunikacyjne',
 			'Zakład Gospodarki Komunalnej',
 			'Pogotowie Kanalizacyjne',
