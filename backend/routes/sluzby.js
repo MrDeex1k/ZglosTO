@@ -12,7 +12,7 @@ router.get('/incydenty', async (req, res) => {
     console.log(req.user)
     //const { typ } = req.params;
     const typ = req.user.typ_uprawnien;
-    const q = `SELECT * FROM incydenty WHERE typ_sluzby = $1 ORDER BY status_incydentu, id_zgloszenia`;
+    const q = `SELECT * FROM incydenty WHERE typ_sluzby = $1 ORDER BY status_incydentu, data_zgloszenia`;
     const { rows } = await db.query(q, [typ]);
     res.json(rows);
   } catch (err) {

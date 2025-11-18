@@ -12,7 +12,7 @@ router.get('/incydenty', async (req, res) => {
     const { email } = req.query;
     if (!email) return res.status(400).json({ error: 'email query param required' });
 
-    const q = 'SELECT * FROM incydenty WHERE mail_zglaszajacego = $1 ORDER BY id_zgloszenia';
+    const q = 'SELECT * FROM incydenty WHERE mail_zglaszajacego = $1 ORDER BY data_zgloszenia';
     const { rows } = await db.query(q, [email]);
     res.json(rows);
   } catch (err) {
@@ -64,9 +64,27 @@ router.get('/incydenty/zakonczone', async (req, res) => {
       SELECT id_zgloszenia, opis_zgloszenia, mail_zglaszajacego, typ_sluzby, status_incydentu, zdjecie_incydentu_rozwiazanego
       FROM incydenty
       WHERE mail_zglaszajacego = $1 AND status_incydentu = 'NAPRAWIONY'
-      ORDER BY id_zgloszenia;
+      ORDER BY data_zgloszenia;
     `;
     const { rows } = await db.query(q, [email]);
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/incydenty/glowna', async (req, res) => {
+  try {
+
+    const q = `
+      SELECT id_zgloszenia, opis_zgloszenia, mail_zglaszajacego, typ_sluzby, status_incydentu, zdjecie_incydentu_rozwiazanego
+      FROM incydenty
+      WHERE status_incydentu = 'NAPRAWIONY'
+      ORDER BY data_rozwiazania
+      LIMIT 15;
+    `;
+    const { rows } = await db.query(q);
     res.json(rows);
   } catch (err) {
     console.error(err);

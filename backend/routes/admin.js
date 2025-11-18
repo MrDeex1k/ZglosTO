@@ -65,12 +65,12 @@ router.patch('/incydenty/:id/status', async (req, res) => {
 
 /**
  * PATCH /admin/uzytkownicy/typ_uprawnien
- * Body: { typ_uprawnien, email } - przypisuje użytkownika do konkretnej służby (typ_uprawnien = typ_sluzby_enum).
+ * Body: { typ_uprawnien, uprawnienia,email } - przypisuje użytkownika do konkretnej służby (typ_uprawnien = typ_sluzby_enum).
  * (W starcie serwera dodaliśmy kolumnę jeśli jej nie było.)
  */
 router.patch('/uzytkownicy/typ_uprawnien', async (req, res) => {
   try {
-    const { typ_uprawnien, email } = req.body;
+    const { typ_uprawnien, uprawnienia ,email } = req.body;
 
     if (!typ_uprawnien) {
       return res.status(400).json({ error: 'typ_uprawnien required' });
@@ -93,12 +93,13 @@ router.patch('/uzytkownicy/typ_uprawnien', async (req, res) => {
     // 2. Aktualizujemy odpowiedni rekord w tabeli uzytkownicy
     const qUpdate = `
       UPDATE uzytkownicy
-      SET typ_uprawnien = $1
-      WHERE id_uzytkownika = $2
+      SET uprawnienia = $1, typ_uprawnien = $2
+      WHERE id_uzytkownika = $3
       RETURNING *;
     `;
 
     const updated = await db.query(qUpdate, [
+      uprawnienia,
       typ_uprawnien,
       betterAuthUserId
     ]);
