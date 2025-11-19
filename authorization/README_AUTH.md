@@ -488,25 +488,6 @@ curl http://localhost:9955/health
 }
 ```
 
-## Uwagi techniczne
-
-### Sesje i cookies
-
-Better Auth używa HTTP-only cookies do zarządzania sesjami. Upewnij się, że:
-- Używasz `credentials: 'include'` w fetch
-- CORS jest poprawnie skonfigurowany (`FRONTEND_ORIGIN`)
-- Dla curl używasz `-b` (read cookies) i `-c` (write cookies)
-
-### Bezpieczeństwo
-
-- Hasła są automatycznie hashowane przez Better Auth (bcrypt)
-- Minimalna długość hasła: 8 znaków
-- Maksymalna długość hasła: 128 znaków
-- Sesje są przechowywane w bazie danych
-- Weryfikacja email jest wyłączona (`requireEmailVerification: false`)
-
----
-
 ## Rozwiązywanie problemów
 
 ### Błąd połączenia z bazą danych
