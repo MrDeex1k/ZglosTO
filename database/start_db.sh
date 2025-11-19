@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-/docker-entrypoint.sh "$@"
+/usr/local/bin/docker-entrypoint.sh "$@"
 
 if [ "$1" = 'postgres' ]; then
     echo "Waiting for database to be ready..."
