@@ -46,5 +46,4 @@ function requireAuth(...allowedRoles)
     }
 }
 
-
 module.exports = { requireAuth };

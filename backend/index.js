@@ -16,7 +16,7 @@ app.use(cookieParser());
 
 db.testConnection()
 
-// Ścieżka do zbudowanego folderu Reacta (po `bun run build`)
+// Ścieżka do zbudowanego folderu Reacta
 const buildPath = path.join(__dirname, '../frontend/dist');
 
 // Serwowanie statycznych plików Reacta
@@ -33,11 +33,6 @@ app.get('/api/protected', requireAuth("sluzby"), (req, res) => {
   console.log(req.user)
   //res.json({ message: 'Jesteś uwierzytelniony', user: session.user });
   res.json({ message: 'To jest odpowiedź z API' });
-});
-
-// API endpointy
-app.get('/api/some-endpoint', (req, res) => {
-    res.json({ message: 'To jest odpowiedź z API' });
 });
 
 // Obsługa wszystkich innych żądań przez zwrócenie index.html

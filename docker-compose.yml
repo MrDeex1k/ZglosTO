@@ -49,6 +49,22 @@ services:
     networks:
       - zglosto-net
 
+  llm_service:
+    build:
+      context: ./llm_service
+    ports:
+      - "8123:8123"
+    env_file:
+      - .env
+    volumes:
+      - huggingface-cache:/root/.cache/huggingface
+    networks:
+      - zglosto-net
+    deploy:
+      resources:
+        limits:
+          memory: 8GB
+
   frontend:
     build:
       context: ./frontend
@@ -70,6 +86,8 @@ services:
 
 volumes:
   postgres-data:
+    driver: local
+  huggingface-cache:
     driver: local
 
 networks:

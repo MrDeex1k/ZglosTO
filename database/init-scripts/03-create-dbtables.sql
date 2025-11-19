@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS incydenty (
 	data_zgloszenia date default now(),
 	godzina_zgloszenia time default now(),
 	data_rozwiazania date default null,
-	godzina_rozwiazania time default null,
+	godzina_rozwiazania time default null
 );
 
 -- Tabela uzytkownicy

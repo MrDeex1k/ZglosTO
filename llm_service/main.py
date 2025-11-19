@@ -15,11 +15,13 @@ try:
 	tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 	model = AutoModelForCausalLM.from_pretrained(MODEL_NAME)
 	MODEL_LOADED = True
+	print("Model Gemma 3 1B został pomyślnie załadowany. Aplikacja LLM Service jest gotowa do działania.")
 except Exception as load_error:
 	tokenizer = None
 	model = None
 	MODEL_LOADED = False
 	MODEL_LOAD_ERROR = str(load_error)
+	print(f"Błąd podczas ładowania modelu Gemma 3 1B: {MODEL_LOAD_ERROR}")
 
 
 def run_inference(prompt: str) -> str:
