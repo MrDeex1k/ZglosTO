@@ -14,7 +14,9 @@ services:
     command: ["postgres", "-c", "port=${POSTGRES_PORT}"]
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - pgbackrest-data:/var/lib/pgbackrest
       - ./database/init-scripts:/docker-entrypoint-initdb.d
+      - ./database/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf
     networks:
       - zglosto-net
     healthcheck:
@@ -86,6 +88,8 @@ services:
 
 volumes:
   postgres-data:
+    driver: local
+  pgbackrest-data:
     driver: local
   huggingface-cache:
     driver: local

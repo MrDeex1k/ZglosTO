@@ -1,6 +1,3 @@
--- Trzeci skrypt inicjalizacyjny - tworzenie tabel aplikacji
-
--- Typy enumeracyjne
 DO $$
 BEGIN
 	IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'status_incydentu_enum') THEN
@@ -21,7 +18,6 @@ BEGIN
 	END IF;
 END$$;
 
--- Tabela incydenty
 CREATE TABLE IF NOT EXISTS incydenty (
 	id_zgloszenia uuid PRIMARY KEY DEFAULT uuidv7(),
 	opis_zgloszenia varchar(255) NOT NULL,
@@ -37,7 +33,6 @@ CREATE TABLE IF NOT EXISTS incydenty (
 	godzina_rozwiazania time default null
 );
 
--- Tabela uzytkownicy
 CREATE TABLE IF NOT EXISTS uzytkownicy (
 	id_uzytkownika text PRIMARY KEY REFERENCES "user"(id) ON DELETE CASCADE,
 	uprawnienia uprawnienia_enum NOT NULL DEFAULT 'mieszkaniec',

@@ -1,5 +1,3 @@
--- Drugi skrypt inicjalizacyjny - tworzenie tabel dla Better Auth
-
 CREATE TABLE IF NOT EXISTS "user" (
 	id text PRIMARY KEY,
 	name text,
