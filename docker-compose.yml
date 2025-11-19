@@ -18,7 +18,7 @@ services:
       - ./database/init-scripts:/docker-entrypoint-initdb.d
       - ./database/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf
     networks:
-      - zglosto-net
+      - internal-net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -p ${POSTGRES_PORT} -U ${POSTGRES_USER:-zglosto_user} -d ${POSTGRES_DB:-zglosto_db}"]
       interval: 4s
@@ -36,7 +36,7 @@ services:
       database:
         condition: service_healthy
     networks:
-      - zglosto-net
+      - internal-net
   
   backend:
     build:
@@ -49,7 +49,7 @@ services:
       database:
         condition: service_healthy
     networks:
-      - zglosto-net
+      - internal-net
 
   llm_service:
     build:
@@ -61,7 +61,7 @@ services:
     volumes:
       - huggingface-cache:/root/.cache/huggingface
     networks:
-      - zglosto-net
+      - internal-net
     deploy:
       resources:
         limits:
@@ -73,7 +73,7 @@ services:
     depends_on:
       - backend
     networks:
-      - zglosto-net
+      - external-net
 
   nginx:
     build:
@@ -84,7 +84,8 @@ services:
       - backend
       - frontend
     networks:
-      - zglosto-net
+      - internal-net
+      - external-net
 
 volumes:
   postgres-data:
@@ -95,5 +96,7 @@ volumes:
     driver: local
 
 networks:
-  zglosto-net:
+  internal-net:
+    driver: bridge
+  external-net:
     driver: bridge
