@@ -10,8 +10,8 @@ services:
       - PGDATA=/var/lib/postgresql/data/pgdata
       - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256
     ports:
-      - "${POSTGRES_PORT:-54325}:${POSTGRES_PORT}"
-    command: ["postgres", "-c", "port=${POSTGRES_PORT}"]
+      - "${POSTGRES_PORT:-54325}:${POSTGRES_PORT:-54325}"
+    command: ["postgres", "-c", "port=${POSTGRES_PORT:-54325}"]
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - pgbackrest-data:/var/lib/pgbackrest
@@ -20,7 +20,7 @@ services:
     networks:
       - internal-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -p ${POSTGRES_PORT} -U ${POSTGRES_USER:-zglosto_user} -d ${POSTGRES_DB:-zglosto_db}"]
+      test: ["CMD-SHELL", "pg_isready -p ${POSTGRES_PORT} -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 4s
       timeout: 4s
       retries: 5
@@ -80,6 +80,7 @@ services:
       context: ./nginx
     ports:
       - "1235:1235"
+      - "9753:9753"
     depends_on:
       - backend
       - frontend
@@ -87,10 +88,30 @@ services:
       - internal-net
       - external-net
 
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: zglosto-pgadmin
+    env_file:
+      - .env
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
+      - PGADMIN_CONFIG_SERVERS_JSON_FILE="/servers.json"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+      - ./pgadmin/servers.json:/servers.json
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - internal-net
+
 volumes:
   postgres-data:
     driver: local
   pgbackrest-data:
+    driver: local
+  pgadmin-data:
     driver: local
   huggingface-cache:
     driver: local

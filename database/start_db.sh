@@ -5,7 +5,7 @@ set -e
 
 if [ "$1" = 'postgres' ]; then
     echo "Waiting for database to be ready..."
-    until pg_isready -p ${POSTGRES_PORT:-54325} -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-zglosto_db}; do
+    until pg_isready -p ${POSTGRES_PORT} -U ${POSTGRES_USER} -d ${POSTGRES_DB}; do
         sleep 2
     done
 

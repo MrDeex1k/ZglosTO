@@ -1,6 +1,7 @@
 .DS_Store
 .env
 *.txt
+pgadmin/servers.json
 llm_service/uv.lock
 llm_service/.venv/
 llm_service/__pycache__/
