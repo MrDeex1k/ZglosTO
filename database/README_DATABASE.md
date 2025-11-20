@@ -11,22 +11,18 @@ database/
 │   ├── 01-init.sql       # Główny skrypt inicjalizacyjny (rozszerzenia + rola + baza danych)
 │   ├── 02-create-auth.sql       # Tworzenie tabel autoryzacji (Better Auth)
 │   ├── 03-create-dbtables.sql  # Tworzenie tabel aplikacji (incydenty, użytkownicy rozszerzeni)
-│   ├── 05-insert-example-users.sql     # Przykładowe dane użytkowników (opcjonalne)
-│   ├── 06-insert-example-uzytkownicy.sql # Rozszerzone dane użytkowników (opcjonalne)
-│   ├── 07-insert-example-incydenty.sql   # Przykładowe zgłoszenia (opcjonalne)
-│   └── 08-insert-example-sessions-tokens.sql # Sesje i tokeny (opcjonalne)
-├── example_dane/          # Źródłowe pliki z przykładowymi danymi
+│   ├── 04-setup-backup.sql     # Tworzenie backupu bazy danych
 └── README_DATABASE.md             # Ten plik
 ```
 
 ## Struktura bazy danych
 
-Baza danych składa się z trzech głównych części inicjalizowanych w kolejności:
+Baza danych składa się z czterech głównych części inicjalizowanych w kolejności:
 
 1. **Rozszerzenia i konfiguracja bazy** (`01-init.sql`) - rozszerzenia PostgreSQL, tworzenie roli administratora i bazy danych
 2. **Tabele autoryzacji** (`02-create-auth.sql`) - tabele dla systemu Better Auth zgodnie z najnowszymi standardami
 3. **Tabele aplikacji** (`03-create-dbtables.sql`) - tabele biznesowe (incydenty, użytkownicy rozszerzeni)
-4. **Przykładowe dane testowe** (`05-08-*.sql`) - opcjonalne dane do celów testowania i demonstracji
+4. **Backup bazy danych** (`04-setup-backup.sql`) - backup bazy danych
 
 Poniżej znajduje się opis struktury bazy (PostgreSQL 18) używanej przez aplikację.
 
@@ -254,13 +250,6 @@ Dane PostgreSQL są przechowywane w wolumenie Docker `postgres-data`, co zapewni
 
 Backend automatycznie łączy się z bazą danych używając zmiennej środowiskowej `DATABASE_URL`.
 Backend czeka na to, aż baza danych będzie "healthy" dzięki konfiguracji `depends_on`.
-
-## Bezpieczeństwo
-
-1. **Używaj silnych haseł** - nie używaj domyślnego hasła w produkcji
-2. **Regularnie aktualizuj** - utrzymuj PostgreSQL w najnowszej wersji
-3. **Backupy** - regularnie twórz kopie zapasowe bazy danych
-4. **Sieć** - baza danych jest w izolowanej sieci Docker `zglosto-net`
 
 ## Rozwiązywanie problemów
 

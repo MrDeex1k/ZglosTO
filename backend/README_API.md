@@ -1,143 +1,34 @@
-# API Backend - ZglosTO
+# Serwer API aplikacji ZglosTO
 
-Dokumentacja backendu dla aplikacji ZglosTO.
+Ten folder zawiera główny serwer API dla aplikacji ZglosTO oparty na Express.js i PostgreSQL.
 
-## Autoryzacja i Middleware
-
-Backend używa middleware do weryfikacji sesji użytkownika poprzez komunikację z serwisem autoryzacji (Better Auth).
-
-### Dostępne middleware:
-
-1. **`verifySession`** - Wymaga zalogowania (zwraca 401 jeśli brak sesji)
-2. **`optionalSession`** - Opcjonalne logowanie (dodaje `req.user` jeśli zalogowany)
-3. **`requireRole(['role1', 'role2'])`** - Wymaga konkretnych uprawnień
-
-### Szybki start:
-
-```javascript
-const { verifySession, requireRole } = require('./middleware/auth');
-
-// Chroniony endpoint
-router.get('/protected', verifySession, (req, res) => {
-  res.json({ user: req.user });
-});
-
-// Tylko dla adminów
-router.get('/admin', verifySession, requireRole(['admin']), (req, res) => {
-  res.json({ message: 'Panel admina' });
-});
-```
-
-📖 **Pełna dokumentacja**: Zobacz `middleware/README.md` i `MIDDLEWARE_EXAMPLE.md`
-
-### Zmienne środowiskowe:
-
-Dodaj do `.env`:
-
-```env
-AUTH_SERVICE_URL=http://authorization:9955
-```
-
-## Struktura projektu
+## Struktura
 
 ```
 backend/
-├── index.js              # Główny serwer Express
-├── database.js           # Połączenie z PostgreSQL
-├── middleware/
-│   ├── auth.js          # Middleware autoryzacji
-│   └── README.md        # Dokumentacja middleware
+├── index.js - główny plik serwera Express
+├── database.js - połączenie z bazą danych PostgreSQL
+├── BetterAuthConn.js - middleware autoryzacji Better Auth
 ├── routes/
-│   ├── mieszkaniec.js   # Endpointy dla mieszkańców
-│   ├── sluzby.js        # Endpointy dla służb
-│   └── admin.js         # Endpointy dla adminów
-└── MIDDLEWARE_EXAMPLE.md # Przykłady użycia
+│   ├── mieszkaniec.js - endpointy dla mieszkańców
+│   ├── sluzby.js - endpointy dla służb miejskich
+│   └── admin.js - endpointy dla administratorów
+├── package.json - zależności projektu
+└── README_API.md - dokumentacja
 ```
 
-## Endpointy API
+## Konfiguracja
 
-### Mieszkaniec (`/mieszkaniec`)
+### Zmienne środowiskowe
 
-**⚠️ UWAGA**: Te endpointy powinny być chronione przez `verifySession`
+Utwórz plik `.env` w folderze `backend/`:
 
-- `GET /mieszkaniec/incydenty` - Pobierz zgłoszenia użytkownika
-- `POST /mieszkaniec/incydenty` - Dodaj nowe zgłoszenie
-- `GET /mieszkaniec/incydenty/zakonczone` - Pobierz zakończone zgłoszenia
-
-### Służby (`/sluzby`)
-
-**⚠️ UWAGA**: Te endpointy powinny być chronione przez `verifySession` + `requireRole(['admin', 'sluzby'])`
-
-- `GET /sluzby/:typ/incydenty` - Pobierz zgłoszenia dla służby
-- `GET /sluzby/:typ/statystyki` - Statystyki dla służby
-- `PATCH /sluzby/incydenty/:id/status` - Aktualizuj status
-- `PATCH /sluzby/incydenty/:id/sprawdzenie` - Oznacz jako sprawdzone
-- `PATCH /sluzby/incydenty/:id/typ` - Przekieruj do innej służby
-- `POST /sluzby/incydenty/:id/zdjecie_rozwiazane` - Dodaj zdjęcie po naprawie
-
-### Admin (`/admin`)
-
-**⚠️ UWAGA**: Te endpointy powinny być chronione przez `verifySession` + `requireRole(['admin'])`
-
-- `GET /admin/statystyki` - Globalne statystyki
-- `PATCH /admin/incydenty/:id/typ` - Zmień typ służby
-- `PATCH /admin/incydenty/:id/status` - Zmień status
-- `PATCH /admin/uzytkownicy/:id/typ_uprawnien` - Przypisz służbę
-
-## Komunikacja z serwisem autoryzacji
-
-Backend komunikuje się z serwisem autoryzacji (`http://authorization:9955`) w celu weryfikacji sesji:
-
-```
-┌─────────┐        ┌─────────┐        ┌──────────────┐
-│ Klient  │───────▶│ Backend │───────▶│ Authorization│
-│         │◀───────│         │◀───────│   (Better    │
-│ (cookie)│        │(przekaż)│        │    Auth)     │
-└─────────┘        └─────────┘        └──────────────┘
-                        │                     │
-                        └─────────────────────┘
-                         Weryfikacja sesji
+```env
+DATABASE_URL=...
+AUTH_SERVICE_URL=...
 ```
 
-### Jak to działa?
-
-1. **Klient** wysyła żądanie do backend z cookies (token sesji Better Auth)
-2. **Backend middleware** przekazuje cookies do authorization service
-3. **Authorization service** weryfikuje sesję używając Better Auth
-4. **Backend** otrzymuje `user` i `session` lub błąd 401
-5. **Middleware** dodaje `req.user` i `req.session` do requesta
-
-## Testowanie
-
-### 1. Zaloguj się i zapisz cookies:
-
-```bash
-curl -X POST http://localhost:9955/api/auth/sign-in/email \
-  -H "Content-Type: application/json" \
-  -c cookies.txt \
-  -d '{
-    "email": "test@example.com",
-    "password": "haslo123"
-  }'
-```
-
-### 2. Użyj chronionego endpointu:
-
-```bash
-# Powinno zwrócić dane użytkownika
-curl http://localhost:3000/mieszkaniec/incydenty -b cookies.txt
-```
-
-### 3. Spróbuj bez cookies (powinno zwrócić 401):
-
-```bash
-curl http://localhost:3000/mieszkaniec/incydenty
-# {"error":"Unauthorized","message":"Musisz być zalogowany..."}
-```
-
-## Instalacja i uruchomienie
-
-### Lokalnie:
+### Uruchomienie
 
 ```bash
 cd backend
@@ -145,79 +36,540 @@ npm install
 npm start
 ```
 
-### Z Docker:
+Serwer uruchomi się na porcie **3000**.
+
+Alternatywnie, użyj Docker:
 
 ```bash
-docker-compose up backend
+docker build -t zglosto-backend .
+docker run -p 3000:3000 zglosto-backend
 ```
 
-Server będzie dostępny na `http://localhost:3000`
+## Architektura API
 
-## Struktura odpowiedzi
+API jest podzielone na trzy główne grupy endpointów:
 
-### Sukces:
+- **Mieszkańcy** (`/mieszkaniec/*`) - publiczne endpointy bez autoryzacji
+- **Służby** (`/sluzby/*`) - chronione endpointy wymagające autoryzacji służb
+- **Administratorzy** (`/admin/*`) - chronione endpointy wymagające autoryzacji administratora
 
+### Autoryzacja
+
+Większość endpointów wymaga autoryzacji poprzez Better Auth. System używa sesji opartych na cookies z kontrolą dostępu opartą na rolach (`uprawnienia` w bazie danych).
+
+## Dostępne endpointy
+
+Wszystkie endpointy są dostępne pod adresem `http://localhost:3000`.
+
+---
+
+### 1. Endpointy dla mieszkańców (publiczne)
+
+#### Pobieranie zgłoszeń użytkownika
+
+**Endpoint:** `GET /mieszkaniec/incydenty`
+
+**Opis:** Pobiera wszystkie zgłoszenia powiązane z adresem email zgłaszającego.
+
+**Query Parameters:**
+- `email` (string, wymagane) - Adres email użytkownika
+
+**Przykład curl:**
+```bash
+curl "http://localhost:3000/mieszkaniec/incydenty?email=user@example.com"
+```
+
+**Przykład fetch (JavaScript):**
+```javascript
+const response = await fetch('http://localhost:3000/mieszkaniec/incydenty?email=user@example.com');
+const data = await response.json();
+console.log(data);
+```
+
+**Response (Success):**
+```json
+[
+  {
+    "id_zgloszenia": 1,
+    "opis_zgloszenia": "Dziura w drodze",
+    "mail_zglaszajacego": "user@example.com",
+    "typ_sluzby": "DROGI",
+    "status_incydentu": "ZGŁOSZONY",
+    "data_zgloszenia": "2024-11-20T10:00:00.000Z",
+    "zdjecie_incydentu_zglaszanego": null
+  }
+]
+```
+
+---
+
+#### Dodanie nowego zgłoszenia
+
+**Endpoint:** `POST /mieszkaniec/incydenty`
+
+**Opis:** Dodaje nowe zgłoszenie. Jeśli nie podano typu służby, domyślnie zostaje ustawione jako "Inne" (przekazane do administratora).
+
+**Request Body:**
+```json
+{
+  "opis_zgloszenia": "Dziura w drodze na ulicy głównej",
+  "mail_zglaszajacego": "user@example.com",
+  "typ_sluzby": "DROGI",
+  "zdjecie_incydentu_zglaszanego": "base64-encoded-image-string"
+}
+```
+
+**Wymagane pola:**
+- `opis_zgloszenia` (string) - Opis zgłoszenia
+- `mail_zglaszajacego` (string) - Adres email zgłaszającego
+
+**Opcjonalne pola:**
+- `typ_sluzby` (string) - Typ służby (domyślnie: "Inne")
+- `zdjecie_incydentu_zglaszanego` (string) - Zdjęcie w formacie base64
+
+**Przykład curl:**
+```bash
+curl -X POST http://localhost:3000/mieszkaniec/incydenty \
+  -H "Content-Type: application/json" \
+  -d '{
+    "opis_zgloszenia": "Dziura w drodze na ulicy głównej",
+    "mail_zglaszajacego": "user@example.com",
+    "typ_sluzby": "DROGI"
+  }'
+```
+
+**Przykład fetch (JavaScript):**
+```javascript
+const response = await fetch('http://localhost:3000/mieszkaniec/incydenty', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    opis_zgloszenia: 'Dziura w drodze na ulicy głównej',
+    mail_zglaszajacego: 'user@example.com',
+    typ_sluzby: 'DROGI'
+  })
+});
+
+const data = await response.json();
+console.log(data);
+```
+
+**Response (Success):**
 ```json
 {
   "success": true,
-  "data": { ... }
+  "incydent": {
+    "id_zgloszenia": 1,
+    "opis_zgloszenia": "Dziura w drodze na ulicy głównej",
+    "mail_zglaszajacego": "user@example.com",
+    "typ_sluzby": "DROGI",
+    "status_incydentu": "ZGŁOSZONY",
+    "data_zgloszenia": "2024-11-20T10:00:00.000Z"
+  }
 }
 ```
 
-### Błąd autoryzacji:
+---
+
+#### Pobieranie zakończonych zgłoszeń użytkownika
+
+**Endpoint:** `GET /mieszkaniec/incydenty/zakonczone`
+
+**Opis:** Pobiera zakończone zgłoszenia (status = NAPRAWIONY) dla danego adresu email.
+
+**Query Parameters:**
+- `email` (string, wymagane) - Adres email użytkownika
+
+**Przykład curl:**
+```bash
+curl "http://localhost:3000/mieszkaniec/incydenty/zakonczone?email=user@example.com"
+```
+
+**Response (Success):**
+```json
+[
+  {
+    "id_zgloszenia": 1,
+    "opis_zgloszenia": "Dziura w drodze",
+    "mail_zglaszajacego": "user@example.com",
+    "typ_sluzby": "DROGI",
+    "status_incydentu": "NAPRAWIONY",
+    "zdjecie_incydentu_rozwiazanego": "base64-encoded-image-data"
+  }
+]
+```
+
+---
+
+#### Pobieranie ostatnich zakończonych zgłoszeń (strona główna)
+
+**Endpoint:** `GET /mieszkaniec/incydenty/glowna`
+
+**Opis:** Pobiera ostatnie 15 zakończonych zgłoszeń (status = NAPRAWIONY) posortowane po dacie rozwiązania.
+
+**Przykład curl:**
+```bash
+curl http://localhost:3000/mieszkaniec/incydenty/glowna
+```
+
+---
+
+### 2. Endpointy dla służb miejskich (wymagają autoryzacji)
+
+Wszystkie endpointy w tej grupie wymagają autoryzacji z rolą "sluzby".
+
+#### Pobieranie zgłoszeń przypisanych do służby
+
+**Endpoint:** `GET /sluzby/incydenty`
+
+**Opis:** Pobiera zgłoszenia przypisane do danej służby (na podstawie typu uprawnień użytkownika).
+
+**Przykład curl:**
+```bash
+curl -H "Cookie: better-auth.session_token=YOUR_SESSION_TOKEN" \
+     http://localhost:3000/sluzby/incydenty
+```
+
+**Response (Success):**
+```json
+[
+  {
+    "id_zgloszenia": 1,
+    "opis_zgloszenia": "Dziura w drodze",
+    "mail_zglaszajacego": "user@example.com",
+    "typ_sluzby": "DROGI",
+    "status_incydentu": "ZGŁOSZONY",
+    "data_zgloszenia": "2024-11-20T10:00:00.000Z"
+  }
+]
+```
+
+---
+
+#### Statystyki służby
+
+**Endpoint:** `GET /sluzby/statystyki`
+
+**Opis:** Zwraca podstawowe statystyki (liczba zgłoszeń wg statusów) dla danej służby.
+
+**Przykład curl:**
+```bash
+curl -H "Cookie: better-auth.session_token=YOUR_SESSION_TOKEN" \
+     http://localhost:3000/sluzby/statystyki
+```
+
+**Response (Success):**
+```json
+[
+  {
+    "status_incydentu": "ZGŁOSZONY",
+    "liczba": 5
+  },
+  {
+    "status_incydentu": "W TRAKCIE NAPRAWY",
+    "liczba": 3
+  },
+  {
+    "status_incydentu": "NAPRAWIONY",
+    "liczba": 12
+  }
+]
+```
+
+---
+
+#### Aktualizacja statusu zgłoszenia
+
+**Endpoint:** `PATCH /sluzby/incydenty/:id/status`
+
+**Opis:** Aktualizuje status zgłoszenia.
+
+**Request Body:**
+```json
+{
+  "status_incydentu": "W TRAKCIE NAPRAWY"
+}
+```
+
+**Wymagane pola:**
+- `status_incydentu` (string) - Nowy status: "ZGŁOSZONY", "W TRAKCIE NAPRAWY", "NAPRAWIONY"
+
+**Przykład curl:**
+```bash
+curl -X PATCH http://localhost:3000/sluzby/incydenty/1/status \
+  -H "Content-Type: application/json" \
+  -H "Cookie: better-auth.session_token=YOUR_SESSION_TOKEN" \
+  -d '{"status_incydentu": "W TRAKCIE NAPRAWY"}'
+```
+
+**Response (Success):**
+```json
+{
+  "success": true,
+  "incydent": {
+    "id_zgloszenia": 1,
+    "status_incydentu": "W TRAKCIE NAPRAWY"
+  }
+}
+```
+
+---
+
+#### Aktualizacja sprawdzenia zgłoszenia
+
+**Endpoint:** `PATCH /sluzby/incydenty/:id/sprawdzenie`
+
+**Opis:** Ustawia flagę sprawdzenia zgłoszenia.
+
+**Request Body:**
+```json
+{
+  "sprawdzenie_incydentu": true
+}
+```
+
+**Przykład curl:**
+```bash
+curl -X PATCH http://localhost:3000/sluzby/incydenty/1/sprawdzenie \
+  -H "Content-Type: application/json" \
+  -H "Cookie: better-auth.session_token=YOUR_SESSION_TOKEN" \
+  -d '{"sprawdzenie_incydentu": true}'
+```
+
+---
+
+#### Przekierowanie zgłoszenia do innej służby
+
+**Endpoint:** `PATCH /sluzby/incydenty/:id/typ`
+
+**Opis:** Przekierowuje zgłoszenie do innej służby.
+
+**Request Body:**
+```json
+{
+  "typ_sluzby": "ŚWIATŁA ULICZNE"
+}
+```
+
+**Przykład curl:**
+```bash
+curl -X PATCH http://localhost:3000/sluzby/incydenty/1/typ \
+  -H "Content-Type: application/json" \
+  -H "Cookie: better-auth.session_token=YOUR_SESSION_TOKEN" \
+  -d '{"typ_sluzby": "ŚWIATŁA ULICZNE"}'
+```
+
+---
+
+#### Dodanie zdjęcia po rozwiązaniu zgłoszenia
+
+**Endpoint:** `POST /sluzby/incydenty/:id/zdjecie_rozwiazane`
+
+**Opis:** Dodaje zdjęcie po rozwiązaniu zgłoszenia.
+
+**Request Body:**
+```json
+{
+  "zdjecie_incydentu_rozwiazanego": "base64-encoded-image-string"
+}
+```
+
+**Przykład curl:**
+```bash
+curl -X POST http://localhost:3000/sluzby/incydenty/1/zdjecie_rozwiazane \
+  -H "Content-Type: application/json" \
+  -H "Cookie: better-auth.session_token=YOUR_SESSION_TOKEN" \
+  -d '{"zdjecie_incydentu_rozwiazanego": "iVBORw0KGgoAAAANSUhEUgAA..."}'
+```
+
+---
+
+### 3. Endpointy dla administratorów (wymagają autoryzacji)
+
+Wszystkie endpointy w tej grupie wymagają autoryzacji z rolą "admin".
+
+#### Pełne statystyki wszystkich służb
+
+**Endpoint:** `GET /admin/statystyki`
+
+**Opis:** Zwraca pełne statystyki wszystkich służb (liczba zgłoszeń wg typu służby i statusu).
+
+**Przykład curl:**
+```bash
+curl -H "Cookie: better-auth.session_token=YOUR_SESSION_TOKEN" \
+     http://localhost:3000/admin/statystyki
+```
+
+**Response (Success):**
+```json
+[
+  {
+    "typ_sluzby": "DROGI",
+    "status_incydentu": "ZGŁOSZONY",
+    "liczba": 5
+  },
+  {
+    "typ_sluzby": "DROGI",
+    "status_incydentu": "NAPRAWIONY",
+    "liczba": 12
+  },
+  {
+    "typ_sluzby": "ŚWIATŁA ULICZNE",
+    "status_incydentu": "ZGŁOSZONY",
+    "liczba": 3
+  }
+]
+```
+
+---
+
+#### Zmiana przypisania zgłoszenia
+
+**Endpoint:** `PATCH /admin/incydenty/:id/typ`
+
+**Opis:** Zmienia przypisanie zgłoszenia do innej służby.
+
+**Request Body:**
+```json
+{
+  "typ_sluzby": "DROGI"
+}
+```
+
+**Przykład curl:**
+```bash
+curl -X PATCH http://localhost:3000/admin/incydenty/1/typ \
+  -H "Content-Type: application/json" \
+  -H "Cookie: better-auth.session_token=YOUR_SESSION_TOKEN" \
+  -d '{"typ_sluzby": "DROGI"}'
+```
+
+---
+
+#### Zmiana statusu zgłoszenia (admin)
+
+**Endpoint:** `PATCH /admin/incydenty/:id/status`
+
+**Opis:** Administrator może ustawić dowolny status zgłoszenia, także cofnąć status.
+
+**Request Body:**
+```json
+{
+  "status_incydentu": "NAPRAWIONY"
+}
+```
+
+**Przykład curl:**
+```bash
+curl -X PATCH http://localhost:3000/admin/incydenty/1/status \
+  -H "Content-Type: application/json" \
+  -H "Cookie: better-auth.session_token=YOUR_SESSION_TOKEN" \
+  -d '{"status_incydentu": "NAPRAWIONY"}'
+```
+
+---
+
+#### Przypisanie użytkownika do służby
+
+**Endpoint:** `PATCH /admin/uzytkownicy/typ_uprawnien`
+
+**Opis:** Przypisuje użytkownika do konkretnej służby i ustawia jego uprawnienia.
+
+**Request Body:**
+```json
+{
+  "email": "pracownik@sluzby.pl",
+  "typ_uprawnien": "DROGI",
+  "uprawnienia": "sluzby"
+}
+```
+
+**Wymagane pola:**
+- `email` (string) - Adres email użytkownika
+- `typ_uprawnien` (string) - Typ służby do przypisania
+
+**Opcjonalne pola:**
+- `uprawnienia` (string) - Poziom uprawnień (domyślnie: "sluzby")
+
+**Przykład curl:**
+```bash
+curl -X PATCH http://localhost:3000/admin/uzytkownicy/typ_uprawnien \
+  -H "Content-Type: application/json" \
+  -H "Cookie: better-auth.session_token=YOUR_SESSION_TOKEN" \
+  -d '{
+    "email": "pracownik@sluzby.pl",
+    "typ_uprawnien": "DROGI",
+    "uprawnienia": "sluzby"
+  }'
+```
+
+**Response (Success):**
+```json
+{
+  "success": true,
+  "updated": {
+    "id_uzytkownika": "user-id",
+    "uprawnienia": "sluzby",
+    "typ_uprawnien": "DROGI"
+  }
+}
+```
+
+---
+
+### 4. Dodatkowe endpointy
+
+#### Chroniony endpoint testowy
+
+**Endpoint:** `GET /api/protected`
+
+**Opis:** Testowy chroniony endpoint dla służb (głównie do testowania autoryzacji).
+
+**Przykład curl:**
+```bash
+curl -H "Cookie: better-auth.session_token=YOUR_SESSION_TOKEN" \
+     http://localhost:3000/api/protected
+```
+
+**Response (Success):**
+```json
+{
+  "message": "To jest odpowiedź z API"
+}
+```
+
+---
+
+## Obsługa błędów
+
+Wszystkie endpointy zwracają błędy w formacie JSON:
 
 ```json
 {
-  "error": "Unauthorized",
-  "message": "Musisz być zalogowany aby uzyskać dostęp do tego zasobu"
+  "error": "opis błędu"
 }
 ```
 
-### Błąd uprawnień:
+**Najczęstsze kody błędów:**
+- `400` - Nieprawidłowe dane wejściowe
+- `401` - Brak autoryzacji lub niewystarczające uprawnienia
+- `404` - Nie znaleziono zasobu
+- `500` - Błąd serwera
 
-```json
-{
-  "error": "Forbidden",
-  "message": "Nie masz uprawnień do tego zasobu"
-}
-```
+## Rozwiązywanie problemów
 
-### Błąd serwisu:
+### Błąd połączenia z bazą danych
+Sprawdź `DATABASE_URL` w zmiennych środowiskowych i upewnij się, że PostgreSQL jest uruchomiony.
 
-```json
-{
-  "error": "Service unavailable",
-  "message": "Serwis autoryzacji jest tymczasowo niedostępny"
-}
-```
+### Problemy z autoryzacją
+- Upewnij się, że serwer autoryzacji (Better Auth) jest uruchomiony
+- Sprawdź poprawność `AUTH_SERVICE_URL`
+- Weryfikuj obecność i ważność cookies sesyjnych
 
-## Dostęp do danych użytkownika w handlerach
+### Problemy z CORS
+Serwer ma włączony CORS dla wszystkich origin, ale upewnij się, że frontend wysyła odpowiednie nagłówki.
 
-Po przejściu przez middleware `verifySession`, masz dostęp do:
-
-```javascript
-router.get('/example', verifySession, (req, res) => {
-  console.log(req.user);    // Dane użytkownika
-  console.log(req.session); // Dane sesji
-  
-  // req.user:
-  // {
-  //   id: "...",
-  //   email: "jan@example.com",
-  //   name: "Jan Kowalski",
-  //   ...
-  // }
-});
-```
-
-## Dalsze kroki
-
-1. **Dodaj middleware do routerów** - Zobacz `MIDDLEWARE_EXAMPLE.md`
-2. **Dostosuj weryfikację ról** - Edytuj `requireRole` w `middleware/auth.js`
-3. **Testuj endpointy** - Użyj curl lub Postman z cookies
-
-## Linki
-
-- [Dokumentacja middleware](middleware/README.md)
-- [Przykłady użycia](MIDDLEWARE_EXAMPLE.md)
-- [Dokumentacja Authorization Service](../authorization/README_AUTH.md)
+### Duże pliki graficzne
+Endpointy obsługują zdjęcia w formacie base64. Limit rozmiaru request body to 10MB (konfigurowalne w `body-parser`).
