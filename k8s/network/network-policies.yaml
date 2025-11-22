@@ -1,0 +1,98 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: internal-net-policy
+  namespace: zglosto
+spec:
+  podSelector: {}  # Dotyczy wszystkich podów w namespace
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Pozwól na ruch wewnętrzny między usługami
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: zglosto
+    ports:
+    - protocol: TCP
+      port: 54325  # PostgreSQL
+    - protocol: TCP
+      port: 9955   # Authorization
+    - protocol: TCP
+      port: 3000   # Backend
+    - protocol: TCP
+      port: 8123   # LLM Service
+    - protocol: TCP
+      port: 80     # Frontend, PgAdmin
+    - protocol: TCP
+      port: 1235   # Nginx main
+    - protocol: TCP
+      port: 9753   # Nginx pgadmin
+  # Pozwól na ruch z ingress controllera
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 1235
+    - protocol: TCP
+      port: 9753
+  egress:
+  # Pozwól na DNS
+  - ports:
+    - protocol: UDP
+      port: 53
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: external-access-policy
+  namespace: zglosto
+spec:
+  podSelector:
+    matchLabels:
+      app: nginx
+  policyTypes:
+  - Ingress
+  ingress:
+  # Pozwól na ruch z ingress controllera
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 1235
+    - protocol: TCP
+      port: 9753
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: llm-egress-policy
+  namespace: zglosto
+spec:
+  podSelector:
+    matchLabels:
+      app: llm-service
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 80
+    - protocol: UDP
+      port: 53
+
+
+
+

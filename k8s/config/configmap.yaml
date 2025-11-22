@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: zglosto-config
+  namespace: zglosto
+data:
+  POSTGRES_PORT:
+  POSTGRES_DB:
+  POSTGRES_USER:
+  DB_HOST:
+
+  NODE_ENV:
+
+  BETTER_AUTH_URL:
+  AUTH_SERVICE_URL:
+
+  PGADMIN_DEFAULT_EMAIL:

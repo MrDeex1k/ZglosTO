@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: llm-service
+  namespace: zglosto
+  labels:
+    app: llm-service
+spec:
+  selector:
+    app: llm-service
+  ports:
+  - name: http
+    port: 8123
+    targetPort: 8123
+    protocol: TCP
+  type: ClusterIP
+
+
+
+

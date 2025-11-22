@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: database
+  namespace: zglosto
+  labels:
+    app: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: database
+  template:
+    metadata:
+      labels:
+        app: database
+    spec:
+      containers:
+      - name: database
+        image: docker.io/zglosto/database:latest  # Zmień na odpowiedni tag
+        imagePullPolicy: IfNotPresent
+        command:
+        - "/usr/local/bin/docker-entrypoint.sh"
+        - "postgres"
+        - "-c"
+        - "port=54325"
+        ports:
+        - containerPort: 54325
+        env:
+        - name: POSTGRES_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: zglosto-config
+              key: POSTGRES_PORT
+        - name: POSTGRES_DB
+          valueFrom:
+            configMapKeyRef:
+              name: zglosto-config
+              key: POSTGRES_DB
+        - name: POSTGRES_USER
+          valueFrom:
+            configMapKeyRef:
+              name: zglosto-config
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: zglosto-secret
+              key: POSTGRES_PASSWORD
+        - name: PGDATA
+          value: "/var/lib/postgresql/data/pgdata"
+        - name: POSTGRES_INITDB_ARGS
+          value: "--auth-host=scram-sha-256"
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+        - name: pgbackrest-data
+          mountPath: /var/lib/pgbackrest
+        - name: init-scripts
+          mountPath: /docker-entrypoint-initdb.d
+        - name: pgbackrest-config
+          mountPath: /etc/pgbackrest/pgbackrest.conf
+          subPath: pgbackrest.conf
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          exec:
+            command:
+              - "/bin/sh"
+              - "-c"
+              - "pg_isready -p 54325 -U ${POSTGRES_USER} -d ${POSTGRES_DB}"
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+              - "/bin/sh"
+              - "-c"
+              - "pg_isready -p 54325 -U ${POSTGRES_USER} -d ${POSTGRES_DB}"
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      volumes:
+      - name: postgres-data
+        persistentVolumeClaim:
+          claimName: postgres-data-pvc
+      - name: pgbackrest-data
+        persistentVolumeClaim:
+          claimName: pgbackrest-data-pvc
+      - name: init-scripts
+        configMap:
+          name: database-init-scripts
+      - name: pgbackrest-config
+        configMap:
+          name: pgbackrest-config
+

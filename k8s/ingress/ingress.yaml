@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: zglosto-ingress
+  namespace: zglosto
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: localhost  # Zmień na swoją domenę
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: nginx
+            port:
+              number: 1235
+      - path: /pgadmin
+        pathType: Prefix
+        backend:
+          service:
+            name: nginx
+            port:
+              number: 9753

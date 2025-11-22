@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-service
+  namespace: zglosto
+  labels:
+    app: llm-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: llm-service
+  template:
+    metadata:
+      labels:
+        app: llm-service
+    spec:
+      containers:
+      - name: llm-service
+        image: docker.io/zglosto/llm-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8123
+        env:
+        - name: HF_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: zglosto-secret
+              key: HF_TOKEN
+        volumeMounts:
+        - name: huggingface-cache
+          mountPath: /root/.cache/huggingface
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "8Gi"
+            cpu: "2000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8123
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8123
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        # securityContext removed: image requires root user; consider rebuilding image to run as non-root
+      volumes:
+      - name: huggingface-cache
+        persistentVolumeClaim:
+          claimName: huggingface-cache-pvc

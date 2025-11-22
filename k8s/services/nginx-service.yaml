@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  namespace: zglosto
+  labels:
+    app: nginx
+spec:
+  selector:
+    app: nginx
+  ports:
+  - name: main-app
+    port: 1235
+    targetPort: 1235
+    protocol: TCP
+  - name: pgadmin
+    port: 9753
+    targetPort: 9753
+    protocol: TCP
+  type: NodePort  # Dla lokalnego środowiska - używa portów węzła
