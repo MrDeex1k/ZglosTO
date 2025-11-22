@@ -1,34 +1,92 @@
-# ZglosTO  
+# ZglosTO
 
-Serwis umożliwiający zgłaszanie incydentów w mieście  
+Serwis umożliwiający zgłaszanie incydentów w mieście.
 
-## Zmienne środowiskowe  
+Ten README zawiera dwie ścieżki uruchomienia:
+
+- Szybkie uruchomienie lokalne — Docker Compose (zalecane do developmentu)
+- Wdrożenie na Kubernetes — pełne środowisko (testy/zdalne środowiska)
+
+------------------------------------------------------------
+
+## 1) Szybkie uruchomienie — Docker Compose
+
+Najprostszy sposób na lokalne uruchomienie wszystkich usług w jednym środowisku.
+
+1. Zbuduj obrazy (opcjonalnie):
+
+```bash
+docker compose build
 ```
-#Node environment
-NODE_ENV=...
 
-#Postgres 
-POSTGRES_USER=...
-POSTGRES_PASSWORD=...
-POSTGRES_DB=...
-POSTGRES_PORT=...
-DB_HOST=...
-DATABASE_URL=...
+2. Uruchom w trybie deweloperskim:
 
-#PgAdmin
-PGADMIN_DEFAULT_EMAIL=...
-PGADMIN_DEFAULT_PASSWORD=...
+```bash
+docker compose up
+# lub w tle
+docker compose up -d
+```
 
-#BETTER-AUTH
-BETTER_AUTH_SECRET=...
-BETTER_AUTH_URL=...
-AUTH_SERVICE_URL=...
+3. Domyślne zmienne środowiskowe (przykład — dopasuj do siebie):
 
-#LLM
+```
+NODE_ENV=
+
+POSTGRES_USER=
+POSTGRES_PASSWORD=
+POSTGRES_DB=
+POSTGRES_PORT=
+DB_HOST=
+
+PGADMIN_DEFAULT_EMAIL=
+PGADMIN_DEFAULT_PASSWORD=
+
+BETTER_AUTH_SECRET=replace_me
+AUTH_SERVICE_URL=
+
 HF_TOKEN=...
 ```
 
-## Proces uruchomienia
-1. Wchodzimy w katalog ZglosTO .  
-2. Uruchamiamy komendę "docker compose build" .  
-3. Uruchamiamy komendę "docker compose up" lub "docker compose up -d", jeśli chcemy uruchomić w tle.  
+4. Sprawdź logi i dostępność:
+
+```bash
+docker compose logs -f backend
+docker compose ps
+```
+
+------------------------------------------------------------
+
+## 2) Wdrożenie na Kubernetes (minikube / kind)
+
+Jeśli potrzebujesz pełniejszego środowiska z oddzielnymi usługami, użyj Kubernetes. Instrukcja znajduje się w `k8s/README_K8s.md`.
+
+Podsumowanie kroków:
+
+1. Zbuduj obrazy lokalnie i udostępnij je klastrowi (minikube/kind):
+
+```bash
+# Dla minikube
+eval "$(minikube docker-env --shell zsh)"
+./build-images.sh latest
+
+# Dla kind
+./build-images.sh latest
+kind load docker-image zglosto/backend:latest
+```
+
+2. Zaktualizuj `k8s/config/secret.yaml` z właściwymi hasłami lub skorzystaj z SealedSecrets/ExternalSecrets.
+
+3. Uruchom skrypt wdrożeniowy (w katalogu repozytorium):
+
+```bash
+./deploy.sh zglosto
+```
+
+4. Sprawdź status i logi:
+
+```bash
+kubectl get pods -n zglosto
+kubectl logs -n zglosto deployment/backend --tail=200
+```
+
+Pełną, szczegółową instrukcję dla Kubernetes znajdziesz w `k8s/README_K8s.md`.
