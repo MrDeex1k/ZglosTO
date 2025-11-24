@@ -5,3 +5,9 @@ metadata:
   labels:
     name: zglosto
     app: zglosto
+    # Pod Security Standards - pozwalamy na runAsNonRoot: false
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/enforce-version: v1.34
+    # Ostrzeżenia dla baseline - monitorujemy potencjalne problemy bezpieczeństwa
+    pod-security.kubernetes.io/warn: baseline
+    pod-security.kubernetes.io/warn-version: v1.34

@@ -14,7 +14,4 @@ spec:
     targetPort: 3000
     protocol: TCP
   type: ClusterIP
-
-
-
-
+  sessionAffinity: None

@@ -14,7 +14,4 @@ spec:
     targetPort: 9955
     protocol: TCP
   type: ClusterIP
-
-
-
-
+  sessionAffinity: None

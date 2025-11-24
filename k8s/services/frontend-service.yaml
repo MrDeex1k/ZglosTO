@@ -14,3 +14,4 @@ spec:
     targetPort: 80
     protocol: TCP
   type: ClusterIP
+  sessionAffinity: None
