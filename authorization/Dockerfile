@@ -17,7 +17,7 @@ RUN bun install
 # Skopiuj resztę plików aplikacji
 COPY . .
 
-# Domyślny port aplikacji (zgodny z backend/index.js)
+# Domyślny port aplikacji
 EXPOSE 9955
 
 CMD ["bun", "start"]

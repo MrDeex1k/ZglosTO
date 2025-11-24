@@ -3,7 +3,7 @@ FROM node:24-alpine
 # Ustaw katalog roboczy
 WORKDIR /app
 
-# Zainstaluj curl/bash i Bun (używany jako package manager zamiast npm)
+# Zainstaluj curl/bash i Bun
 RUN apk add --no-cache curl bash libc6-compat && \
 	curl -fsSL https://bun.sh/install | bash
 
@@ -17,7 +17,7 @@ RUN bun install
 # Skopiuj resztę plików aplikacji
 COPY . .
 
-# Domyślny port aplikacji (zgodny z backend/index.js)
+# Domyślny port aplikacji
 EXPOSE 3000
 
 CMD ["bun", "index.js"]

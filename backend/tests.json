@@ -2,8 +2,7 @@
   "info": {
     "_postman_id": "8d1a53d9-7e21-4e2d-b4f1-6dbd8d6f4a5c",
     "name": "Incydenty - API Testy",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "chatgpt"
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
