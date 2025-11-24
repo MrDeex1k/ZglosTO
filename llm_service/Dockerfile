@@ -21,8 +21,5 @@ RUN uv sync
 # Make start script executable
 RUN chmod +x start.sh
 
-# Expose port
-EXPOSE 8123
-
 # Run the application
 CMD ["./start.sh"]

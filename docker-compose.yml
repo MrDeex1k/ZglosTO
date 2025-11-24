@@ -54,8 +54,6 @@ services:
   llm_service:
     build:
       context: ./llm_service
-    ports:
-      - "8123:8123"
     env_file:
       - .env
     volumes:
