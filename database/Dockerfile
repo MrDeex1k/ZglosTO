@@ -6,6 +6,7 @@ LABEL description="PostgreSQL 18 database for ZglosTO application"
 RUN apt-get update && apt-get install -y postgresql-18-cron pgbackrest && rm -rf /var/lib/apt/lists/*
 
 RUN echo "shared_preload_libraries = 'pg_cron'" >> /usr/share/postgresql/postgresql.conf.sample
+RUN echo "cron.database_name = 'zglosto_db'" >> /usr/share/postgresql/postgresql.conf.sample
 
 COPY pgbackrest.conf /etc/pgbackrest/pgbackrest.conf
 
