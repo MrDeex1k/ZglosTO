@@ -78,7 +78,7 @@ router.get('/incydenty/glowna', async (req, res) => {
   try {
 
     const q = `
-      SELECT id_zgloszenia, opis_zgloszenia, mail_zglaszajacego, typ_sluzby, status_incydentu, zdjecie_incydentu_rozwiazanego
+      SELECT id_zgloszenia, opis_zgloszenia, adres_zgloszenia, typ_sluzby, status_incydentu, zdjecie_incydentu_rozwiazanego, data_zgloszenia, godzina_zgloszenia, data_rozwiazania, godzina_rozwiazania
       FROM incydenty
       WHERE status_incydentu = 'NAPRAWIONY'
       ORDER BY data_rozwiazania

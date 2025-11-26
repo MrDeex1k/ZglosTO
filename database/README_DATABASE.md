@@ -22,13 +22,13 @@ Baza danych składa się z czterech głównych części inicjalizowanych w kolej
 1. **Rozszerzenia i konfiguracja bazy** (`01-init.sql`) - rozszerzenia PostgreSQL, tworzenie roli administratora i bazy danych
 2. **Tabele autoryzacji** (`02-create-auth.sql`) - tabele dla systemu Better Auth zgodnie z najnowszymi standardami
 3. **Tabele aplikacji** (`03-create-dbtables.sql`) - tabele biznesowe (incydenty, użytkownicy rozszerzeni)
-4. **Backup bazy danych** (`04-setup-backup.sql`) - backup bazy danych
+4. **Backup bazy danych** (`04-setup-backup.sql`) - automatyczne tworzenie kopii zapasowych
 
 Poniżej znajduje się opis struktury bazy (PostgreSQL 18) używanej przez aplikację.
 
 ### Typy ENUM
 - `status_incydentu_enum` — wartości: `ZGŁOSZONY`, `W TRAKCIE NAPRAWY`, `NAPRAWIONY`
-- `typ_sluzby_enum` — wartości: `Miejskie Przedsiębiorstwo Komunikacyjne`, `Zakład Gospodarki Komunalnej`, `Pogotowie Kanalizacyjne`, `Zarząd Dróg`, `Inne`
+- `typ_sluzby_enum` — wartości: `Miejskie Przedsiębiorstwo Energetyki Cieplnej`, `Miejskie Przedsiębiorstwo Komunikacyjne`, `Zakład Gospodarki Komunalnej`, `Pogotowie Kanalizacyjne`, `Zarząd Dróg`, `Inne`
 - `uprawnienia_enum` — wartości: `mieszkaniec`, `sluzby`, `admin`
 
 ### Tabele autoryzacji (Better Auth)
@@ -109,11 +109,13 @@ Kolumny:
 - `id_zgloszenia` uuid PRIMARY KEY DEFAULT uuidv7() — domyślnie generowane funkcją `uuidv7()`
 - `opis_zgloszenia` varchar(255) NOT NULL — opis zgłoszenia (max 255 znaków)
 - `mail_zglaszajacego` varchar(50) NOT NULL — adres mailowy zgłaszającego (max 50 znaków)
+- `adres_zgloszenia` varchar(50) NOT NULL — adres miejsca zgłoszenia incydentu (max 50 znaków)
 - `zdjecie_incydentu_zglaszanego` bytea — opcjonalne zdjęcie incydentu zgłoszonego przez mieszkańca
 - `zdjecie_incydentu_rozwiazanego` bytea — opcjonalne zdjęcie po rozwiązaniu incydentu przez służby
 - `sprawdzenie_incydentu` boolean NOT NULL DEFAULT FALSE — czy incydent został sprawdzony
 - `status_incydentu` `status_incydentu_enum` NOT NULL DEFAULT 'ZGŁOSZONY'
-- `typ_sluzby` `typ_sluzby_enum` — typ służby odpowiedzialnej (opcjonalne)
+- `typ_sluzby` `typ_sluzby_enum` — typ służby odpowiedzialnej
+- `LLM_odpowiedz` text DEFAULT NULL — odpowiedź systemu LLM
 - `data_zgloszenia` date DEFAULT now() — data zgłoszenia domyślnie teraz
 - `godzina_zgloszenia` time DEFAULT now() — godzina zgłoszenia domyślnie teraz
 - `data_rozwiazania` date DEFAULT NULL — data rozwiązania domyślnie NULL
@@ -156,22 +158,10 @@ Obecnie dostępne skrypty:
    - Tworzy tabele: `incydenty`, `uzytkownicy`
    - Dodaje indeksy optymalizacyjne
 
-4. **`05-insert-example-users.sql`** - przykładowe dane użytkowników (opcjonalne)
-   - Wstawia 10 przykładowych użytkowników z różnymi rolami do tabeli `users`
-   - Tworzy odpowiadające im konta w tabeli `accounts` z zahashowanymi hasłami
-   - Używane tylko do celów testowych/demo
-
-5. **`06-insert-example-uzytkownicy.sql`** - rozszerzone dane użytkowników (opcjonalne)
-   - Wstawia rozszerzone informacje o użytkownikach z uprawnieniami
-   - Powiązane z tabelą `users`
-
-6. **`07-insert-example-incydenty.sql`** - przykładowe zgłoszenia incydentów (opcjonalne)
-   - Wstawia 13 przykładowych zgłoszeń w różnych statusach
-   - Zawiera realistyczne dane testowe
-
-7. **`08-insert-example-sessions-tokens.sql`** - przykładowe sesje i wartości weryfikacyjne (opcjonalne)
-   - Wstawia sesje użytkowników i wartości weryfikacyjne (reset hasła, weryfikacja email)
-   - Różne stany wartości weryfikacyjnych (aktywne, wygasłe)
+4. **`04-setup-backup.sql`** - automatyczne tworzenie kopii zapasowych
+   - Instaluje rozszerzenie `pg_cron` dla harmonogramu zadań
+   - Tworzy funkcję `perform_backup()` do wykonywania kopii zapasowych
+   - Konfiguruje automatyczne wykonywanie backupu co 48 godzin przy użyciu pgBackRest
 
 #### Jak dodać nowy skrypt?
 
@@ -213,9 +203,20 @@ docker-compose logs database
 
 ### Backup bazy danych
 
+System automatycznie wykonuje pełne kopie zapasowe co 48 godzin przy użyciu pgBackRest.
+
+#### Ręczne wykonanie backupu
+
 ```bash
 docker-compose exec database pg_dump -U zglosto_user zglosto_db > backup.sql
 ```
+
+#### Automatyczne backupy pgBackRest
+
+System jest skonfigurowany do automatycznego tworzenia kopii zapasowych przy użyciu pgBackRest:
+- **Częstotliwość**: Co 48 godzin
+- **Typ**: Pełne kopie zapasowe (full backup)
+- **Narzędzie**: pgBackRest z stanza `zglosto_db`
 
 ### Przywracanie z backupu
 

@@ -138,6 +138,7 @@ data:
     	id_zgloszenia uuid PRIMARY KEY DEFAULT uuidv7(),
     	opis_zgloszenia varchar(255) NOT NULL,
     	mail_zglaszajacego varchar(50) NOT NULL,
+    	adres_zgloszenia varchar(50) NOT NULL,
     	zdjecie_incydentu_zglaszanego bytea,
     	zdjecie_incydentu_rozwiazanego bytea,
     	sprawdzenie_incydentu boolean NOT NULL DEFAULT FALSE,

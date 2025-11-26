@@ -214,6 +214,24 @@ curl "http://localhost:3000/mieszkaniec/incydenty/zakonczone?email=user@example.
 curl http://localhost:3000/mieszkaniec/incydenty/glowna
 ```
 
+**Response (Success):**
+```json
+[
+  {
+    "id_zgloszenia": "uuid-here",
+    "opis_zgloszenia": "Naprawiona dziura w drodze",
+    "adres_zgloszenia": "ul. Główna 15, Warszawa",
+    "typ_sluzby": "Zarząd Dróg",
+    "status_incydentu": "NAPRAWIONY",
+    "zdjecie_incydentu_rozwiazanego": "base64-encoded-image-data",
+    "data_zgloszenia": "2024-11-15",
+    "godzina_zgloszenia": "14:30:00",
+    "data_rozwiazania": "2024-11-20",
+    "godzina_rozwiazania": "16:45:00"
+  }
+]
+```
+
 ---
 
 ### 2. Endpointy dla służb miejskich (wymagają autoryzacji)
