@@ -7,8 +7,8 @@
  * - 'register': Widok rejestracji nowych użytkowników
  * - 'dashboard': Panel użytkownika (routing wewnętrzny w zależności od roli):
  *   - 'admin': Panel Administratorski - zarządzanie wszystkimi zgłoszeniami
- *   - 'service': Panel Służby - zarządzanie zgłoszeniami przypisanymi do konkretnej służby
- *   - 'resident': Panel Mieszkańca - przegląd własnych zgłoszeń
+ *   - 'sluzby': Panel Służby - zarządzanie zgłoszeniami przypisanymi do konkretnej służby
+ *   - 'mieszkaniec': Panel Mieszkańca - przegląd własnych zgłoszeń
  */
 
 import { useState, useEffect } from 'react';
@@ -51,7 +51,7 @@ export default function App() {
   const [visibleServiceIncidents, setVisibleServiceIncidents] = useState(10);
   const [currentView, setCurrentView] = useState<'home' | 'login' | 'register' | 'dashboard'>('home');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userRole, setUserRole] = useState<'admin' | 'service' | 'resident'>('resident');
+  const [userRole, setUserRole] = useState<'admin' | 'sluzby' | 'mieszkaniec'>('mieszkaniec');
   const [userEmail, setUserEmail] = useState<string>('');
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
@@ -154,7 +154,7 @@ export default function App() {
     setVisibleIncidents(15); // Pokazuje wszystkie 15 zgłoszeń (5 początkowych + 10 dodatkowych)
   };
 
-  const handleLoginSuccess = (role: 'admin' | 'service' | 'resident', email: string) => {
+  const handleLoginSuccess = (role: 'admin' | 'sluzby' | 'mieszkaniec', email: string) => {
     setIsLoggedIn(true);
     setUserRole(role);
     setUserEmail(email);
@@ -175,7 +175,7 @@ export default function App() {
 
   const handleLogoutClick = () => {
     setIsLoggedIn(false);
-    setUserRole('resident');
+    setUserRole('mieszkaniec');
     setUserEmail('');
     setCurrentView('home');
   };
@@ -226,7 +226,7 @@ export default function App() {
   // Dashboard view
   if (currentView === 'dashboard') {
     // Panel mieszkańca - wyświetlanie zgłoszeń mieszkańca
-    if (userRole === 'resident') {
+    if (userRole === 'mieszkaniec') {
       const userIncidents = incidents.filter(inc => inc.email === userEmail);
 
       return (
@@ -284,7 +284,7 @@ export default function App() {
     }
 
     // Panel służby - wyświetlanie zgłoszeń przypisanych do danej służby
-    if (userRole === 'service') {
+    if (userRole === 'sluzby') {
       const userServiceName = getServiceFromEmail(userEmail);
       const allServiceIncidents = incidents
         .filter(inc => inc.service === userServiceName)

@@ -5,7 +5,7 @@ import { Label } from './ui/label';
 
 interface LoginFormProps {
   onRegisterClick: () => void;
-  onLoginSuccess: (userRole: 'admin' | 'service' | 'resident', email: string) => void;
+  onLoginSuccess: (userRole: 'admin' | 'sluzby' | 'mieszkaniec', email: string) => void;
 }
 
 export function LoginForm({ onRegisterClick, onLoginSuccess }: LoginFormProps) {
@@ -27,19 +27,19 @@ export function LoginForm({ onRegisterClick, onLoginSuccess }: LoginFormProps) {
     }
     
     // Określenie roli użytkownika na podstawie emaila
-    let userRole: 'admin' | 'service' | 'resident' = 'resident';
-    
+    let userRole: 'admin' | 'sluzby' | 'mieszkaniec' = 'mieszkaniec';
+
     if (email.toLowerCase().includes('admin')) {
       userRole = 'admin';
-    } else if (email.toLowerCase().includes('sluzba') || 
-               email.toLowerCase().includes('mpk') || 
+    } else if (email.toLowerCase().includes('sluzba') ||
+               email.toLowerCase().includes('mpk') ||
                email.toLowerCase().includes('zgk') ||
                email.toLowerCase().includes('zarzad') ||
                email.toLowerCase().includes('pogotowie') ||
                email.toLowerCase().includes('mpec')) {
-      userRole = 'service';
+      userRole = 'sluzby';
     } else if (email.toLowerCase().includes('mieszkaniec')) {
-      userRole = 'resident';
+      userRole = 'mieszkaniec';
     }
     
     // TODO: Implementacja logowania

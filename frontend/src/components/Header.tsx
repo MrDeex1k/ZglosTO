@@ -9,7 +9,7 @@ interface HeaderProps {
   onDashboardClick: () => void;
   onLogoutClick: () => void;
   isLoggedIn: boolean;
-  userRole?: 'admin' | 'service' | 'resident';
+  userRole?: 'admin' | 'sluzby' | 'mieszkaniec';
 }
 
 export function Header({ onLoginClick, onHomeClick, onDashboardClick, onLogoutClick, isLoggedIn, userRole }: HeaderProps) {
@@ -22,9 +22,9 @@ export function Header({ onLoginClick, onHomeClick, onDashboardClick, onLogoutCl
     switch (userRole) {
       case 'admin':
         return 'PANEL ADMINISTRATORSKI';
-      case 'service':
+      case 'sluzby':
         return 'PANEL SŁUŻBY';
-      case 'resident':
+      case 'mieszkaniec':
         return 'PANEL MIESZKAŃCA';
       default:
         return 'PANEL UŻYTKOWNIKA';

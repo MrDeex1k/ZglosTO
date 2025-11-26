@@ -68,7 +68,7 @@ export function AdminPanel({
   
   // State dla formularza uprawnień
   const [userEmail, setUserEmail] = useState('');
-  const [selectedRole, setSelectedRole] = useState<'resident' | 'service'>('resident');
+  const [selectedRole, setSelectedRole] = useState<'mieszkaniec' | 'sluzby'>('mieszkaniec');
   const [selectedService, setSelectedService] = useState('');
   const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string; visible: boolean }>({
     type: 'success',
@@ -111,7 +111,7 @@ export function AdminPanel({
     
     // Wyczyść formularz
     setUserEmail('');
-    setSelectedRole('resident');
+    setSelectedRole('mieszkaniec');
   };
   
   const handleAssignService = () => {
@@ -583,22 +583,22 @@ export function AdminPanel({
                   <Button
                     variant="outline"
                     className={`flex-1 border-2 ${
-                      selectedRole === 'resident'
+                      selectedRole === 'mieszkaniec'
                         ? 'bg-blue-100 border-blue-500'
                         : 'border-blue-300 hover:bg-blue-50'
                     }`}
-                    onClick={() => setSelectedRole('resident')}
+                    onClick={() => setSelectedRole('mieszkaniec')}
                   >
                     Mieszkaniec
                   </Button>
                   <Button
                     variant="outline"
                     className={`flex-1 border-2 ${
-                      selectedRole === 'service'
+                      selectedRole === 'sluzby'
                         ? 'bg-purple-100 border-purple-500'
                         : 'border-purple-300 hover:bg-purple-50'
                     }`}
-                    onClick={() => setSelectedRole('service')}
+                    onClick={() => setSelectedRole('sluzby')}
                   >
                     Służby
                   </Button>
