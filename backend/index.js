@@ -10,7 +10,7 @@ const sluzbyRouter = require("./routes/sluzby")
 const adminRouter = require("./routes/admin")
 const {requireAuth} = require("./BetterAuthConn")
 
-const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL ?? "http://auth-service:3000";
+const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL;
 
 app.use(cookieParser());
 

@@ -5,6 +5,7 @@ import { X } from 'lucide-react';
 import type { Incident } from '../App';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Badge } from './ui/badge';
+import { formatPolishDate } from '../utils/dateUtils';
 
 interface AdminIncidentDialogProps {
   incident: Incident | null;
@@ -32,16 +33,6 @@ const getServiceShortName = (service: string): string => {
   return service;
 };
 
-const formatDate = (dateString: string): string => {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('pl-PL', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
 
 export function AdminIncidentDialog({ incident, open, onOpenChange, onUpdateService, onUpdate }: AdminIncidentDialogProps) {
   const [selectedService, setSelectedService] = useState<string>('');
@@ -154,11 +145,11 @@ export function AdminIncidentDialog({ incident, open, onOpenChange, onUpdateServ
               </Badge>
             </div>
             <div className="text-gray-600 mb-2">
-              <strong>Data zgłoszenia:</strong> {formatDate(incident.createdAt)}
+              <strong>Data zgłoszenia:</strong> {formatPolishDate(incident.createdAt)}
             </div>
             {incident.resolvedAt && (
               <div className="text-gray-600">
-                <strong>Data rozwiązania:</strong> {formatDate(incident.resolvedAt)}
+                <strong>Data rozwiązania:</strong> {formatPolishDate(incident.resolvedAt)}
               </div>
             )}
           </div>

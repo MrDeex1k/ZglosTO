@@ -20,7 +20,7 @@ function requireAuth(...allowedRoles)
                 'Cookie': `better-auth.session_token=${sessionToken}`,
                 'Content-Type': 'application/json'
             },
-            // If your BetterAuth setup requires POST instead: 
+            // If BetterAuth setup requires POST instead: 
             // method: 'POST',
             // body: JSON.stringify({ token: sessionToken })
             });

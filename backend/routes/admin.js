@@ -53,7 +53,21 @@ router.patch('/incydenty/:id/status', async (req, res) => {
     const { status_incydentu } = req.body;
     if (!status_incydentu) return res.status(400).json({ error: 'status_incydentu required' });
 
-    const q = `UPDATE incydenty SET status_incydentu = $1 WHERE id_zgloszenia = $2 RETURNING *;`;
+    const q = `
+      UPDATE incydenty
+      SET status_incydentu = $1,
+          data_rozwiazania = CASE
+            WHEN $1 = 'NAPRAWIONY' THEN CURRENT_DATE
+            WHEN $1 IN ('ZGŁOSZONY', 'W TRAKCIE NAPRAWY') THEN NULL
+            ELSE data_rozwiazania
+          END,
+          godzina_rozwiazania = CASE
+            WHEN $1 = 'NAPRAWIONY' THEN CURRENT_TIME
+            WHEN $1 IN ('ZGŁOSZONY', 'W TRAKCIE NAPRAWY') THEN NULL
+            ELSE godzina_rozwiazania
+          END
+      WHERE id_zgloszenia = $2 RETURNING *;
+    `;
     const { rows } = await db.query(q, [status_incydentu, id]);
     if (rows.length === 0) return res.status(404).json({ error: 'incydent not found' });
     res.json({ success: true, incydent: rows[0] });
@@ -120,8 +134,6 @@ router.patch('/uzytkownicy/typ_uprawnien', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-
-
 
 
 module.exports = router;

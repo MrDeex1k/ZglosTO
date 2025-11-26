@@ -90,113 +90,18 @@ console.log(data);
 ```json
 [
   {
-    "id_zgloszenia": 1,
-    "opis_zgloszenia": "Dziura w drodze",
-    "mail_zglaszajacego": "user@example.com",
-    "typ_sluzby": "DROGI",
-    "status_incydentu": "ZGŁOSZONY",
-    "data_zgloszenia": "2024-11-20T10:00:00.000Z",
-    "zdjecie_incydentu_zglaszanego": null
-  }
-]
-```
-
----
-
-#### Dodanie nowego zgłoszenia
-
-**Endpoint:** `POST /mieszkaniec/incydenty`
-
-**Opis:** Dodaje nowe zgłoszenie. Jeśli nie podano typu służby, domyślnie zostaje ustawione jako "Inne" (przekazane do administratora).
-
-**Request Body:**
-```json
-{
-  "opis_zgloszenia": "Dziura w drodze na ulicy głównej",
-  "mail_zglaszajacego": "user@example.com",
-  "typ_sluzby": "DROGI",
-  "zdjecie_incydentu_zglaszanego": "base64-encoded-image-string"
-}
-```
-
-**Wymagane pola:**
-- `opis_zgloszenia` (string) - Opis zgłoszenia
-- `mail_zglaszajacego` (string) - Adres email zgłaszającego
-
-**Opcjonalne pola:**
-- `typ_sluzby` (string) - Typ służby (domyślnie: "Inne")
-- `zdjecie_incydentu_zglaszanego` (string) - Zdjęcie w formacie base64
-
-**Przykład curl:**
-```bash
-curl -X POST http://localhost:3000/mieszkaniec/incydenty \
-  -H "Content-Type: application/json" \
-  -d '{
-    "opis_zgloszenia": "Dziura w drodze na ulicy głównej",
-    "mail_zglaszajacego": "user@example.com",
-    "typ_sluzby": "DROGI"
-  }'
-```
-
-**Przykład fetch (JavaScript):**
-```javascript
-const response = await fetch('http://localhost:3000/mieszkaniec/incydenty', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({
-    opis_zgloszenia: 'Dziura w drodze na ulicy głównej',
-    mail_zglaszajacego: 'user@example.com',
-    typ_sluzby: 'DROGI'
-  })
-});
-
-const data = await response.json();
-console.log(data);
-```
-
-**Response (Success):**
-```json
-{
-  "success": true,
-  "incydent": {
-    "id_zgloszenia": 1,
-    "opis_zgloszenia": "Dziura w drodze na ulicy głównej",
-    "mail_zglaszajacego": "user@example.com",
-    "typ_sluzby": "DROGI",
-    "status_incydentu": "ZGŁOSZONY",
-    "data_zgloszenia": "2024-11-20T10:00:00.000Z"
-  }
-}
-```
-
----
-
-#### Pobieranie zakończonych zgłoszeń użytkownika
-
-**Endpoint:** `GET /mieszkaniec/incydenty/zakonczone`
-
-**Opis:** Pobiera zakończone zgłoszenia (status = NAPRAWIONY) dla danego adresu email.
-
-**Query Parameters:**
-- `email` (string, wymagane) - Adres email użytkownika
-
-**Przykład curl:**
-```bash
-curl "http://localhost:3000/mieszkaniec/incydenty/zakonczone?email=user@example.com"
-```
-
-**Response (Success):**
-```json
-[
-  {
-    "id_zgloszenia": 1,
-    "opis_zgloszenia": "Dziura w drodze",
-    "mail_zglaszajacego": "user@example.com",
-    "typ_sluzby": "DROGI",
+    "id_zgloszenia": "019ac081-4076-7ead-89e7-16c0227fcbc8",
+    "opis_zgloszenia": "Testowa dziura w drodze na ulicy głównej",
+    "mail_zglaszajacego": "jan.test@gmail.pl",
+    "adres_zgloszenia": "Warszawa, ul. Testowa 15",
+    "zdjecie_incydentu_zglaszanego": null,
+    "zdjecie_incydentu_rozwiazanego": null,
+    "sprawdzenie_incydentu": true,
     "status_incydentu": "NAPRAWIONY",
-    "zdjecie_incydentu_rozwiazanego": "base64-encoded-image-data"
+    "typ_sluzby": "Zarząd Dróg",
+    "llm_odpowiedz": null,
+    "data_godzina_zgloszenia": "26.11.2025 15:11",
+    "data_godzina_rozwiazania": "26.11.2025 15:21"
   }
 ]
 ```
@@ -218,21 +123,99 @@ curl http://localhost:3000/mieszkaniec/incydenty/glowna
 ```json
 [
   {
-    "id_zgloszenia": "uuid-here",
-    "opis_zgloszenia": "Naprawiona dziura w drodze",
-    "adres_zgloszenia": "ul. Główna 15, Warszawa",
-    "typ_sluzby": "Zarząd Dróg",
+    "id_zgloszenia": "019ac088-d5f2-7f31-8f4d-d6a0aaf684a5",
+    "opis_zgloszenia": "Autobus linii 150 nie przyjechał",
+    "adres_zgloszenia": "Warszawa, ul. Testowa 123",
+    "typ_sluzby": "Miejskie Przedsiębiorstwo Komunikacyjne",
     "status_incydentu": "NAPRAWIONY",
-    "zdjecie_incydentu_rozwiazanego": "base64-encoded-image-data",
-    "data_zgloszenia": "2024-11-15",
-    "godzina_zgloszenia": "14:30:00",
-    "data_rozwiazania": "2024-11-20",
-    "godzina_rozwiazania": "16:45:00"
-  }
+    "zdjecie_incydentu_rozwiazanego": null,
+    "data_godzina_zgloszenia": "26.11.2025 15:19",
+    "data_godzina_rozwiazania": "26.11.2025 15:22"
+  },
 ]
 ```
 
 ---
+
+#### Dodanie nowego zgłoszenia
+
+**Endpoint:** `POST /mieszkaniec/incydenty`
+
+**Opis:** Dodaje nowe zgłoszenie. Jeśli nie podano typu służby, domyślnie zostaje ustawione jako "Inne" (przekazane do administratora).
+
+**Request Body:**
+```json
+{
+  "opis_zgloszenia": "Dziura w drodze na ulicy głównej",
+  "mail_zglaszajacego": "user@example.com",
+  "adres_zgloszenia": "ul. Główna 15, Warszawa",
+  "typ_sluzby": "DROGI",
+  "zdjecie_incydentu_zglaszanego": "base64-encoded-image-string"
+}
+```
+
+**Wymagane pola:**
+- `opis_zgloszenia` (string) - Opis zgłoszenia
+- `mail_zglaszajacego` (string) - Adres email zgłaszającego
+- `adres_zgloszenia` (string) - Adres miejsca zgłoszenia
+
+**Opcjonalne pola:**
+- `typ_sluzby` (string) - Typ służby (domyślnie: "Inne")
+- `zdjecie_incydentu_zglaszanego` (string) - Zdjęcie w formacie base64
+
+**Przykład curl:**
+```bash
+curl -X POST http://localhost:3000/mieszkaniec/incydenty \
+  -H "Content-Type: application/json" \
+  -d '{
+    "opis_zgloszenia": "Dziura w drodze na ulicy głównej",
+    "mail_zglaszajacego": "user@example.com",
+    "adres_zgloszenia": "ul. Główna 15, Warszawa",
+    "typ_sluzby": "DROGI"
+  }'
+```
+
+**Przykład fetch (JavaScript):**
+```javascript
+const response = await fetch('http://localhost:3000/mieszkaniec/incydenty', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    opis_zgloszenia: 'Autobus linii 150 nie przyjechał',
+    mail_zglaszajacego: 'ewelina.tasak@gmail.com',
+    adres_zgloszenia: 'Warszawa, ul. Testowa 123',
+    typ_sluzby: 'Miejskie Przedsiębiorstwo Komunikacyjne'
+  })
+});
+
+const data = await response.json();
+console.log(data);
+```
+
+**Response (Success):**
+```json
+{
+  "success": true,
+  "incydent": {
+    "id_zgloszenia": "019ac088-d5f2-7f31-8f4d-d6a0aaf684a5",
+    "opis_zgloszenia": "Autobus linii 150 nie przyjechał",
+    "mail_zglaszajacego": "ewelina.tasak@gmail.com",
+    "adres_zgloszenia": "Warszawa, ul. Testowa 123",
+    "zdjecie_incydentu_zglaszanego": null,
+    "zdjecie_incydentu_rozwiazanego": null,
+    "sprawdzenie_incydentu": false,
+    "status_incydentu": "ZGŁOSZONY",
+    "typ_sluzby": "Miejskie Przedsiębiorstwo Komunikacyjne",
+    "llm_odpowiedz": null,
+    "data_zgloszenia": "2025-11-26T00:00:00.000Z",
+    "godzina_zgloszenia": "14:19:44.497464",
+    "data_rozwiazania": null,
+    "godzina_rozwiazania": null
+  }
+}
+```
 
 ### 2. Endpointy dla służb miejskich (wymagają autoryzacji)
 
@@ -302,7 +285,7 @@ curl -H "Cookie: better-auth.session_token=YOUR_SESSION_TOKEN" \
 
 **Endpoint:** `PATCH /sluzby/incydenty/:id/status`
 
-**Opis:** Aktualizuje status zgłoszenia.
+**Opis:** Aktualizuje status zgłoszenia. Jeśli status zostanie zmieniony na "NAPRAWIONY", automatycznie ustawia datę i godzinę rozwiązania na aktualną datę i godzinę.
 
 **Request Body:**
 ```json
@@ -470,7 +453,7 @@ curl -X PATCH http://localhost:3000/admin/incydenty/1/typ \
 
 **Endpoint:** `PATCH /admin/incydenty/:id/status`
 
-**Opis:** Administrator może ustawić dowolny status zgłoszenia, także cofnąć status.
+**Opis:** Administrator może ustawić dowolny status zgłoszenia, także cofnąć status. Jeśli status zostanie zmieniony na "NAPRAWIONY", automatycznie ustawia datę i godzinę rozwiązania na aktualną datę i godzinę. Jeśli status zostanie cofnięty z "NAPRAWIONY" na "ZGŁOSZONY" lub "W TRAKCIE NAPRAWY", daty rozwiązania zostaną wyczyszczone (ustawione na NULL).
 
 **Request Body:**
 ```json

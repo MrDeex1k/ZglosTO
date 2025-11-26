@@ -2,6 +2,7 @@ import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { MapPin, Calendar, CheckCircle2 } from 'lucide-react';
 import type { Incident } from '../App';
+import { formatPolishDate } from '../utils/dateUtils';
 
 interface IncidentCardProps {
   incident: Incident;
@@ -25,14 +26,6 @@ const getServiceShortName = (service: string): string => {
   return service;
 };
 
-const formatDate = (dateString: string): string => {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('pl-PL', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-};
 
 export function IncidentCard({ incident, onClick }: IncidentCardProps) {
   const serviceColor = serviceColors[incident.service] || serviceColors[getServiceShortName(incident.service)] || 'bg-gray-100 text-gray-800';
@@ -71,12 +64,12 @@ export function IncidentCard({ incident, onClick }: IncidentCardProps) {
             <div className="flex items-center gap-4 text-gray-500">
               <div className="flex items-center gap-1">
                 <Calendar className="w-4 h-4" />
-                <span>Zgłoszono: {formatDate(incident.createdAt)}</span>
+                <span>Data zgłoszenia: {formatPolishDate(incident.createdAt)}</span>
               </div>
               {incident.resolvedAt && (
                 <div className="flex items-center gap-1">
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>Rozwiązano: {formatDate(incident.resolvedAt)}</span>
+                  <span>Data rozwiązania: {formatPolishDate(incident.resolvedAt)}</span>
                 </div>
               )}
             </div>

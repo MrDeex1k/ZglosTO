@@ -2,6 +2,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Badge } from './ui/badge';
 import { MapPin, Calendar, CheckCircle2, Image as ImageIcon } from 'lucide-react';
 import type { Incident } from '../App';
+import { formatPolishDate } from '../utils/dateUtils';
 
 interface IncidentDetailsDialogProps {
   incident: Incident | null;
@@ -27,16 +28,6 @@ const getServiceShortName = (service: string): string => {
   return service;
 };
 
-const formatDate = (dateString: string): string => {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('pl-PL', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
 
 export function IncidentDetailsDialog({ incident, open, onOpenChange }: IncidentDetailsDialogProps) {
   if (!incident) return null;
@@ -141,7 +132,7 @@ export function IncidentDetailsDialog({ incident, open, onOpenChange }: Incident
               <Calendar className="w-4 h-4 mt-0.5 text-gray-500" />
               <div>
                 <div className="text-gray-500">Data zgłoszenia</div>
-                <div className="text-gray-900">{formatDate(incident.createdAt)}</div>
+                <div className="text-gray-900">{formatPolishDate(incident.createdAt)}</div>
               </div>
             </div>
 
@@ -150,7 +141,7 @@ export function IncidentDetailsDialog({ incident, open, onOpenChange }: Incident
                 <CheckCircle2 className="w-4 h-4 mt-0.5 text-green-600" />
                 <div>
                   <div className="text-gray-500">Data rozwiązania</div>
-                  <div className="text-gray-900">{formatDate(incident.resolvedAt)}</div>
+                  <div className="text-gray-900">{formatPolishDate(incident.resolvedAt)}</div>
                 </div>
               </div>
             )}

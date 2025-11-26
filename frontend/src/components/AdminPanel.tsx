@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import type { Incident } from "../App";
 import { AdminIncidentDialog } from "./AdminIncidentDialog";
+import { formatPolishDate } from "../utils/dateUtils";
 import { Badge } from "./ui/badge";
 import { Card } from "./ui/card";
 
@@ -51,16 +52,6 @@ const getServiceShortName = (service: string): string => {
   return service;
 };
 
-const formatDate = (dateString: string): string => {
-  const date = new Date(dateString);
-  return date.toLocaleDateString("pl-PL", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
 
 export function AdminPanel({
   incidents,
@@ -360,7 +351,7 @@ export function AdminPanel({
                     </span>
                     <span className="text-gray-400">•</span>
                     <span className="whitespace-nowrap">
-                      {formatDate(incident.createdAt)}
+                      {formatPolishDate(incident.createdAt)}
                     </span>
                   </div>
                 </div>
@@ -472,7 +463,7 @@ export function AdminPanel({
                       </span>
                       <span className="text-gray-400">•</span>
                       <span className="whitespace-nowrap">
-                        {formatDate(incident.createdAt)}
+                        {formatPolishDate(incident.createdAt)}
                       </span>
                     </div>
                   </div>

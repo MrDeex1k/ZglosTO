@@ -11,7 +11,7 @@
  *   - 'resident': Panel Mieszkańca - przegląd własnych zgłoszeń
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { IncidentForm } from './components/IncidentForm';
@@ -24,6 +24,7 @@ import { AdminPanel } from './components/AdminPanel';
 import { Button } from './components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './components/ui/dialog';
 import { Toaster } from './components/ui/sonner';
+import { fetchResolvedIncidents, createIncident } from './services/api';
 
 import './App.css'
 
@@ -42,271 +43,10 @@ export interface Incident {
   resolvedAt?: string;
 }
 
-// Przykładowe dane rozwiązanych zgłoszeń
-const mockResolvedIncidents: Incident[] = [
-  {
-    id: '1',
-    service: 'Zarząd Dróg',
-    description: 'Dziura w jezdni na ul. Głównej',
-    address: 'ul. Główna 123, Warszawa',
-    email: 'jan.kowalski@example.com',
-    status: 'resolved',
-    checked: true,
-    adminStatus: 'NAPRAWIONY',
-    createdAt: '2025-11-15T10:00:00Z',
-    resolvedAt: '2025-11-16T14:30:00Z',
-  },
-  {
-    id: '2',
-    service: 'MPK',
-    description: 'Uszkodzona wiata przystankowa',
-    address: 'ul. Kościuszki 45, Warszawa',
-    email: 'anna.nowak@example.com',
-    status: 'resolved',
-    checked: true,
-    adminStatus: 'NAPRAWIONY',
-    createdAt: '2025-11-14T08:15:00Z',
-    resolvedAt: '2025-11-15T16:20:00Z',
-  },
-  {
-    id: '3',
-    service: 'Zakład Gospodarki Komunalnej',
-    description: 'Przepełnione śmietniki w parku',
-    address: 'Park Centralny, Warszawa',
-    email: 'jan.kowalski@example.com',
-    status: 'resolved',
-    checked: true,
-    adminStatus: 'NAPRAWIONY',
-    createdAt: '2025-11-13T12:30:00Z',
-    resolvedAt: '2025-11-14T09:45:00Z',
-  },
-  {
-    id: '4',
-    service: 'Pogotowie Kanalizacyjne',
-    description: 'Zalana studzienka kanalizacyjna',
-    address: 'ul. Polna 78, Warszawa',
-    email: 'piotr.wisniewski@example.com',
-    status: 'resolved',
-    checked: true,
-    adminStatus: 'NAPRAWIONY',
-    createdAt: '2025-11-12T15:45:00Z',
-    resolvedAt: '2025-11-13T11:00:00Z',
-  },
-  {
-    id: '5',
-    service: 'Zarząd Dróg',
-    description: 'Uszkodzone oznakowanie poziome',
-    address: 'ul. Marszałkowska 100, Warszawa',
-    email: 'jan.kowalski@example.com',
-    status: 'resolved',
-    checked: true,
-    adminStatus: 'NAPRAWIONY',
-    createdAt: '2025-11-11T09:20:00Z',
-    resolvedAt: '2025-11-12T13:15:00Z',
-  },
-  {
-    id: '6',
-    service: 'Miejskie Przedsiębiorstwo Komunikacyjne',
-    description: 'Niedziałający automat biletowy na przystanku',
-    address: 'pl. Konstytucji 3, Warszawa',
-    email: 'anna.nowak@example.com',
-    status: 'resolved',
-    checked: true,
-    adminStatus: 'NAPRAWIONY',
-    createdAt: '2025-11-10T07:30:00Z',
-    resolvedAt: '2025-11-11T15:00:00Z',
-  },
-  {
-    id: '7',
-    service: 'Zakład Gospodarki Komunalnej',
-    description: 'Nieskoszona trawa na terenie osiedla',
-    address: 'os. Przyjaźni 12, Warszawa',
-    email: 'jan.kowalski@example.com',
-    status: 'pending',
-    checked: false,
-    adminStatus: 'ZGŁOSZONY',
-    createdAt: '2025-11-09T14:20:00Z',
-  },
-  {
-    id: '8',
-    service: 'Zarząd Dróg',
-    description: 'Uszkodzone oświetlenie uliczne',
-    address: 'ul. Wolności 56, Warszawa',
-    email: 'maria.kaminska@example.com',
-    status: 'resolved',
-    checked: true,
-    adminStatus: 'NAPRAWIONY',
-    createdAt: '2025-11-08T18:45:00Z',
-    resolvedAt: '2025-11-09T12:00:00Z',
-  },
-  {
-    id: '9',
-    service: 'Pogotowie Kanalizacyjne',
-    description: 'Nieprzyjemny zapach z kanalizacji',
-    address: 'ul. Słoneczna 89, Warszawa',
-    email: 'jan.kowalski@example.com',
-    status: 'in-progress',
-    checked: true,
-    adminStatus: 'W TRAKCIE NAPRAWY',
-    createdAt: '2025-11-07T11:15:00Z',
-  },
-  {
-    id: '10',
-    service: 'MPK',
-    description: 'Zniszczona tablica informacyjna na przystanku',
-    address: 'ul. Piękna 22, Warszawa',
-    email: 'anna.nowak@example.com',
-    status: 'resolved',
-    checked: true,
-    adminStatus: 'NAPRAWIONY',
-    createdAt: '2025-11-06T09:00:00Z',
-    resolvedAt: '2025-11-07T14:20:00Z',
-  },
-  {
-    id: '11',
-    service: 'Zarząd Dróg',
-    description: 'Zapadnięty chodnik przy przejściu dla pieszych',
-    address: 'ul. Nowa 34, Warszawa',
-    email: 'jan.kowalski@example.com',
-    status: 'pending',
-    checked: false,
-    adminStatus: 'ZGŁOSZONY',
-    createdAt: '2025-11-05T13:30:00Z',
-  },
-  {
-    id: '12',
-    service: 'Zakład Gospodarki Komunalnej',
-    description: 'Potrzeba dodatkowego kosza na śmieci',
-    address: 'Skwer im. Kopernika, Warszawa',
-    email: 'tomasz.lewandowski@example.com',
-    status: 'resolved',
-    checked: true,
-    adminStatus: 'NAPRAWIONY',
-    createdAt: '2025-11-04T10:45:00Z',
-    resolvedAt: '2025-11-05T15:30:00Z',
-  },
-  {
-    id: '13',
-    service: 'Miejskie Przedsiębiorstwo Komunikacyjne',
-    description: 'Brak rozkładu jazdy na przystanku',
-    address: 'ul. Zielona 67, Warszawa',
-    email: 'anna.nowak@example.com',
-    status: 'resolved',
-    checked: true,
-    adminStatus: 'NAPRAWIONY',
-    createdAt: '2025-11-03T08:20:00Z',
-    resolvedAt: '2025-11-04T12:40:00Z',
-  },
-  {
-    id: '14',
-    service: 'Pogotowie Kanalizacyjne',
-    description: 'Zatkany odpływ deszczowy',
-    address: 'ul. Sportowa 15, Warszawa',
-    email: 'jan.kowalski@example.com',
-    status: 'resolved',
-    checked: true,
-    adminStatus: 'NAPRAWIONY',
-    createdAt: '2025-11-02T16:00:00Z',
-    resolvedAt: '2025-11-03T10:15:00Z',
-  },
-  {
-    id: '15',
-    service: 'Zarząd Dróg',
-    description: 'Niedziałające światła sygnalizacji świetlnej',
-    address: 'Skrzyżowanie ul. Targowej i Wileńskiej, Warszawa',
-    email: 'piotr.wisniewski@example.com',
-    status: 'resolved',
-    checked: true,
-    adminStatus: 'NAPRAWIONY',
-    createdAt: '2025-11-01T07:50:00Z',
-    resolvedAt: '2025-11-02T09:30:00Z',
-  },
-  {
-    id: '16',
-    service: 'Zakład Gospodarki Komunalnej',
-    description: 'Dzikie wysypisko śmieci w lesie',
-    address: 'Las Bielański, Warszawa',
-    email: 'maria.kaminska@example.com',
-    status: 'resolved',
-    checked: true,
-    adminStatus: 'NAPRAWIONY',
-    createdAt: '2025-10-31T12:00:00Z',
-    resolvedAt: '2025-11-01T14:00:00Z',
-  },
-  {
-    id: '17',
-    service: 'MPK',
-    description: 'Brudna wiata przystankowa',
-    address: 'al. Jerozolimskie 120, Warszawa',
-    email: 'anna.nowak@example.com',
-    status: 'resolved',
-    checked: true,
-    adminStatus: 'NAPRAWIONY',
-    createdAt: '2025-10-30T09:30:00Z',
-    resolvedAt: '2025-10-31T11:45:00Z',
-  },
-  {
-    id: '18',
-    service: 'Zarząd Dróg',
-    description: 'Wyboista droga gruntowa',
-    address: 'ul. Leśna 8, Warszawa',
-    email: 'jan.kowalski@example.com',
-    status: 'resolved',
-    checked: true,
-    adminStatus: 'NAPRAWIONY',
-    createdAt: '2025-10-29T14:15:00Z',
-    resolvedAt: '2025-10-30T16:00:00Z',
-  },
-  // Nieprzypisane zgłoszenia (Inne)
-  {
-    id: '19',
-    service: 'Inne',
-    description: 'Dziwny hałas dochodzący z kanalizacji, nie wiem kto powinien się tym zająć',
-    address: 'ul. Marszałkowska 45, Warszawa',
-    email: 'anna.nowak@example.com',
-    status: 'pending',
-    checked: false,
-    adminStatus: 'ZGŁOSZONY',
-    createdAt: '2025-11-16T09:30:00Z',
-  },
-  {
-    id: '20',
-    service: 'Inne',
-    description: 'Podejrzane uszkodzenie na skrzyżowaniu - może to być problem z drogą lub sygnalizacją',
-    address: 'Al. Jerozolimskie 123, Warszawa',
-    email: 'piotr.kowalski@example.com',
-    status: 'pending',
-    checked: false,
-    adminStatus: 'ZGŁOSZONY',
-    createdAt: '2025-11-15T14:20:00Z',
-  },
-  {
-    id: '21',
-    service: 'Inne',
-    description: 'Coś dzieje się z ciepłem w budynku, ale nie jestem pewien czy to MPEC',
-    address: 'ul. Złota 67, Warszawa',
-    email: 'katarzyna.lewandowska@example.com',
-    status: 'pending',
-    checked: false,
-    adminStatus: 'ZGŁOSZONY',
-    createdAt: '2025-11-14T11:45:00Z',
-  },
-  {
-    id: '22',
-    service: 'Inne',
-    description: 'Problem z infrastrukturą przy przystanku - może MPK, może ZGK?',
-    address: 'ul. Puławska 234, Warszawa',
-    email: 'jan.wisniewski@example.com',
-    status: 'pending',
-    checked: false,
-    adminStatus: 'ZGŁOSZONY',
-    createdAt: '2025-11-13T08:00:00Z',
-  },
-];
 
 export default function App() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [incidents, setIncidents] = useState<Incident[]>(mockResolvedIncidents);
+  const [incidents, setIncidents] = useState<Incident[]>([]);
   const [visibleIncidents, setVisibleIncidents] = useState(5);
   const [visibleServiceIncidents, setVisibleServiceIncidents] = useState(10);
   const [currentView, setCurrentView] = useState<'home' | 'login' | 'register' | 'dashboard'>('home');
@@ -316,19 +56,98 @@ export default function App() {
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [serviceStatusFilter, setServiceStatusFilter] = useState<'ALL' | 'ZGŁOSZONY' | 'W TRAKCIE NAPRAWY' | 'NAPRAWIONY'>('ALL');
+  const [isLoadingIncidents, setIsLoadingIncidents] = useState(true);
+  const [incidentsError, setIncidentsError] = useState<string | null>(null);
 
-  const handleSubmitIncident = (incident: Omit<Incident, 'id' | 'status' | 'createdAt'>) => {
-    const newIncident: Incident = {
-      ...incident,
-      id: Date.now().toString(),
-      status: 'pending',
-      checked: false,
-      adminStatus: 'ZGŁOSZONY',
-      createdAt: new Date().toISOString(),
+  // Transform API response to Incident interface
+  const transformApiIncident = (apiIncident: any): Incident => {
+    return {
+      id: apiIncident.id_zgloszenia,
+      service: apiIncident.typ_sluzby,
+      description: apiIncident.opis_zgloszenia,
+      address: apiIncident.adres_zgloszenia,
+      email: '', // API doesn't provide email for resolved incidents
+      imageUrl: undefined, // API doesn't provide original image for resolved incidents
+      resolvedImageUrl: apiIncident.zdjecie_incydentu_rozwiazanego || undefined,
+      status: 'resolved', // All incidents from this endpoint are resolved
+      checked: true, // Resolved incidents are typically checked
+      adminStatus: apiIncident.status_incydentu as 'ZGŁOSZONY' | 'W TRAKCIE NAPRAWY' | 'NAPRAWIONY',
+      createdAt: apiIncident.data_godzina_zgloszenia,
+      resolvedAt: apiIncident.data_godzina_rozwiazania,
     };
-    
-    setIncidents([newIncident, ...incidents]);
-    setIsDialogOpen(false);
+  };
+
+  // Fetch resolved incidents on component mount
+  useEffect(() => {
+
+    const loadIncidents = async () => {
+      try {
+        setIsLoadingIncidents(true);
+        setIncidentsError(null);
+        const apiIncidents = await fetchResolvedIncidents();
+        const transformedIncidents = apiIncidents.map(transformApiIncident);
+        setIncidents(transformedIncidents);
+      } catch (error) {
+        console.error('Failed to load incidents:', error);
+        setIncidentsError('Nie udało się załadować zgłoszeń. Spróbuj odświeżyć stronę.');
+        // Leave incidents empty if API fails
+        setIncidents([]);
+      } finally {
+        setIsLoadingIncidents(false);
+      }
+    };
+
+    loadIncidents();
+  }, []);
+
+  const handleSubmitIncident = async (incident: Omit<Incident, 'id' | 'status' | 'createdAt'>) => {
+    try {
+      // Prepare data for API call
+      const apiData = {
+        opis_zgloszenia: incident.description,
+        mail_zglaszajacego: incident.email,
+        adres_zgloszenia: incident.address,
+        typ_sluzby: incident.service !== 'Inne' ? incident.service : undefined,
+        zdjecie_incydentu_zglaszanego: incident.imageUrl,
+      };
+
+      // Call the API to create the incident
+      const response = await createIncident(apiData);
+
+      // Transform the API response to Incident format
+      const newIncident: Incident = {
+        id: response.incydent.id_zgloszenia,
+        service: response.incydent.typ_sluzby,
+        description: response.incydent.opis_zgloszenia,
+        address: response.incydent.adres_zgloszenia,
+        email: response.incydent.mail_zglaszajacego,
+        imageUrl: response.incydent.zdjecie_incydentu_zglaszanego || undefined,
+        resolvedImageUrl: response.incydent.zdjecie_incydentu_rozwiazanego || undefined,
+        status: response.incydent.status_incydentu === 'NAPRAWIONY' ? 'resolved' :
+                response.incydent.status_incydentu === 'W TRAKCIE NAPRAWY' ? 'in-progress' : 'pending',
+        checked: response.incydent.sprawdzenie_incydentu,
+        adminStatus: response.incydent.status_incydentu,
+        createdAt: response.incydent.data_zgloszenia,
+        resolvedAt: response.incydent.data_rozwiazania || undefined,
+      };
+
+      setIncidents([newIncident, ...incidents]);
+      setIsDialogOpen(false);
+    } catch (error) {
+      console.error('Failed to create incident:', error);
+      // Fallback to local state if API fails
+      const newIncident: Incident = {
+        ...incident,
+        id: Date.now().toString(),
+        status: 'pending',
+        checked: false,
+        adminStatus: 'ZGŁOSZONY',
+        createdAt: new Date().toISOString(),
+      };
+
+      setIncidents([newIncident, ...incidents]);
+      setIsDialogOpen(false);
+    }
   };
 
   const showMoreIncidents = () => {
@@ -702,8 +521,23 @@ export default function App() {
             <h3 className="text-gray-900 mb-6">
               Ostatnio rozwiązane zgłoszenia
             </h3>
-            
-            {resolvedIncidents.length === 0 ? (
+
+            {isLoadingIncidents ? (
+              <div className="text-center py-12 bg-white rounded-lg border">
+                <p className="text-gray-500">Ładowanie zgłoszeń...</p>
+              </div>
+            ) : incidentsError ? (
+              <div className="text-center py-12 bg-white rounded-lg border border-red-200">
+                <p className="text-red-500 mb-4">{incidentsError}</p>
+                <Button
+                  variant="outline"
+                  onClick={() => window.location.reload()}
+                  className="border-red-300 text-red-600 hover:bg-red-50"
+                >
+                  Odśwież stronę
+                </Button>
+              </div>
+            ) : resolvedIncidents.length === 0 ? (
               <div className="text-center py-12 bg-white rounded-lg border">
                 <p className="text-gray-500">Brak rozwiązanych zgłoszeń</p>
               </div>
@@ -714,11 +548,11 @@ export default function App() {
                     <IncidentCard key={incident.id} incident={incident} onClick={() => handleIncidentClick(incident)} />
                   ))}
                 </div>
-                
+
                 {visibleIncidents < resolvedIncidents.length && visibleIncidents < 15 && (
                   <div className="text-center">
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       onClick={showMoreIncidents}
                     >
                       Pokaż więcej

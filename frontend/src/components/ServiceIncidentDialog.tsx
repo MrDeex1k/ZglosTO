@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { MapPin, Calendar, CheckCircle2, Image as ImageIcon } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import type { Incident } from '../App';
+import { formatPolishDate } from '../utils/dateUtils';
 
 interface ServiceIncidentDialogProps {
   incident: Incident | null;
@@ -31,16 +32,6 @@ const getServiceShortName = (service: string): string => {
   return service;
 };
 
-const formatDate = (dateString: string): string => {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('pl-PL', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
 
 export function ServiceIncidentDialog({ incident, open, onOpenChange, onUpdate }: ServiceIncidentDialogProps) {
   const [checked, setChecked] = useState<boolean>(false);
@@ -170,7 +161,7 @@ export function ServiceIncidentDialog({ incident, open, onOpenChange, onUpdate }
               <Calendar className="w-4 h-4 mt-0.5 text-gray-500" />
               <div>
                 <div className="text-gray-500">Data zgłoszenia</div>
-                <div className="text-gray-900">{formatDate(incident.createdAt)}</div>
+                <div className="text-gray-900">{formatPolishDate(incident.createdAt)}</div>
               </div>
             </div>
           </div>
