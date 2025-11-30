@@ -1,5 +1,6 @@
 .DS_Store
 .env
+.env.*
 *.txt
 pgadmin/servers.json
 llm_service/uv.lock
