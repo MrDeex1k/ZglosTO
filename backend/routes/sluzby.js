@@ -4,6 +4,28 @@ const router = express.Router();
 const db = require('../database');
 
 /**
+ * Helper function to convert BYTEA buffer to base64 data URL
+ */
+function bufferToDataUrl(buffer) {
+  if (!buffer) return null;
+  // Detect image type from magic bytes
+  const bytes = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+  let mimeType = 'image/jpeg'; // default
+  
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
+    mimeType = 'image/png';
+  } else if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) {
+    mimeType = 'image/gif';
+  } else if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) {
+    mimeType = 'image/jpeg';
+  } else if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46) {
+    mimeType = 'image/webp';
+  }
+  
+  return `data:${mimeType};base64,${bytes.toString('base64')}`;
+}
+
+/**
  * GET /sluzby/incydenty
  * Pobiera zgłoszenia przypisane do danej służby
  */
@@ -14,7 +36,15 @@ router.get('/incydenty', async (req, res) => {
     const typ = req.user.typ_uprawnien;
     const q = `SELECT * FROM incydenty WHERE typ_sluzby = $1 ORDER BY status_incydentu, data_zgloszenia`;
     const { rows } = await db.query(q, [typ]);
-    res.json(rows);
+    
+    // Convert BYTEA fields to base64 data URLs
+    const transformedRows = rows.map(row => ({
+      ...row,
+      zdjecie_incydentu_zglaszanego: bufferToDataUrl(row.zdjecie_incydentu_zglaszanego),
+      zdjecie_incydentu_rozwiazanego: bufferToDataUrl(row.zdjecie_incydentu_rozwiazanego),
+    }));
+    
+    res.json(transformedRows);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });

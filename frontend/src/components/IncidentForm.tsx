@@ -25,8 +25,10 @@ import {
   AlertCircle,
   CheckCircle,
   Phone,
+  Loader2,
 } from "lucide-react";
 import type { Incident } from "../App";
+import { createIncident, queryLLM } from "../services/api";
 
 interface IncidentFormProps {
   onSubmit: (
@@ -52,6 +54,7 @@ export function IncidentForm({ onSubmit }: IncidentFormProps) {
   const [imagePreview, setImagePreview] = useState<
     string | null
   >(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingSubmit, setPendingSubmit] = useState<{
     service: string;
     description: string;
@@ -114,14 +117,14 @@ export function IncidentForm({ onSubmit }: IncidentFormProps) {
     if (
       !alertState.isOpen &&
       pendingSubmit &&
-      alertState.type === "success"
+      (alertState.type === "success" || alertState.type === "emergency")
     ) {
       onSubmit(pendingSubmit);
       setPendingSubmit(null);
     }
-  }, [alertState.isOpen, pendingSubmit, onSubmit]);
+  }, [alertState.isOpen, pendingSubmit, onSubmit, alertState.type]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!service || !description || !address || !email) {
@@ -146,35 +149,52 @@ export function IncidentForm({ onSubmit }: IncidentFormProps) {
       return;
     }
 
-    // Mock LLM analysis based on keywords in description
-    const descriptionLower = description.toLowerCase();
+    setIsSubmitting(true);
 
-    if (descriptionLower.includes("wypadek")) {
-      // Emergency services should handle this
-      setAlertState({
-        isOpen: true,
-        type: "emergency",
-        title: "Pomoc ratunkowa",
-        message:
-          "Sprawą powinny się zająć służby ratunkowe. Zadzwoń pod numer alarmowy!",
+    try {
+      // Query LLM to classify the incident
+      const llmClassification = await queryLLM(description);
+
+      // Prepare image as base64 (without the data:image/...;base64, prefix)
+      let imageBase64: string | undefined;
+      if (imagePreview) {
+        // Remove the data URL prefix (e.g., "data:image/jpeg;base64,")
+        const base64Match = imagePreview.match(/^data:[^;]+;base64,(.+)$/);
+        if (base64Match) {
+          imageBase64 = base64Match[1];
+        }
+      }
+
+      // Always save the incident to the backend (regardless of LLM classification)
+      await createIncident({
+        opis_zgloszenia: description,
+        mail_zglaszajacego: email,
+        adres_zgloszenia: address,
+        typ_sluzby: service,
+        zdjecie_incydentu_zglaszanego: imageBase64,
+        llm_odpowiedz: llmClassification,
       });
-      return;
-    }
 
-    if (descriptionLower.includes("błąd")) {
-      // Simulate backend error
-      setAlertState({
-        isOpen: true,
-        type: "error",
-        title: "Błąd wysyłania",
-        message:
-          "Nie udało się wysłać zgłoszenia. Spróbuj ponownie później.",
-      });
-      return;
-    }
+      if (llmClassification === 'SŁUŻBY RATUNKOWE') {
+        // Emergency services should handle this - show emergency alert
+        setAlertState({
+          isOpen: true,
+          type: "emergency",
+          title: "Pomoc ratunkowa",
+          message:
+            "Zgłoszenie zostało zarejestrowane. Na podstawie analizy Twojego zgłoszenia, sprawą powinny się zająć służby ratunkowe. Zadzwoń pod numer alarmowy 112!",
+        });
+      } else {
+        // Success - city services will handle this
+        setAlertState({
+          isOpen: true,
+          type: "success",
+          title: "Sukces",
+          message: "Zgłoszenie zostało pomyślnie wysłane i zarejestrowane w systemie!",
+        });
+      }
 
-    if (descriptionLower.includes("drzewo")) {
-      // Success case - store data and show alert first
+      // Store data for pendingSubmit callback
       setPendingSubmit({
         service,
         description,
@@ -185,13 +205,6 @@ export function IncidentForm({ onSubmit }: IncidentFormProps) {
         adminStatus: 'ZGŁOSZONY',
       });
 
-      setAlertState({
-        isOpen: true,
-        type: "success",
-        title: "Sukces",
-        message: "Zgłoszenie zostało pomyślnie wysłane!",
-      });
-
       // Reset form
       setService("");
       setDescription("");
@@ -199,34 +212,19 @@ export function IncidentForm({ onSubmit }: IncidentFormProps) {
       setEmail("");
       setImageFile(null);
       setImagePreview(null);
-      return;
+
+    } catch (error) {
+      console.error('Error submitting incident:', error);
+      setAlertState({
+        isOpen: true,
+        type: "error",
+        title: "Błąd wysyłania",
+        message:
+          "Nie udało się wysłać zgłoszenia. Spróbuj ponownie później.",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-
-    // Default case - normal submission
-    setPendingSubmit({
-      service,
-      description,
-      address,
-      email,
-      imageUrl: imagePreview || undefined,
-      checked: false,
-      adminStatus: 'ZGŁOSZONY',
-    });
-
-    setAlertState({
-      isOpen: true,
-      type: "success",
-      title: "Sukces",
-      message: "Zgłoszenie zostało pomyślnie wysłane!",
-    });
-
-    // Reset form
-    setService("");
-    setDescription("");
-    setAddress("");
-    setEmail("");
-    setImageFile(null);
-    setImagePreview(null);
   };
 
   return (
@@ -343,8 +341,16 @@ export function IncidentForm({ onSubmit }: IncidentFormProps) {
         <Button
           type="submit"
           className="bg-blue-600 hover:bg-blue-700"
+          disabled={isSubmitting}
         >
-          Wyślij zgłoszenie
+          {isSubmitting ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Wysyłanie...
+            </>
+          ) : (
+            "Wyślij zgłoszenie"
+          )}
         </Button>
       </div>
 

@@ -24,7 +24,7 @@ import { AdminPanel } from './components/AdminPanel';
 import { Button } from './components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './components/ui/dialog';
 import { Toaster } from './components/ui/sonner';
-import { fetchResolvedIncidents, createIncident } from './services/api';
+import { fetchResolvedIncidents } from './services/api';
 
 import './App.css'
 
@@ -101,53 +101,17 @@ export default function App() {
   }, []);
 
   const handleSubmitIncident = async (incident: Omit<Incident, 'id' | 'status' | 'createdAt'>) => {
-    try {
-      // Prepare data for API call
-      const apiData = {
-        opis_zgloszenia: incident.description,
-        mail_zglaszajacego: incident.email,
-        adres_zgloszenia: incident.address,
-        typ_sluzby: incident.service !== 'Inne' ? incident.service : undefined,
-        zdjecie_incydentu_zglaszanego: incident.imageUrl,
-      };
+    // Incident is already saved by IncidentForm, just update local state
+    const newIncident: Incident = {
+      ...incident,
+      id: Date.now().toString(),
+      status: 'pending',
+      adminStatus: 'ZGŁOSZONY',
+      createdAt: new Date().toISOString(),
+    };
 
-      // Call the API to create the incident
-      const response = await createIncident(apiData);
-
-      // Transform the API response to Incident format
-      const newIncident: Incident = {
-        id: response.incydent.id_zgloszenia,
-        service: response.incydent.typ_sluzby,
-        description: response.incydent.opis_zgloszenia,
-        address: response.incydent.adres_zgloszenia,
-        email: response.incydent.mail_zglaszajacego,
-        imageUrl: response.incydent.zdjecie_incydentu_zglaszanego || undefined,
-        resolvedImageUrl: response.incydent.zdjecie_incydentu_rozwiazanego || undefined,
-        status: response.incydent.status_incydentu === 'NAPRAWIONY' ? 'resolved' :
-                response.incydent.status_incydentu === 'W TRAKCIE NAPRAWY' ? 'in-progress' : 'pending',
-        checked: response.incydent.sprawdzenie_incydentu,
-        adminStatus: response.incydent.status_incydentu,
-        createdAt: response.incydent.data_zgloszenia,
-        resolvedAt: response.incydent.data_rozwiazania || undefined,
-      };
-
-      setIncidents([newIncident, ...incidents]);
-      setIsDialogOpen(false);
-    } catch (error) {
-      console.error('Failed to create incident:', error);
-      // Fallback to local state if API fails
-      const newIncident: Incident = {
-        ...incident,
-        id: Date.now().toString(),
-        status: 'pending',
-        checked: false,
-        adminStatus: 'ZGŁOSZONY',
-        createdAt: new Date().toISOString(),
-      };
-
-      setIncidents([newIncident, ...incidents]);
-      setIsDialogOpen(false);
-    }
+    setIncidents([newIncident, ...incidents]);
+    setIsDialogOpen(false);
   };
 
   const showMoreIncidents = () => {
