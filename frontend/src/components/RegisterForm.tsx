@@ -3,79 +3,113 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
-import { Alert, AlertDescription } from './ui/alert';
-import { CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { signUp, type UserRole } from '../lib/auth-client';
 
 interface RegisterFormProps {
   onLoginClick: () => void;
+  onRegisterSuccess?: (userRole: UserRole, email: string) => void;
 }
 
-export function RegisterForm({ onLoginClick }: RegisterFormProps) {
+export function RegisterForm({ onLoginClick, onRegisterSuccess }: RegisterFormProps) {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Reset message
-    setMessage(null);
+    // Walidacja imienia
+    if (!name.trim()) {
+      toast.error('Proszę podać imię i nazwisko');
+      return;
+    }
     
     // Walidacja email
     if (!email.includes('@')) {
-      alert('Proszę podać prawidłowy adres email');
+      toast.error('Proszę podać prawidłowy adres email');
       return;
     }
     
     // Walidacja hasła
-    if (password.length < 6) {
-      alert('Hasło musi mieć co najmniej 6 znaków');
+    if (password.length < 8) {
+      toast.error('Hasło musi mieć co najmniej 8 znaków');
       return;
     }
     
     // Walidacja zgód
     if (!acceptPrivacy) {
-      alert('Musisz zaakceptować politykę prywatności');
+      toast.error('Musisz zaakceptować politykę prywatności');
       return;
     }
     
     if (!acceptTerms) {
-      alert('Musisz zaakceptować regulamin');
+      toast.error('Musisz zaakceptować regulamin');
       return;
     }
     
-    // Zmockowana logika rejestracji
-    if (email.toLowerCase().includes('sukces')) {
-      // Sukces
-      setMessage({
-        type: 'success',
-        text: 'HURRA! Udało Ci się zarejestrować.'
-      });
-      
-      // Przekierowanie do logowania po 3 sekundach
-      setTimeout(() => {
-        onLoginClick();
-      }, 3000);
-    } else if (email.toLowerCase().includes('błąd') || email.toLowerCase().includes('blad')) {
-      // Błąd
-      setMessage({
-        type: 'error',
-        text: 'Opsss... Wystąpił błąd. Spróbuj ponownie za chwilę.'
-      });
-    } else {
-      // Domyślnie sukces
-      setMessage({
-        type: 'success',
-        text: 'HURRA! Udało Ci się zarejestrować.'
-      });
-      
-      // Przekierowanie do logowania po 3 sekundach
-      setTimeout(() => {
-        onLoginClick();
-      }, 3000);
-    }
+    // Rejestracja przez Better-Auth
+    await signUp.email(
+      {
+        email,
+        password,
+        name,
+      },
+      {
+        onRequest: () => {
+          setIsLoading(true);
+        },
+        onSuccess: (ctx) => {
+          setIsLoading(false);
+          
+          // Pokaż toast sukcesu
+          toast.success('HURRA! Udało Ci się zarejestrować!', {
+            description: 'Za chwilę zostaniesz przekierowany do panelu.',
+            duration: 3000,
+          });
+          
+          // Pobierz uprawnienia z odpowiedzi i przekieruj do dashboard
+          const user = ctx.data?.user;
+          const userRole: UserRole = (user as any)?.uprawnienia || 'mieszkaniec';
+          const userEmail = user?.email || email;
+          
+          // Przekierowanie do dashboard po 2 sekundach
+          setTimeout(() => {
+            if (onRegisterSuccess) {
+              onRegisterSuccess(userRole, userEmail);
+            } else {
+              onLoginClick();
+            }
+          }, 2000);
+        },
+        onError: (ctx) => {
+          setIsLoading(false);
+          let errorMessage = 'Coś poszło nie tak. Spróbuj ponownie.';
+          
+          // Obsługa znanych błędów
+          if (ctx.error?.message?.includes('already exists') || 
+              ctx.error?.message?.includes('User already exists')) {
+            errorMessage = 'Użytkownik z tym adresem email już istnieje.';
+          } else if (ctx.error?.code === 'INVALID_EMAIL') {
+            errorMessage = 'Podany adres email jest nieprawidłowy.';
+          } else if (ctx.error?.code === 'WEAK_PASSWORD') {
+            errorMessage = 'Hasło jest za słabe. Użyj silniejszego hasła.';
+          } else if (ctx.error?.message) {
+            errorMessage = ctx.error.message;
+          }
+          
+          toast.error('Opsss...', {
+            description: errorMessage,
+            duration: 5000,
+          });
+          console.error('Register error:', ctx.error);
+        },
+      }
+    );
   };
 
   return (
@@ -87,6 +121,22 @@ export function RegisterForm({ onLoginClick }: RegisterFormProps) {
           </h2>
           
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Name */}
+            <div className="space-y-2">
+              <Label htmlFor="register-name">
+                Imię i nazwisko <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="register-name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="np. Jan Kowalski"
+                required
+                disabled={isLoading}
+              />
+            </div>
+
             {/* Email */}
             <div className="space-y-2">
               <Label htmlFor="register-email">
@@ -99,6 +149,7 @@ export function RegisterForm({ onLoginClick }: RegisterFormProps) {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="np. jan.kowalski@example.com"
                 required
+                disabled={isLoading}
               />
             </div>
 
@@ -112,8 +163,9 @@ export function RegisterForm({ onLoginClick }: RegisterFormProps) {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Minimum 6 znaków"
+                placeholder="Minimum 8 znaków"
                 required
+                disabled={isLoading}
               />
             </div>
 
@@ -123,6 +175,7 @@ export function RegisterForm({ onLoginClick }: RegisterFormProps) {
                 id="privacy-policy"
                 checked={acceptPrivacy}
                 onCheckedChange={(checked) => setAcceptPrivacy(checked === true)}
+                disabled={isLoading}
               />
               <Label 
                 htmlFor="privacy-policy" 
@@ -138,6 +191,7 @@ export function RegisterForm({ onLoginClick }: RegisterFormProps) {
                 id="terms"
                 checked={acceptTerms}
                 onCheckedChange={(checked) => setAcceptTerms(checked === true)}
+                disabled={isLoading}
               />
               <Label 
                 htmlFor="terms" 
@@ -151,8 +205,16 @@ export function RegisterForm({ onLoginClick }: RegisterFormProps) {
             <Button 
               type="submit" 
               className="w-full bg-blue-600 hover:bg-blue-700"
+              disabled={isLoading}
             >
-              ZAREJESTRUJ SIĘ
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Rejestracja...
+                </>
+              ) : (
+                'ZAREJESTRUJ SIĘ'
+              )}
             </Button>
 
             {/* Login Link */}
@@ -163,26 +225,13 @@ export function RegisterForm({ onLoginClick }: RegisterFormProps) {
                   type="button"
                   onClick={onLoginClick}
                   className="text-blue-600 hover:text-blue-700 hover:underline"
+                  disabled={isLoading}
                 >
                   Zaloguj się
                 </button>
               </p>
             </div>
           </form>
-          
-          {/* Message */}
-          {message && (
-            <Alert
-              className="mt-4"
-              variant={message.type}
-            >
-              {message.type === 'success' && <CheckCircle2 className="h-4 w-4" />}
-              {message.type === 'error' && <XCircle className="h-4 w-4" />}
-              <AlertDescription>
-                {message.text}
-              </AlertDescription>
-            </Alert>
-          )}
         </div>
       </div>
     </div>

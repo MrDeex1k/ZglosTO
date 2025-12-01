@@ -5,7 +5,20 @@ import { auth } from './src/auth';
 import { logApiRequest } from './src/logger';
 
 const app = express();
-const PORT = Number(process.env.PORT) || 9955;
+const PORT = Number(process.env.PORT);
+
+// CORS - MUSI BYĆ PRZED wszystkimi routes!
+// Akceptuj żądania z nginx (frontend) i bezpośrednio podczas developmentu
+app.use(
+  cors({
+    origin: [
+      process.env.FRONTEND_ORIGIN],
+    credentials: true,
+  })
+);
+
+// JSON middleware
+app.use(express.json());
 
 // Middleware do logowania wszystkich żądań API
 app.use((req, res, next) => {
@@ -38,17 +51,6 @@ app.use((req, res, next) => {
 });
 
 app.all('/api/auth/*splat', toNodeHandler(auth));
-
-// JSON middleware for non-auth routes
-app.use(express.json());
-
-// CORS - dostosuj FRONTEND_ORIGIN w .env
-app.use(
-  cors({
-    origin: process.env.FRONTEND_ORIGIN || 'http://localhost:5173',
-    credentials: true,
-  })
-);
 
 // Example health endpoint
 app.get('/health', async (_req, res) => {

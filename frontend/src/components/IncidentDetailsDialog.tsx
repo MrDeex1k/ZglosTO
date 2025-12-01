@@ -82,7 +82,7 @@ export function IncidentDetailsDialog({ incident, open, onOpenChange }: Incident
           <div>
             <div className="text-gray-500 mb-1">Adres</div>
             <div className="flex items-start gap-2 text-gray-900">
-              <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0 text-gray-500" />
+              <MapPin className="w-4 h-4 mt-0.5 shrink-0 text-gray-500" />
               <span>{incident.address}</span>
             </div>
           </div>

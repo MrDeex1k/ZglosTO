@@ -2,51 +2,67 @@ import { useState } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { Alert, AlertDescription } from './ui/alert';
+import { Loader2, XCircle } from 'lucide-react';
+import { signIn, type UserRole } from '../lib/auth-client';
 
 interface LoginFormProps {
   onRegisterClick: () => void;
-  onLoginSuccess: (userRole: 'admin' | 'sluzby' | 'mieszkaniec', email: string) => void;
+  onLoginSuccess: (userRole: UserRole, email: string) => void;
 }
 
 export function LoginForm({ onRegisterClick, onLoginSuccess }: LoginFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Reset błędu
+    setError(null);
     
     // Walidacja
     if (!email.includes('@')) {
-      alert('Proszę podać prawidłowy adres email');
+      setError('Proszę podać prawidłowy adres email');
       return;
     }
     
     if (password.length < 6) {
-      alert('Hasło musi mieć co najmniej 6 znaków');
+      setError('Hasło musi mieć co najmniej 6 znaków');
       return;
     }
     
-    // Określenie roli użytkownika na podstawie emaila
-    let userRole: 'admin' | 'sluzby' | 'mieszkaniec' = 'mieszkaniec';
-
-    if (email.toLowerCase().includes('admin')) {
-      userRole = 'admin';
-    } else if (email.toLowerCase().includes('sluzba') ||
-               email.toLowerCase().includes('mpk') ||
-               email.toLowerCase().includes('zgk') ||
-               email.toLowerCase().includes('zarzad') ||
-               email.toLowerCase().includes('pogotowie') ||
-               email.toLowerCase().includes('mpec')) {
-      userRole = 'sluzby';
-    } else if (email.toLowerCase().includes('mieszkaniec')) {
-      userRole = 'mieszkaniec';
-    }
-    
-    // TODO: Implementacja logowania
-    console.log('Login:', { email, password, userRole });
-    
-    // Symulacja pomyślnego logowania
-    onLoginSuccess(userRole, email);
+    // Logowanie przez Better-Auth
+    await signIn.email(
+      {
+        email,
+        password,
+      },
+      {
+        onRequest: () => {
+          setIsLoading(true);
+          setError(null);
+        },
+        onSuccess: (ctx) => {
+          setIsLoading(false);
+          // Pobierz uprawnienia z odpowiedzi sesji
+          const user = ctx.data?.user;
+          const userRole: UserRole = (user as any)?.uprawnienia || 'mieszkaniec';
+          const userEmail = user?.email || email;
+          
+          console.log('Login success:', { userRole, userEmail, user });
+          onLoginSuccess(userRole, userEmail);
+        },
+        onError: (ctx) => {
+          setIsLoading(false);
+          const errorMessage = ctx.error?.message || 'Nieprawidłowy email lub hasło';
+          setError(errorMessage);
+          console.error('Login error:', ctx.error);
+        },
+      }
+    );
   };
 
   return (
@@ -70,6 +86,7 @@ export function LoginForm({ onRegisterClick, onLoginSuccess }: LoginFormProps) {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="np. jan.kowalski@example.com"
                 required
+                disabled={isLoading}
               />
             </div>
 
@@ -85,15 +102,32 @@ export function LoginForm({ onRegisterClick, onLoginSuccess }: LoginFormProps) {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Wprowadź hasło"
                 required
+                disabled={isLoading}
               />
             </div>
+
+            {/* Error Message */}
+            {error && (
+              <Alert variant="error" className="flex items-center gap-2">
+                <XCircle className="h-5 w-5 text-red-600" />
+                <AlertDescription className="text-sm font-medium">{error}</AlertDescription>
+              </Alert>
+            )}
 
             {/* Login Button */}
             <Button 
               type="submit" 
               className="w-full bg-blue-600 hover:bg-blue-700"
+              disabled={isLoading}
             >
-              ZALOGUJ SIĘ
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Logowanie...
+                </>
+              ) : (
+                'ZALOGUJ SIĘ'
+              )}
             </Button>
 
             {/* Register Button */}
@@ -102,6 +136,7 @@ export function LoginForm({ onRegisterClick, onLoginSuccess }: LoginFormProps) {
               variant="outline"
               className="w-full"
               onClick={onRegisterClick}
+              disabled={isLoading}
             >
               ZAREJESTRUJ SIĘ
             </Button>

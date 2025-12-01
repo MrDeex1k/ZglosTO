@@ -12,6 +12,12 @@ export const auth = betterAuth({
   database: dbPool,
   secret: process.env.BETTER_AUTH_SECRET,
 
+  // Dozwolone origin (CORS + walidacja Better-Auth)
+  trustedOrigins: [
+    process.env.FRONTEND_ORIGIN || "http://localhost:1235",
+    "http://localhost:5173", // Vite dev server
+  ],
+
   // Włącz autoryzację email + password
   emailAndPassword: {
     enabled: true,

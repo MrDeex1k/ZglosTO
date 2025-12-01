@@ -25,6 +25,8 @@ import { Button } from './components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './components/ui/dialog';
 import { Toaster } from './components/ui/sonner';
 import { fetchResolvedIncidents } from './services/api';
+import { useSession, signOut, type UserRole } from './lib/auth-client';
+import { Loader2 } from 'lucide-react';
 
 import './App.css'
 
@@ -50,14 +52,19 @@ export default function App() {
   const [visibleIncidents, setVisibleIncidents] = useState(5);
   const [visibleServiceIncidents, setVisibleServiceIncidents] = useState(10);
   const [currentView, setCurrentView] = useState<'home' | 'login' | 'register' | 'dashboard'>('home');
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userRole, setUserRole] = useState<'admin' | 'sluzby' | 'mieszkaniec'>('mieszkaniec');
-  const [userEmail, setUserEmail] = useState<string>('');
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [serviceStatusFilter, setServiceStatusFilter] = useState<'ALL' | 'ZGŁOSZONY' | 'W TRAKCIE NAPRAWY' | 'NAPRAWIONY'>('ALL');
   const [isLoadingIncidents, setIsLoadingIncidents] = useState(true);
   const [incidentsError, setIncidentsError] = useState<string | null>(null);
+
+  // Better-Auth session hook - zastępuje lokalne stany isLoggedIn, userRole, userEmail
+  const { data: session, isPending: isSessionLoading } = useSession();
+  
+  // Pobierz dane z sesji
+  const isLoggedIn = !!session?.user;
+  const userEmail = session?.user?.email || '';
+  const userRole: UserRole = (session?.user as any)?.uprawnienia || 'mieszkaniec';
 
   // Transform API response to Incident interface
   const transformApiIncident = (apiIncident: any): Incident => {
@@ -79,7 +86,6 @@ export default function App() {
 
   // Fetch resolved incidents on component mount
   useEffect(() => {
-
     const loadIncidents = async () => {
       try {
         setIsLoadingIncidents(true);
@@ -100,6 +106,18 @@ export default function App() {
     loadIncidents();
   }, []);
 
+  // Wyświetl loading screen podczas ładowania sesji
+  if (isSessionLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Ładowanie...</p>
+        </div>
+      </div>
+    );
+  }
+
   const handleSubmitIncident = async (incident: Omit<Incident, 'id' | 'status' | 'createdAt'>) => {
     // Incident is already saved by IncidentForm, just update local state
     const newIncident: Incident = {
@@ -118,10 +136,9 @@ export default function App() {
     setVisibleIncidents(15); // Pokazuje wszystkie 15 zgłoszeń (5 początkowych + 10 dodatkowych)
   };
 
-  const handleLoginSuccess = (role: 'admin' | 'sluzby' | 'mieszkaniec', email: string) => {
-    setIsLoggedIn(true);
-    setUserRole(role);
-    setUserEmail(email);
+  const handleLoginSuccess = (_role: UserRole, _email: string) => {
+    // Sesja jest teraz zarządzana przez Better-Auth hook useSession()
+    // Po pomyślnym logowaniu, useSession automatycznie zaktualizuje stan
     setCurrentView('dashboard');
   };
 
@@ -137,11 +154,14 @@ export default function App() {
     setCurrentView('login');
   };
 
-  const handleLogoutClick = () => {
-    setIsLoggedIn(false);
-    setUserRole('mieszkaniec');
-    setUserEmail('');
-    setCurrentView('home');
+  const handleLogoutClick = async () => {
+    await signOut({
+      fetchOptions: {
+        onSuccess: () => {
+          setCurrentView('home');
+        }
+      }
+    });
   };
 
   const handleIncidentClick = (incident: Incident) => {
@@ -431,7 +451,10 @@ export default function App() {
           isLoggedIn={isLoggedIn}
           userRole={userRole}
         />
-        <RegisterForm onLoginClick={() => setCurrentView('login')} />
+        <RegisterForm 
+          onLoginClick={() => setCurrentView('login')} 
+          onRegisterSuccess={handleLoginSuccess}
+        />
         <Footer />
       </div>
     );
