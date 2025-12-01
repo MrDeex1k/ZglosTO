@@ -7,8 +7,6 @@ import { logApiRequest } from './src/logger';
 const app = express();
 const PORT = Number(process.env.PORT);
 
-// CORS - MUSI BYĆ PRZED wszystkimi routes!
-// Akceptuj żądania z nginx (frontend) i bezpośrednio podczas developmentu
 app.use(
   cors({
     origin: [
