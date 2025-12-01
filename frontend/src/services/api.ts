@@ -30,6 +30,21 @@ interface ApiUserIncident {
   data_godzina_rozwiazania: string | null;
 }
 
+interface ApiAllIncidents {
+  id_zgloszenia: string;
+  opis_zgloszenia: string;
+  mail_zglaszajacego: string;
+  adres_zgloszenia: string;
+  zdjecie_incydentu_zglaszanego: string | null;
+  zdjecie_incydentu_rozwiazanego: string | null;
+  sprawdzenie_incydentu: boolean;
+  status_incydentu: string;
+  typ_sluzby: string;
+  LLM_odpowiedz: string | null;
+  data_godzina_zgloszenia: string;
+  data_godzina_rozwiazania: string | null;
+}
+
 /**
  * Fetch resolved incidents for the home page
  */
@@ -45,6 +60,27 @@ export async function fetchResolvedIncidents(): Promise<ApiResolvedIncident[]> {
     return data;
   } catch (error) {
     console.error('Error fetching resolved incidents:', error);
+    throw error;
+  }
+}
+
+/**
+ * Fetch all incidents for admin panel
+ */
+export async function fetchAllIncidents(): Promise<ApiAllIncidents[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/admin/incydenty`, {
+      credentials: 'include' // Include cookies for authentication
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching all incidents:', error);
     throw error;
   }
 }

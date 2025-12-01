@@ -426,6 +426,40 @@ curl -H "Cookie: better-auth.session_token=YOUR_SESSION_TOKEN" \
 
 ---
 
+#### Wszystkie zgłoszenia w systemie
+
+**Endpoint:** `GET /admin/incydenty`
+
+**Opis:** Zwraca wszystkie zgłoszenia w systemie niezależnie od statusu czy przypisania do służby. Posortowane wg daty zgłoszenia malejąco.
+
+**Przykład curl:**
+```bash
+curl -H "Cookie: better-auth.session_token=YOUR_SESSION_TOKEN" \
+     http://localhost:3000/admin/incydenty
+```
+
+**Response (Success):**
+```json
+[
+  {
+    "id_zgloszenia": "019ac081-4076-7ead-89e7-16c0227fcbc8",
+    "opis_zgloszenia": "Dziura w drodze na ulicy głównej",
+    "mail_zglaszajacego": "jan.kowalski@gmail.pl",
+    "adres_zgloszenia": "Warszawa, ul. Testowa 15",
+    "zdjecie_incydentu_zglaszanego": null,
+    "zdjecie_incydentu_rozwiazanego": null,
+    "sprawdzenie_incydentu": true,
+    "status_incydentu": "NAPRAWIONY",
+    "typ_sluzby": "Zarząd Dróg",
+    "llm_odpowiedz": "SŁUŻBY MIEJSKIE",
+    "data_godzina_zgloszenia": "26.11.2025 15:11",
+    "data_godzina_rozwiazania": "26.11.2025 15:21"
+  }
+]
+```
+
+---
+
 #### Zmiana przypisania zgłoszenia
 
 **Endpoint:** `PATCH /admin/incydenty/:id/typ`

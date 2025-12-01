@@ -22,7 +22,10 @@ const buildPath = path.join(__dirname, '../frontend/dist');
 // Serwowanie statycznych plików Reacta
 app.use(express.static(buildPath));
 
-app.use(cors());
+app.use(cors({
+  origin: true, // Zezwala na wszystkie origins w development
+  credentials: true // Zezwala na wysyłanie cookies i innych credentials
+}));
 app.use(bodyParser.json({ limit: '10mb' })); // zdjęcia base64 mogą być duże
 
 app.use("/mieszkaniec", mieszkaniecRouter)

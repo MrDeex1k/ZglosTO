@@ -24,7 +24,7 @@ import { AdminPanel } from './components/AdminPanel';
 import { Button } from './components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './components/ui/dialog';
 import { Toaster } from './components/ui/sonner';
-import { fetchResolvedIncidents } from './services/api';
+import { fetchResolvedIncidents, fetchAllIncidents } from './services/api';
 import { useSession, signOut, type UserRole } from './lib/auth-client';
 import { Loader2 } from 'lucide-react';
 
@@ -58,6 +58,9 @@ export default function App() {
   const [isLoadingIncidents, setIsLoadingIncidents] = useState(true);
   const [incidentsError, setIncidentsError] = useState<string | null>(null);
 
+  // Stan dla wszystkich zgłoszeń administratora
+  const [allIncidents, setAllIncidents] = useState<Incident[]>([]);
+
   // Better-Auth session hook - zastępuje lokalne stany isLoggedIn, userRole, userEmail
   const { data: session, isPending: isSessionLoading } = useSession();
   
@@ -84,6 +87,24 @@ export default function App() {
     };
   };
 
+  // Transform API response from admin endpoint to Incident interface
+  const transformApiAllIncidents = (apiIncident: any): Incident => {
+    return {
+      id: apiIncident.id_zgloszenia,
+      service: apiIncident.typ_sluzby,
+      description: apiIncident.opis_zgloszenia,
+      address: apiIncident.adres_zgloszenia,
+      email: apiIncident.mail_zglaszajacego,
+      imageUrl: apiIncident.zdjecie_incydentu_zglaszanego || undefined,
+      resolvedImageUrl: apiIncident.zdjecie_incydentu_rozwiazanego || undefined,
+      status: apiIncident.status_incydentu === 'NAPRAWIONY' ? 'resolved' : 'pending',
+      checked: apiIncident.sprawdzenie_incydentu,
+      adminStatus: apiIncident.status_incydentu as 'ZGŁOSZONY' | 'W TRAKCIE NAPRAWY' | 'NAPRAWIONY',
+      createdAt: apiIncident.data_godzina_zgloszenia,
+      resolvedAt: apiIncident.data_godzina_rozwiazania || undefined,
+    };
+  };
+
   // Fetch resolved incidents on component mount
   useEffect(() => {
     const loadIncidents = async () => {
@@ -105,6 +126,24 @@ export default function App() {
 
     loadIncidents();
   }, []);
+
+  // Fetch all incidents for admin panel when admin logs in
+  useEffect(() => {
+    const loadAllIncidents = async () => {
+      if (userRole === 'admin' && isLoggedIn) {
+        try {
+          const apiIncidents = await fetchAllIncidents();
+          const transformedIncidents = apiIncidents.map(transformApiAllIncidents);
+          setAllIncidents(transformedIncidents);
+        } catch (error) {
+          console.error('Failed to load all incidents:', error);
+          setAllIncidents([]);
+        }
+      }
+    };
+
+    loadAllIncidents();
+  }, [userRole, isLoggedIn]);
 
   // Wyświetl loading screen podczas ładowania sesji
   if (isSessionLoading) {
@@ -407,8 +446,8 @@ export default function App() {
           userRole={userRole}
         />
         <main className="flex-1 container mx-auto px-4">
-          <AdminPanel 
-            incidents={incidents}
+          <AdminPanel
+            incidents={allIncidents}
             onUpdateIncident={handleUpdateIncident}
             onUpdateIncidentService={handleUpdateIncidentService}
           />

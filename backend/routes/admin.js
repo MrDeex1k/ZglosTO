@@ -4,6 +4,28 @@ const router = express.Router();
 const db = require('../database');
 
 /**
+ * Helper function to convert BYTEA buffer to base64 data URL
+ */
+function bufferToDataUrl(buffer) {
+  if (!buffer) return null;
+  // Detect image type from magic bytes
+  const bytes = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+  let mimeType = 'image/jpeg'; // default
+
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
+    mimeType = 'image/png';
+  } else if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) {
+    mimeType = 'image/gif';
+  } else if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) {
+    mimeType = 'image/jpeg';
+  } else if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46) {
+    mimeType = 'image/webp';
+  }
+
+  return `data:${mimeType};base64,${bytes.toString('base64')}`;
+}
+
+/**
  * GET /admin/statystyki
  * Zwraca pełne statystyki wszystkich służb (liczba zgłoszeń wg typ_sluzby i statusu).
  */
@@ -17,6 +39,35 @@ router.get('/statystyki', async (req, res) => {
     `;
     const { rows } = await db.query(q, []);
     res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /admin/incydenty
+ * Zwraca wszystkie zgłoszenia w systemie niezależnie od statusu czy przypisania do służby. Posortowane wg daty zgłoszenia malejąco.
+ */
+router.get('/incydenty', async (req, res) => {
+  try {
+    const q = `
+      SELECT id_zgloszenia, opis_zgloszenia, mail_zglaszajacego, adres_zgloszenia, zdjecie_incydentu_zglaszanego, zdjecie_incydentu_rozwiazanego, sprawdzenie_incydentu, status_incydentu, typ_sluzby, LLM_odpowiedz,
+             TO_CHAR(data_zgloszenia, 'DD.MM.YYYY') || ' ' || TO_CHAR(godzina_zgloszenia, 'HH24:MI') as data_godzina_zgloszenia,
+             TO_CHAR(data_rozwiazania, 'DD.MM.YYYY') || ' ' || TO_CHAR(godzina_rozwiazania, 'HH24:MI') as data_godzina_rozwiazania
+      FROM incydenty
+      ORDER BY data_zgloszenia DESC, godzina_zgloszenia DESC;
+    `;
+    const { rows } = await db.query(q, []);
+
+    // Convert BYTEA fields to base64 data URLs
+    const transformedRows = rows.map(row => ({
+      ...row,
+      zdjecie_incydentu_zglaszanego: bufferToDataUrl(row.zdjecie_incydentu_zglaszanego),
+      zdjecie_incydentu_rozwiazanego: bufferToDataUrl(row.zdjecie_incydentu_rozwiazanego),
+    }));
+
+    res.json(transformedRows);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
