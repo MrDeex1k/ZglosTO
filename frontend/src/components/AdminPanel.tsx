@@ -13,19 +13,11 @@ import { AdminIncidentDialog } from "./AdminIncidentDialog";
 import { formatPolishDate } from "../utils/dateUtils";
 import { Badge } from "./ui/badge";
 import { Card } from "./ui/card";
+import { updateIncidentStatus, updateIncidentVerification, updateIncidentService } from "../services/api";
 
 interface AdminPanelProps {
   incidents: Incident[];
-  onUpdateIncident: (
-    incidentId: string,
-    checked: boolean,
-    adminStatus:
-      | "ZGŁOSZONY"
-      | "W TRAKCIE NAPRAWY"
-      | "NAPRAWIONY",
-    resolvedImageBase64?: string
-  ) => void;
-  onUpdateIncidentService?: (incidentId: string, newService: string) => void;
+  onIncidentsChange?: (incidents: Incident[]) => void;
 }
 
 const serviceColors: Record<string, string> = {
@@ -55,9 +47,9 @@ const getServiceShortName = (service: string): string => {
 
 export function AdminPanel({
   incidents,
-  onUpdateIncident,
-  onUpdateIncidentService,
+  onIncidentsChange,
 }: AdminPanelProps) {
+  const [localIncidents, setLocalIncidents] = useState<Incident[]>(incidents);
   const [activeView, setActiveView] = useState<
     "menu" | "all" | "unassigned" | "permissions"
   >("menu");
@@ -65,6 +57,66 @@ export function AdminPanel({
     useState<Incident | null>(null);
   const [showAllIncidents, setShowAllIncidents] =
     useState(false);
+
+  // Aktualizuj lokalny stan gdy props się zmieniają
+  useEffect(() => {
+    setLocalIncidents(incidents);
+  }, [incidents]);
+
+  // Funkcja do aktualizacji zgłoszenia poprzez API
+  const handleUpdateIncident = async (
+    incidentId: string,
+    checked: boolean,
+    adminStatus: "ZGŁOSZONY" | "W TRAKCIE NAPRAWY" | "NAPRAWIONY"
+  ) => {
+    try {
+      // Aktualizuj status poprzez API
+      await updateIncidentStatus(incidentId, adminStatus);
+      // Aktualizuj sprawdzenie poprzez API
+      await updateIncidentVerification(incidentId, checked);
+
+      // Aktualizuj lokalny stan
+      const updatedIncidents = localIncidents.map(inc =>
+        inc.id === incidentId
+          ? { ...inc, checked, adminStatus }
+          : inc
+      );
+      setLocalIncidents(updatedIncidents);
+
+      // Powiadom rodzica o zmianie jeśli callback istnieje
+      if (onIncidentsChange) {
+        onIncidentsChange(updatedIncidents);
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error updating incident:', error);
+      throw error;
+    }
+  };
+
+  // Funkcja do aktualizacji typu służby zgłoszenia poprzez API
+  const handleUpdateIncidentService = async (incidentId: string, newService: string) => {
+    try {
+      await updateIncidentService(incidentId, newService);
+
+      // Aktualizuj lokalny stan
+      const updatedIncidents = localIncidents.map(inc =>
+        inc.id === incidentId
+          ? { ...inc, service: newService }
+          : inc
+      );
+      setLocalIncidents(updatedIncidents);
+
+      // Powiadom rodzica o zmianie jeśli callback istnieje
+      if (onIncidentsChange) {
+        onIncidentsChange(updatedIncidents);
+      }
+    } catch (error) {
+      console.error('Error updating incident service:', error);
+      throw error;
+    }
+  };
   
   // State dla formularza uprawnień
   const [userEmail, setUserEmail] = useState('');
@@ -137,7 +189,7 @@ export function AdminPanel({
   };
 
   // Wszystkie zgłoszenia
-  const allIncidents = [...incidents].sort(
+  const allIncidents = [...localIncidents].sort(
     (a, b) =>
       new Date(b.createdAt).getTime() -
       new Date(a.createdAt).getTime(),
@@ -392,8 +444,8 @@ export function AdminPanel({
           onOpenChange={(open) =>
             !open && setSelectedIncident(null)
           }
-          onUpdateService={onUpdateIncidentService || (() => {})}
-          onUpdate={onUpdateIncident}
+          onUpdateService={handleUpdateIncidentService}
+          onUpdate={handleUpdateIncident}
         />
       </div>
     );
@@ -506,8 +558,8 @@ export function AdminPanel({
           onOpenChange={(open) =>
             !open && setSelectedIncident(null)
           }
-          onUpdateService={onUpdateIncidentService || (() => {})}
-          onUpdate={onUpdateIncident}
+          onUpdateService={handleUpdateIncidentService}
+          onUpdate={handleUpdateIncident}
         />
       </div>
     );

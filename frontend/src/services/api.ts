@@ -86,6 +86,84 @@ export async function fetchAllIncidents(): Promise<ApiAllIncidents[]> {
 }
 
 /**
+ * Update incident status (admin)
+ */
+export async function updateIncidentStatus(incidentId: string, status: string): Promise<any> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/admin/incydenty/${incidentId}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({ status_incydentu: status }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error updating incident status:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update incident verification (admin)
+ */
+export async function updateIncidentVerification(incidentId: string, checked: boolean): Promise<any> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/admin/incydenty/${incidentId}/sprawdzenie`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({ sprawdzenie_incydentu: checked }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error updating incident verification:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update incident service type (admin)
+ */
+export async function updateIncidentService(incidentId: string, serviceType: string): Promise<any> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/admin/incydenty/${incidentId}/typ`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({ typ_sluzby: serviceType }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error updating incident service:', error);
+    throw error;
+  }
+}
+
+/**
  * Fetch user incidents by email
  */
 export async function fetchUserIncidents(email: string): Promise<ApiUserIncident[]> {

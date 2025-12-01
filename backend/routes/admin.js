@@ -75,6 +75,26 @@ router.get('/incydenty', async (req, res) => {
 });
 
 /**
+ * PATCH /admin/incydenty/:id/sprawdzenie
+ * Body: { sprawdzenie_incydentu: boolean }
+ */
+router.patch('/incydenty/:id/sprawdzenie', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { sprawdzenie_incydentu } = req.body;
+    if (typeof sprawdzenie_incydentu !== 'boolean') return res.status(400).json({ error: 'sprawdzenie_incydentu boolean required' });
+
+    const q = `UPDATE incydenty SET sprawdzenie_incydentu = $1 WHERE id_zgloszenia = $2 RETURNING *;`;
+    const { rows } = await db.query(q, [sprawdzenie_incydentu, id]);
+    if (rows.length === 0) return res.status(404).json({ error: 'incydent not found' });
+    res.json({ success: true, incydent: rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
  * PATCH /admin/incydenty/:id/typ
  * Body: { typ_sluzby } - zmienia przypisanie.
  */
@@ -106,7 +126,7 @@ router.patch('/incydenty/:id/status', async (req, res) => {
 
     const q = `
       UPDATE incydenty
-      SET status_incydentu = $1,
+      SET status_incydentu = $1::status_incydentu_enum,
           data_rozwiazania = CASE
             WHEN $1 = 'NAPRAWIONY' THEN CURRENT_DATE
             WHEN $1 IN ('ZGŁOSZONY', 'W TRAKCIE NAPRAWY') THEN NULL

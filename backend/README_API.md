@@ -506,6 +506,43 @@ curl -X PATCH http://localhost:3000/admin/incydenty/1/status \
 
 ---
 
+#### Aktualizacja sprawdzenia zgłoszenia (admin)
+
+**Endpoint:** `PATCH /admin/incydenty/:id/sprawdzenie`
+
+**Opis:** Administrator może ustawić flagę sprawdzenia zgłoszenia.
+
+**Request Body:**
+```json
+{
+  "sprawdzenie_incydentu": true
+}
+```
+
+**Wymagane pola:**
+- `sprawdzenie_incydentu` (boolean) - Czy zgłoszenie zostało sprawdzone
+
+**Przykład curl:**
+```bash
+curl -X PATCH http://localhost:3000/admin/incydenty/1/sprawdzenie \
+  -H "Content-Type: application/json" \
+  -H "Cookie: better-auth.session_token=YOUR_SESSION_TOKEN" \
+  -d '{"sprawdzenie_incydentu": true}'
+```
+
+**Response (Success):**
+```json
+{
+  "success": true,
+  "incydent": {
+    "id_zgloszenia": 1,
+    "sprawdzenie_incydentu": true
+  }
+}
+```
+
+---
+
 #### Przypisanie użytkownika do służby
 
 **Endpoint:** `PATCH /admin/uzytkownicy/typ_uprawnien`

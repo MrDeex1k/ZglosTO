@@ -218,15 +218,6 @@ export default function App() {
     );
   };
   
-  const handleUpdateIncidentService = (incidentId: string, newService: string) => {
-    setIncidents(prevIncidents =>
-      prevIncidents.map(inc =>
-        inc.id === incidentId
-          ? { ...inc, service: newService }
-          : inc
-      )
-    );
-  };
 
   const getServiceFromEmail = (email: string): string => {
     const lowerEmail = email.toLowerCase();
@@ -448,8 +439,7 @@ export default function App() {
         <main className="flex-1 container mx-auto px-4">
           <AdminPanel
             incidents={allIncidents}
-            onUpdateIncident={handleUpdateIncident}
-            onUpdateIncidentService={handleUpdateIncidentService}
+            onIncidentsChange={setAllIncidents}
           />
         </main>
         <Footer />
