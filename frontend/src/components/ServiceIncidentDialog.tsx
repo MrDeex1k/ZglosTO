@@ -84,10 +84,19 @@ export function ServiceIncidentDialog({ incident, open, onOpenChange, onUpdate }
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Service Badge */}
+          {/* Service and Status Badges */}
           <div className="flex items-center gap-2 flex-wrap">
             <Badge className={serviceColor}>
               {getServiceShortName(incident.service)}
+            </Badge>
+            <Badge variant="outline" className={
+              incident.adminStatus === 'NAPRAWIONY'
+                ? 'border-green-500 text-green-700 bg-green-100'
+                : incident.adminStatus === 'W TRAKCIE NAPRAWY'
+                ? 'border-orange-500 text-orange-700 bg-orange-100'
+                : 'border-gray-500 text-gray-700 bg-gray-100'
+            }>
+              {incident.adminStatus}
             </Badge>
           </div>
 

@@ -67,7 +67,7 @@ router.get('/incydenty/glowna', async (req, res) => {
              TO_CHAR(data_rozwiazania, 'DD.MM.YYYY') || ' ' || TO_CHAR(godzina_rozwiazania, 'HH24:MI') as data_godzina_rozwiazania
       FROM incydenty
       WHERE status_incydentu = 'NAPRAWIONY'
-      ORDER BY data_rozwiazania
+      ORDER BY data_rozwiazania DESC, godzina_rozwiazania DESC
       LIMIT 15;
     `;
     const { rows } = await db.query(q);

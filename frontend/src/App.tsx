@@ -24,7 +24,7 @@ import { AdminPanel } from './components/AdminPanel';
 import { Button } from './components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './components/ui/dialog';
 import { Toaster } from './components/ui/sonner';
-import { fetchResolvedIncidents, fetchAllIncidents } from './services/api';
+import { fetchResolvedIncidents, fetchAllIncidents, fetchServiceIncidents, updateIncidentStatusService, updateIncidentVerificationService, uploadResolvedImageService } from './services/api';
 import { useSession, signOut, type UserRole } from './lib/auth-client';
 import { Loader2 } from 'lucide-react';
 
@@ -61,6 +61,9 @@ export default function App() {
   // Stan dla wszystkich zgłoszeń administratora
   const [allIncidents, setAllIncidents] = useState<Incident[]>([]);
 
+  // Stan dla zgłoszeń służb
+  const [serviceIncidents, setServiceIncidents] = useState<Incident[]>([]);
+
   // Better-Auth session hook - zastępuje lokalne stany isLoggedIn, userRole, userEmail
   const { data: session, isPending: isSessionLoading } = useSession();
   
@@ -68,6 +71,7 @@ export default function App() {
   const isLoggedIn = !!session?.user;
   const userEmail = session?.user?.email || '';
   const userRole: UserRole = (session?.user as any)?.uprawnienia || 'mieszkaniec';
+  const userServiceType = (session?.user as any)?.typ_uprawnien || null;
 
   // Transform API response to Incident interface
   const transformApiIncident = (apiIncident: any): Incident => {
@@ -95,6 +99,24 @@ export default function App() {
       description: apiIncident.opis_zgloszenia,
       address: apiIncident.adres_zgloszenia,
       email: apiIncident.mail_zglaszajacego,
+      imageUrl: apiIncident.zdjecie_incydentu_zglaszanego || undefined,
+      resolvedImageUrl: apiIncident.zdjecie_incydentu_rozwiazanego || undefined,
+      status: apiIncident.status_incydentu === 'NAPRAWIONY' ? 'resolved' : 'pending',
+      checked: apiIncident.sprawdzenie_incydentu,
+      adminStatus: apiIncident.status_incydentu as 'ZGŁOSZONY' | 'W TRAKCIE NAPRAWY' | 'NAPRAWIONY',
+      createdAt: apiIncident.data_godzina_zgloszenia,
+      resolvedAt: apiIncident.data_godzina_rozwiazania || undefined,
+    };
+  };
+
+  // Transform API response from service endpoint to Incident interface
+  const transformApiServiceIncidents = (apiIncident: any): Incident => {
+    return {
+      id: apiIncident.id_zgloszenia,
+      service: apiIncident.typ_sluzby,
+      description: apiIncident.opis_zgloszenia,
+      address: apiIncident.adres_zgloszenia,
+      email: apiIncident.mail_zglaszajacego || '',
       imageUrl: apiIncident.zdjecie_incydentu_zglaszanego || undefined,
       resolvedImageUrl: apiIncident.zdjecie_incydentu_rozwiazanego || undefined,
       status: apiIncident.status_incydentu === 'NAPRAWIONY' ? 'resolved' : 'pending',
@@ -143,6 +165,24 @@ export default function App() {
     };
 
     loadAllIncidents();
+  }, [userRole, isLoggedIn]);
+
+  // Fetch service incidents for service panel when service user logs in
+  useEffect(() => {
+    const loadServiceIncidents = async () => {
+      if (userRole === 'sluzby' && isLoggedIn) {
+        try {
+          const apiIncidents = await fetchServiceIncidents();
+          const transformedIncidents = apiIncidents.map(transformApiServiceIncidents);
+          setServiceIncidents(transformedIncidents);
+        } catch (error) {
+          console.error('Failed to load service incidents:', error);
+          setServiceIncidents([]);
+        }
+      }
+    };
+
+    loadServiceIncidents();
   }, [userRole, isLoggedIn]);
 
   // Wyświetl loading screen podczas ładowania sesji
@@ -208,34 +248,51 @@ export default function App() {
     setIsDetailsDialogOpen(true);
   };
 
-  const handleUpdateIncident = (incidentId: string, checked: boolean, adminStatus: 'ZGŁOSZONY' | 'W TRAKCIE NAPRAWY' | 'NAPRAWIONY', resolvedImageBase64?: string) => {
-    setIncidents(prevIncidents =>
-      prevIncidents.map(inc =>
-        inc.id === incidentId
-          ? { ...inc, checked, adminStatus, resolvedImageUrl: resolvedImageBase64 || inc.resolvedImageUrl }
-          : inc
-      )
-    );
+  const handleUpdateIncident = async (incidentId: string, checked: boolean, adminStatus: 'ZGŁOSZONY' | 'W TRAKCIE NAPRAWY' | 'NAPRAWIONY', resolvedImageBase64?: string) => {
+    try {
+      if (userRole === 'sluzby') {
+        // Dla służb używamy API służb
+        await updateIncidentStatusService(incidentId, adminStatus);
+        await updateIncidentVerificationService(incidentId, checked);
+
+        if (resolvedImageBase64) {
+          await uploadResolvedImageService(incidentId, resolvedImageBase64);
+        }
+
+        // Aktualizuj lokalny stan dla służb
+        setServiceIncidents(prevIncidents =>
+          prevIncidents.map(inc =>
+            inc.id === incidentId
+              ? { ...inc, checked, adminStatus, resolvedImageUrl: resolvedImageBase64 || inc.resolvedImageUrl }
+              : inc
+          )
+        );
+      } else {
+        // Dla innych ról (np. admin) używamy istniejącej logiki lub API admina
+        setIncidents(prevIncidents =>
+          prevIncidents.map(inc =>
+            inc.id === incidentId
+              ? { ...inc, checked, adminStatus, resolvedImageUrl: resolvedImageBase64 || inc.resolvedImageUrl }
+              : inc
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error updating incident:', error);
+      throw error;
+    }
   };
   
 
-  const getServiceFromEmail = (email: string): string => {
-    const lowerEmail = email.toLowerCase();
-    if (lowerEmail.includes('mpk')) {
-      return 'Miejskie Przedsiębiorstwo Komunikacyjne';
-    } else if (lowerEmail.includes('zgk')) {
-      return 'Zakład Gospodarki Komunalnej';
-    } else if (lowerEmail.includes('pogotowie')) {
-      return 'Pogotowie Kanalizacyjne';
-    } else if (lowerEmail.includes('zarzad')) {
-      return 'Zarząd Dróg';
-    } else if (lowerEmail.includes('mpec')) {
-      return 'Miejskie Przedsiębiorstwo Energetyki Cieplnej';
-    }
-    return '';
-  };
 
-  const resolvedIncidents = incidents.filter(inc => inc.status === 'resolved');
+  const resolvedIncidents = incidents
+    .filter(inc => inc.status === 'resolved')
+    .sort((a, b) => {
+      // Sortuj najpierw po dacie rozwiązania, potem po dacie utworzenia (malejąco)
+      const dateA = new Date(a.resolvedAt || a.createdAt);
+      const dateB = new Date(b.resolvedAt || b.createdAt);
+      return dateB.getTime() - dateA.getTime();
+    });
 
   // Dashboard view
   if (currentView === 'dashboard') {
@@ -299,15 +356,10 @@ export default function App() {
 
     // Panel służby - wyświetlanie zgłoszeń przypisanych do danej służby
     if (userRole === 'sluzby') {
-      const userServiceName = getServiceFromEmail(userEmail);
-      const allServiceIncidents = incidents
-        .filter(inc => inc.service === userServiceName)
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      
-      // Filtrowanie według statusu
-      const serviceIncidents = serviceStatusFilter === 'ALL'
-        ? allServiceIncidents
-        : allServiceIncidents.filter(inc => inc.adminStatus === serviceStatusFilter);
+      // Filtrowanie zgłoszeń według statusu - API już filtruje po służbie
+      const filteredServiceIncidents = serviceStatusFilter === 'ALL'
+        ? serviceIncidents.filter(inc => inc.adminStatus === 'ZGŁOSZONY' || inc.adminStatus === 'W TRAKCIE NAPRAWY')
+        : serviceIncidents.filter(inc => inc.adminStatus === serviceStatusFilter);
 
       return (
         <div className="min-h-screen flex flex-col bg-gray-50">
@@ -323,12 +375,12 @@ export default function App() {
             <div className="max-w-4xl mx-auto">
               <h2 className="text-gray-900 mb-2">Panel Służby</h2>
               <p className="text-gray-600 mb-2">Zalogowano jako: {userEmail}</p>
-              <p className="text-gray-600 mb-8">Służba: <span className="font-semibold">{userServiceName}</span></p>
+              <p className="text-gray-600 mb-8">Służba: <span className="font-semibold">{userServiceType || 'Nieprzypisana'}</span></p>
 
               <div className="mb-8">
                 <h3 className="text-gray-900 mb-6">Zgłoszenia dla Twojej służby</h3>
-                
-                {allServiceIncidents.length === 0 ? (
+
+                {serviceIncidents.length === 0 ? (
                   <div className="text-center py-12 bg-white rounded-lg border">
                     <p className="text-gray-500">Brak zgłoszeń dla tej służby</p>
                   </div>
@@ -347,7 +399,7 @@ export default function App() {
                         }`}
                         onClick={() => setServiceStatusFilter('ALL')}
                       >
-                        Wszystkie ({allServiceIncidents.length})
+                        Wszystkie ({filteredServiceIncidents.length})
                       </Button>
                       <Button
                         variant="outline"
@@ -359,7 +411,7 @@ export default function App() {
                         }`}
                         onClick={() => setServiceStatusFilter('ZGŁOSZONY')}
                       >
-                        ZGŁOSZONY ({allServiceIncidents.filter(inc => inc.adminStatus === 'ZGŁOSZONY').length})
+                        ZGŁOSZONY ({serviceIncidents.filter(inc => inc.adminStatus === 'ZGŁOSZONY').length})
                       </Button>
                       <Button
                         variant="outline"
@@ -371,7 +423,7 @@ export default function App() {
                         }`}
                         onClick={() => setServiceStatusFilter('W TRAKCIE NAPRAWY')}
                       >
-                        W TRAKCIE NAPRAWY ({allServiceIncidents.filter(inc => inc.adminStatus === 'W TRAKCIE NAPRAWY').length})
+                        W TRAKCIE NAPRAWY ({serviceIncidents.filter(inc => inc.adminStatus === 'W TRAKCIE NAPRAWY').length})
                       </Button>
                       <Button
                         variant="outline"
@@ -383,21 +435,21 @@ export default function App() {
                         }`}
                         onClick={() => setServiceStatusFilter('NAPRAWIONY')}
                       >
-                        NAPRAWIONY ({allServiceIncidents.filter(inc => inc.adminStatus === 'NAPRAWIONY').length})
+                        NAPRAWIONY ({serviceIncidents.filter(inc => inc.adminStatus === 'NAPRAWIONY').length})
                       </Button>
                     </div>
                     
                     <div className="space-y-4 mb-6">
-                      {serviceIncidents.slice(0, visibleServiceIncidents).map((incident) => (
-                        <IncidentCard 
-                          key={incident.id} 
-                          incident={incident} 
-                          onClick={() => handleIncidentClick(incident)} 
+                      {filteredServiceIncidents.slice(0, visibleServiceIncidents).map((incident) => (
+                        <IncidentCard
+                          key={incident.id}
+                          incident={incident}
+                          onClick={() => handleIncidentClick(incident)}
                         />
                       ))}
                     </div>
-                    
-                    {visibleServiceIncidents < serviceIncidents.length && (
+
+                    {visibleServiceIncidents < filteredServiceIncidents.length && (
                       <div className="text-center">
                         <Button 
                           variant="outline" 

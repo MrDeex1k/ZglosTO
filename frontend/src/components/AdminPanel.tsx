@@ -13,7 +13,7 @@ import { AdminIncidentDialog } from "./AdminIncidentDialog";
 import { formatPolishDate } from "../utils/dateUtils";
 import { Badge } from "./ui/badge";
 import { Card } from "./ui/card";
-import { updateIncidentStatus, updateIncidentVerification, updateIncidentService } from "../services/api";
+import { updateIncidentStatus, updateIncidentVerification, updateIncidentService, updateUserPermissions } from "../services/api";
 
 interface AdminPanelProps {
   incidents: Incident[];
@@ -143,7 +143,7 @@ export function AdminPanel({
   }, [alert.visible]);
   
   // Funkcje obsługi formularzy
-  const handleSaveRole = () => {
+  const handleSaveRole = async () => {
     // Walidacja
     if (!userEmail || !userEmail.includes('@')) {
       setAlert({
@@ -153,20 +153,29 @@ export function AdminPanel({
       });
       return;
     }
-    
-    // Sukces (mock)
-    setAlert({
-      type: 'success',
-      message: 'Hurra! Awans użytkownika się powiódł',
-      visible: true
-    });
-    
-    // Wyczyść formularz
-    setUserEmail('');
-    setSelectedRole('mieszkaniec');
+
+    try {
+      await updateUserPermissions(userEmail, selectedRole);
+
+      setAlert({
+        type: 'success',
+        message: 'Hurra! Awans użytkownika się powiódł',
+        visible: true
+      });
+
+      // Wyczyść formularz
+      setUserEmail('');
+      setSelectedRole('mieszkaniec');
+    } catch (error) {
+      setAlert({
+        type: 'error',
+        message: 'Opsss... Zmiana się nie powiodła...',
+        visible: true
+      });
+    }
   };
   
-  const handleAssignService = () => {
+  const handleAssignService = async () => {
     // Walidacja
     if (!selectedService) {
       setAlert({
@@ -176,16 +185,25 @@ export function AdminPanel({
       });
       return;
     }
-    
-    // Sukces (mock)
-    setAlert({
-      type: 'success',
-      message: 'Hurra! Awans użytkownika się powiódł',
-      visible: true
-    });
-    
-    // Wyczyść formularz
-    setSelectedService('');
+
+    try {
+      await updateUserPermissions(userEmail, 'sluzby', selectedService);
+
+      setAlert({
+        type: 'success',
+        message: 'Hurra! Awans użytkownika się powiódł',
+        visible: true
+      });
+
+      // Wyczyść formularz
+      setSelectedService('');
+    } catch (error) {
+      setAlert({
+        type: 'error',
+        message: 'Opsss... Zmiana się nie powiodła...',
+        visible: true
+      });
+    }
   };
 
   // Wszystkie zgłoszenia

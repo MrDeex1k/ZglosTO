@@ -34,9 +34,16 @@ router.get('/incydenty', async (req, res) => {
     console.log(req.user)
     //const { typ } = req.params;
     const typ = req.user.typ_uprawnien;
-    const q = `SELECT * FROM incydenty WHERE typ_sluzby = $1 ORDER BY status_incydentu, data_zgloszenia`;
+    const q = `
+      SELECT id_zgloszenia, opis_zgloszenia, mail_zglaszajacego, adres_zgloszenia, zdjecie_incydentu_zglaszanego, zdjecie_incydentu_rozwiazanego, sprawdzenie_incydentu, status_incydentu, typ_sluzby, llm_odpowiedz,
+             TO_CHAR(data_zgloszenia, 'DD.MM.YYYY') || ' ' || TO_CHAR(godzina_zgloszenia, 'HH24:MI') as data_godzina_zgloszenia,
+             TO_CHAR(data_rozwiazania, 'DD.MM.YYYY') || ' ' || TO_CHAR(godzina_rozwiazania, 'HH24:MI') as data_godzina_rozwiazania
+      FROM incydenty
+      WHERE typ_sluzby = $1
+      ORDER BY status_incydentu, data_zgloszenia
+    `;
     const { rows } = await db.query(q, [typ]);
-    
+
     // Convert BYTEA fields to base64 data URLs
     const transformedRows = rows.map(row => ({
       ...row,
@@ -86,7 +93,7 @@ router.patch('/incydenty/:id/status', async (req, res) => {
 
     const q = `
       UPDATE incydenty
-      SET status_incydentu = $1,
+      SET status_incydentu = $1::status_incydentu_enum,
           data_rozwiazania = CASE WHEN $1 = 'NAPRAWIONY' THEN CURRENT_DATE ELSE data_rozwiazania END,
           godzina_rozwiazania = CASE WHEN $1 = 'NAPRAWIONY' THEN CURRENT_TIME ELSE godzina_rozwiazania END
       WHERE id_zgloszenia = $2 RETURNING *;

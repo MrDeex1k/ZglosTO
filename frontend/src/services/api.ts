@@ -164,6 +164,140 @@ export async function updateIncidentService(incidentId: string, serviceType: str
 }
 
 /**
+ * Update user permissions and service assignment (admin)
+ */
+export async function updateUserPermissions(email: string, permissions: string, serviceType?: string): Promise<any> {
+  try {
+    const body: any = {
+      email,
+      uprawnienia: permissions
+    };
+
+    if (serviceType) {
+      body.typ_uprawnien = serviceType;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/admin/uzytkownicy/typ_uprawnien`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error updating user permissions:', error);
+    throw error;
+  }
+}
+
+/**
+ * Fetch service incidents for logged in service user
+ */
+export async function fetchServiceIncidents(): Promise<ApiUserIncident[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/sluzby/incydenty`, {
+      credentials: 'include' // Include cookies for authentication
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching service incidents:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update incident status (service)
+ */
+export async function updateIncidentStatusService(incidentId: string, status: string): Promise<any> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/sluzby/incydenty/${incidentId}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({ status_incydentu: status }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error updating incident status:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update incident verification (service)
+ */
+export async function updateIncidentVerificationService(incidentId: string, checked: boolean): Promise<any> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/sluzby/incydenty/${incidentId}/sprawdzenie`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({ sprawdzenie_incydentu: checked }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error updating incident verification:', error);
+    throw error;
+  }
+}
+
+/**
+ * Upload resolved image (service)
+ */
+export async function uploadResolvedImageService(incidentId: string, imageBase64: string): Promise<any> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/sluzby/incydenty/${incidentId}/zdjecie_rozwiazane`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({ zdjecie_incydentu_rozwiazanego: imageBase64 }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error uploading resolved image:', error);
+    throw error;
+  }
+}
+
+/**
  * Fetch user incidents by email
  */
 export async function fetchUserIncidents(email: string): Promise<ApiUserIncident[]> {
