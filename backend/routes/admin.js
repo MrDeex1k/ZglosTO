@@ -60,7 +60,6 @@ router.get('/incydenty', async (req, res) => {
     `;
     const { rows } = await db.query(q, []);
 
-    // Convert BYTEA fields to base64 data URLs
     const transformedRows = rows.map(row => ({
       ...row,
       zdjecie_incydentu_zglaszanego: bufferToDataUrl(row.zdjecie_incydentu_zglaszanego),
@@ -161,7 +160,6 @@ router.patch('/uzytkownicy/typ_uprawnien', async (req, res) => {
       return res.status(400).json({ error: 'typ_uprawnien required' });
     }
 
-    // 1. Pobieramy ID użytkownika z tabeli BetterAuth
     const qUser = `
       SELECT id 
       FROM "user"
@@ -175,7 +173,6 @@ router.patch('/uzytkownicy/typ_uprawnien', async (req, res) => {
 
     const betterAuthUserId = userResult.rows[0].id;
 
-    // 2. Aktualizujemy odpowiedni rekord w tabeli uzytkownicy
     const qUpdate = `
       UPDATE uzytkownicy
       SET uprawnienia = $1, typ_uprawnien = $2
