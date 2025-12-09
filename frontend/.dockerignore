@@ -1,7 +1,7 @@
-node_modules
-npm-debug.log
 .env
 .DS_Store
 dist
+*.log
+node_modules
 .vscode
 .git

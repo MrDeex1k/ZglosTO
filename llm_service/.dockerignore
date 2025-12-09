@@ -4,4 +4,11 @@
 .vscode
 .git
 __pycache__
-uv.lock
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+*.egg-info/
+.ipynb_checkpoints/
