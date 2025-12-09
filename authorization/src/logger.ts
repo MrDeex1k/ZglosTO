@@ -2,7 +2,6 @@ import { appendFile } from 'fs/promises';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
-// Pobieranie __dirname dla ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -73,4 +72,3 @@ export async function logAuthOperation(
   const message = `AUTORYZACJA: ${operation} | ${status}${detailsStr}${errorStr}`;
   await writeLog(message);
 }
-

@@ -9,4 +9,4 @@ RUN if [ -f bun.lockb ]; then bun install --ci --frozen-lockfile --production; e
 # Domyślny port aplikacji
 EXPOSE 3000
 
-CMD ["bun", "index.js"]
+CMD ["bun", "start"]

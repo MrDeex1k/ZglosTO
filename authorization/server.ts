@@ -23,7 +23,6 @@ app.use((req, res, next) => {
   // Przechwytujemy oryginalną metodę end() aby zalogować odpowiedź
   const originalEnd = res.end.bind(res);
   res.end = function (chunk?: any, encoding?: any, cb?: any) {
-    // Logujemy żądanie po zakończeniu odpowiedzi
     const success = res.statusCode >= 200 && res.statusCode < 400;
     logApiRequest(
       req.method,
@@ -32,10 +31,9 @@ app.use((req, res, next) => {
       success,
       req.path.startsWith('/api/auth') ? 'Auth endpoint' : undefined
     ).catch(() => {
-      // Błąd logowania jest ignorowany - nie logujemy do konsoli
+      // Błąd logowania
     });
     
-    // Wywołujemy oryginalną metodę end()
     if (typeof chunk === 'function') {
       return originalEnd(chunk);
     } else if (typeof encoding === 'function') {
@@ -50,13 +48,12 @@ app.use((req, res, next) => {
 
 app.all('/api/auth/*splat', toNodeHandler(auth));
 
-// Example health endpoint
 app.get('/health', async (_req, res) => {
   await logApiRequest('GET', '/health', 200, true, 'Health check');
   res.json({ ok: true });
 });
 
-// Session verification endpoint for backend services
+// Sesja weryfikacji endpoint dla backendu
 app.get('/api/verify-session', async (req, res) => {
   try {
     const session = await auth.api.getSession({

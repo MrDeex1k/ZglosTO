@@ -15,10 +15,10 @@ export const auth = betterAuth({
   // Dozwolone origin (CORS + walidacja Better-Auth)
   trustedOrigins: [
     process.env.FRONTEND_ORIGIN || "http://localhost:1235",
-    "http://localhost:5173", // Vite dev server
+    "http://localhost:5173",
   ],
 
-  // Włącz autoryzację email + password
+  // Włącz autoryzację email + hasło
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: false,
@@ -80,7 +80,6 @@ export const auth = betterAuth({
       create: {
         after: async (user) => {
           try {
-            // Tworzenie wpisu w tabeli uzytkownicy z domyślnymi wartościami
             await dbPool.query(
               `INSERT INTO uzytkownicy (id_uzytkownika, uprawnienia, typ_uprawnien)
                VALUES ($1, 'mieszkaniec', NULL)
@@ -109,7 +108,6 @@ export const auth = betterAuth({
   // Hooki do logowania operacji autoryzacyjnych
   hooks: {
     after: createAuthMiddleware(async (ctx) => {
-      // Logowanie po zakończeniu operacji autoryzacyjnych
       if (ctx.path.startsWith("/sign-up")) {
         const newSession = ctx.context.newSession;
         if (newSession) {
@@ -146,7 +144,6 @@ export const auth = betterAuth({
       }
     }),
     before: createAuthMiddleware(async (ctx) => {
-      // Logowanie prób rejestracji/logowania przed wykonaniem
       if (ctx.path.startsWith("/sign-up") || ctx.path.startsWith("/sign-in")) {
         const operation = ctx.path.startsWith("/sign-up") ? 'Próba rejestracji' : 'Próba logowania';
         const email = (ctx.body as any)?.email || 'N/A';
@@ -181,7 +178,7 @@ export const auth = betterAuth({
           };
         }
 
-        // Jeśli nie ma wpisu, zwróć bez zmian (użytkownik może nie mieć jeszcze wpisu)
+        // Jeśli nie ma wpisu, zwróć bez zmian
         return { user, session };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
