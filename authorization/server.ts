@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+
 import { toNodeHandler } from 'better-auth/node';
 import { auth } from './src/auth';
 import { logApiRequest } from './src/logger';
