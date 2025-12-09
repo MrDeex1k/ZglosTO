@@ -1,8 +1,8 @@
 {
-  "name": "serwer-zglosto",
-  "version": "0.0.0",
-  "description": "Backend serwera dla aplikacji ZglosTO",
-  "main": "index.ts",
+  "name": "authorization-zglosto",
+  "version": "1.0.0",
+  "description": "Authorization service for ZglosTO application",
+  "main": "server.ts",
   "type": "module",
   "scripts": {
     "start": "bun server.ts"

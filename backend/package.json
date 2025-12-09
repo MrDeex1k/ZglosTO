@@ -1,7 +1,7 @@
 {
-  "name": "serwer-zglosto",
-  "version": "0.0.0",
-  "description": "Backend serwera dla aplikacji ZglosTO",
+  "name": "backend-zglosto",
+  "version": "1.0.0",
+  "description": "Backend dla aplikacji ZglosTO",
   "main": "index.js",
   "scripts": {
     "start": "bun index.js",
