@@ -1,4 +1,4 @@
-FROM postgres:18
+FROM postgres:18.1
 
 LABEL maintainer="ZglosTO"
 LABEL description="PostgreSQL 18 database for ZglosTO application"
