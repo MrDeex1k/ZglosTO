@@ -1,0 +1,41 @@
+appId: pl.zglosto.app
+---
+- runFlow:
+    when:
+      visible: 'Obsługa zgłoszenia'
+    commands:
+      - runFlow:
+          when:
+            platform: iOS
+          commands:
+            - tapOn:
+                id: 'BackButton'
+      - runFlow:
+          when:
+            platform: Android
+          commands:
+            - back
+- extendedWaitUntil:
+    visible:
+      id: 'service-queue-ready'
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: 'service-filter-all'
+    direction: UP
+- tapOn:
+    id: 'service-filter-all'
+- scrollUntilVisible:
+    element:
+      text: '.*PHASE55-ROADS-ONLY.*'
+    direction: DOWN
+    timeout: 30000
+- tapOn: '.*PHASE55-ROADS-ONLY.*'
+- extendedWaitUntil:
+    visible: 'Obsługa zgłoszenia'
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      text: 'Zdjęcie po rozwiązaniu'
+    direction: DOWN
+- assertVisible: 'Zdjęcie po rozwiązaniu'

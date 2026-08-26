@@ -1,0 +1,24 @@
+services:
+  llm_gateway:
+    environment:
+      LLM_RUNTIME: openai-compatible
+      OPENAI_COMPATIBLE_URL: ${LLM_EXTERNAL_URL:?LLM_EXTERNAL_URL is required}
+      OPENAI_COMPATIBLE_MODEL: ${LLM_EXTERNAL_MODEL:?LLM_EXTERNAL_MODEL is required}
+      OPENAI_COMPATIBLE_API_KEY_FILE: /run/secrets/llm/api-key
+      OPENAI_COMPATIBLE_TEMPERATURE: ${LLM_EXTERNAL_TEMPERATURE:-0.1}
+      OPENAI_COMPATIBLE_MAX_TOKENS: ${LLM_EXTERNAL_MAX_TOKENS:-64}
+    secrets:
+      - source: llm_external_api_key
+        target: /run/secrets/llm/api-key
+        mode: 0440
+    networks:
+      - internal-net
+      - llm-external-net
+
+secrets:
+  llm_external_api_key:
+    file: ${LLM_EXTERNAL_API_KEY_FILE:?LLM_EXTERNAL_API_KEY_FILE is required}
+
+networks:
+  llm-external-net:
+    driver: bridge

@@ -1,0 +1,22 @@
+# Optional Docker Model Runner profile. The base Compose stack keeps LLM_RUNTIME=disabled.
+services:
+  llm_gateway:
+    environment:
+      LLM_RUNTIME: docker-model-runner
+      LLM_UPSTREAM_TIMEOUT_MS: '5000'
+      DOCKER_MODEL_RUNNER_TEMPERATURE: '0.1'
+      DOCKER_MODEL_RUNNER_MAX_TOKENS: '64'
+    models:
+      gemma3:
+        endpoint_var: DOCKER_MODEL_RUNNER_URL
+        model_var: DOCKER_MODEL_RUNNER_MODEL
+
+models:
+  gemma3:
+    model: ai/gemma3-qat:1B-Q4_K_M
+    context_size: 4096
+    runtime_flags:
+      - --cache-type-k
+      - q4_0
+      - --cache-type-v
+      - q4_0

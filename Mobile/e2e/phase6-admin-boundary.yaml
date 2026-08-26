@@ -1,0 +1,115 @@
+appId: pl.zglosto.app
+name: Phase 6.0 admin mobile boundary
+tags:
+  - phase6
+  - admin
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- openLink:
+    link: ${EXPO_DEV_CLIENT_URL}
+- runFlow:
+    when:
+      visible: 'Development Build'
+    commands:
+      - openLink:
+          link: ${EXPO_DEV_CLIENT_URL}
+- runFlow:
+    when:
+      visible: '.*(Open|Otwórz).*'
+    commands:
+      - tapOn: '.*(Open|Otwórz).*'
+- runFlow:
+    when:
+      visible: 'Close'
+    commands:
+      - tapOn: 'Close'
+- extendedWaitUntil:
+    visible: '.*(Zaloguj się|Sign in).*'
+    timeout: 30000
+- runFlow:
+    when:
+      visible: 'Sign in'
+    commands:
+      - tapOn: 'Polski'
+- tapOn: 'Zaloguj się'
+- extendedWaitUntil:
+    visible: 'Logowanie'
+    timeout: 10000
+- tapOn:
+    id: 'login-email'
+- inputText: ${PHASE6_ROLE_EMAIL}
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - hideKeyboard
+- tapOn:
+    id: 'login-password'
+- inputText: ${PHASE6_ROLE_PASSWORD}
+- hideKeyboard
+- tapOn:
+    id: 'login-submit'
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - runFlow:
+          when:
+            visible: '.*(Zachować hasło|Save Password).*'
+          commands:
+            - tapOn: '.*(Nie teraz|Not Now).*'
+- extendedWaitUntil:
+    visible:
+      id: 'admin-mobile-unavailable'
+    timeout: 30000
+- assertVisible: 'Panel Administratora niedostępny'
+- assertVisible: 'Wymagany komputer'
+- assertVisible: 'Wyloguj się'
+- assertNotVisible:
+    id: 'public-incidents-ready'
+- assertNotVisible:
+    id: 'service-queue-ready'
+- assertNotVisible: '.*(Otwórz panel webowy|Open web dashboard).*'
+- openLink:
+    link: 'zglosto://open/incidents/00000000-0000-4000-8000-000000000031?target=public'
+- extendedWaitUntil:
+    visible:
+      id: 'admin-mobile-unavailable'
+    timeout: 15000
+- stopApp
+- launchApp
+- openLink:
+    link: ${EXPO_DEV_CLIENT_URL}
+- runFlow:
+    when:
+      visible: 'Development Build'
+    commands:
+      - openLink:
+          link: ${EXPO_DEV_CLIENT_URL}
+- runFlow:
+    when:
+      visible: '.*(Open|Otwórz).*'
+    commands:
+      - tapOn: '.*(Open|Otwórz).*'
+- runFlow:
+    when:
+      visible: 'Continue'
+    commands:
+      - tapOn: 'Continue'
+- runFlow:
+    when:
+      visible: 'Close'
+    commands:
+      - tapOn: 'Close'
+- extendedWaitUntil:
+    visible:
+      id: 'admin-mobile-unavailable'
+    timeout: 30000
+- tapOn:
+    id: 'admin-mobile-sign-out'
+- extendedWaitUntil:
+    visible:
+      id: 'public-incidents-ready'
+    timeout: 30000

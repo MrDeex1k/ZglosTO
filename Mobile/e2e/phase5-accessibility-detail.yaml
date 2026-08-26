@@ -1,0 +1,21 @@
+appId: pl.zglosto.app
+---
+- runFlow:
+    when:
+      visible: '.*QUEUE-A-05.*'
+    commands:
+      - tapOn: '.*QUEUE-A-05.*'
+- extendedWaitUntil:
+    visible: 'Obsługa zgłoszenia'
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      text: 'Działania służby'
+    direction: DOWN
+- assertVisible: 'Zgłoszony'
+- assertVisible: 'W trakcie naprawy'
+- assertVisible: 'Naprawiony'
+- scrollUntilVisible:
+    element:
+      id: 'service-toggle-verification'
+    direction: DOWN

@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "phase": "9.9-9.10",
+  "scope": {
+    "compose": "static-manual",
+    "kubernetes": "automatic",
+    "k3s": "automatic"
+  },
+  "controllers": {
+    "keda": {
+      "minimumVersion": "2.20.0",
+      "namespace": "keda"
+    },
+    "httpAddOn": {
+      "version": "0.15.0",
+      "apiVersion": "http.keda.sh/v1beta1",
+      "apiMaturity": "v1beta1",
+      "releaseLine": "pre-1.0",
+      "productionCertificationPhase": 12
+    }
+  },
+  "mediaWorker": {
+    "queue": "zglosto.media.process.v1",
+    "formula": "min(floor(backlog / 4) + 1, 4)",
+    "minimumReplicas": 1,
+    "maximumReplicas": 4,
+    "pollingIntervalSeconds": 5,
+    "scaleDownStabilizationSeconds": 180,
+    "prefetchPerReplica": 1,
+    "sharpConcurrencyPerReplica": 1,
+    "fallbackReplicas": 1,
+    "boundaryExamples": {
+      "0": 1,
+      "3": 1,
+      "4": 2,
+      "7": 2,
+      "8": 3,
+      "11": 3,
+      "12": 4,
+      "100": 4
+    }
+  },
+  "llmGateway": {
+    "mechanism": "keda-http-add-on",
+    "rejectedAlternative": "knative-serving",
+    "minimumReplicas": 0,
+    "maximumReplicas": 4,
+    "concurrencyPerReplica": 4,
+    "pollingIntervalSeconds": 5,
+    "idleScaleDownSeconds": 300,
+    "backendTotalTimeoutSeconds": 7,
+    "interceptorRequestTimeoutSeconds": 6,
+    "interceptorReadinessTimeoutSeconds": 5,
+    "interceptorResponseHeaderTimeoutSeconds": 5
+  }
+}

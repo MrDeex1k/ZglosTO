@@ -1,0 +1,196 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgbouncer
+  namespace: zglosto
+  labels:
+    app: pgbouncer
+  annotations:
+    secret.reloader.stakater.com/reload: zglosto-pgbouncer-tls,zglosto-database-tls,zglosto-database-credentials
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: pgbouncer
+  template:
+    metadata:
+      labels:
+        app: pgbouncer
+    spec:
+      serviceAccountName: pgbouncer
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        fsGroup: 70
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: pgbouncer
+          image: docker.io/zglosto/pgbouncer:phase9-baseline
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 70
+            runAsGroup: 70
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          ports:
+            - name: postgresql
+              containerPort: 6432
+          env:
+            - name: DATABASE_URL_FILE
+              value: /run/secrets/database-credentials/database-direct-url
+            - name: PGBOUNCER_CLIENT_URL_FILE
+              value: /run/secrets/database-credentials/database-url
+            - name: DATABASE_TLS_CA_SOURCE_PATH
+              value: /run/secrets/database-ca/ca.crt
+            - name: PGBOUNCER_TLS_CERT_PATH
+              value: /run/secrets/pgbouncer-tls/tls.crt
+            - name: PGBOUNCER_TLS_KEY_PATH
+              value: /run/secrets/pgbouncer-tls/tls.key
+            - name: PGSSLMODE
+              value: verify-full
+            - name: PGSSLROOTCERT
+              value: /var/run/pgbouncer/tls/ca.crt
+            - name: LISTEN_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: PGBOUNCER_PORT
+            - name: AUTH_TYPE
+              value: scram-sha-256
+            - name: POOL_MODE
+              value: transaction
+            - name: MAX_CLIENT_CONN
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: PGBOUNCER_MAX_CLIENT_CONN
+            - name: DEFAULT_POOL_SIZE
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: PGBOUNCER_DEFAULT_POOL_SIZE
+            - name: RESERVE_POOL_SIZE
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: PGBOUNCER_RESERVE_POOL_SIZE
+            - name: MAX_PREPARED_STATEMENTS
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: PGBOUNCER_MAX_PREPARED_STATEMENTS
+            - name: SERVER_CHECK_QUERY
+              value: SELECT 1
+            - name: IGNORE_STARTUP_PARAMETERS
+              value: extra_float_digits
+            - name: CLIENT_TLS_SSLMODE
+              value: require
+            - name: CLIENT_TLS_CERT_FILE
+              value: /var/run/pgbouncer/tls/server.crt
+            - name: CLIENT_TLS_KEY_FILE
+              value: /var/run/pgbouncer/tls/server.key
+            - name: CLIENT_TLS_PROTOCOLS
+              value: tlsv1.3
+            - name: SERVER_TLS_SSLMODE
+              value: verify-full
+            - name: SERVER_TLS_CA_FILE
+              value: /var/run/pgbouncer/tls/ca.crt
+            - name: SERVER_TLS_PROTOCOLS
+              value: tlsv1.3
+          volumeMounts:
+            - name: database-credentials
+              mountPath: /run/secrets/database-credentials
+              readOnly: true
+            - name: database-ca
+              mountPath: /run/secrets/database-ca
+              readOnly: true
+            - name: pgbouncer-tls
+              mountPath: /run/secrets/pgbouncer-tls
+              readOnly: true
+            - name: runtime-config
+              mountPath: /etc/pgbouncer
+            - name: runtime-tls
+              mountPath: /var/run/pgbouncer
+            - name: tmp
+              mountPath: /tmp
+          resources:
+            requests:
+              memory: 64Mi
+              cpu: 50m
+            limits:
+              memory: 256Mi
+              cpu: 500m
+          startupProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -ec
+                - PGSSLMODE=require pg_isready -h 127.0.0.1 -p 6432
+            failureThreshold: 30
+            periodSeconds: 2
+            timeoutSeconds: 2
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -ec
+                - PGSSLMODE=require pg_isready -h 127.0.0.1 -p 6432
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -ec
+                - >-
+                  psql -v ON_ERROR_STOP=1
+                  "$(sed 's/@pgbouncer:/@127.0.0.1:/'
+                  /run/secrets/database-credentials/database-url)?sslmode=require"
+                  -c "SELECT 1" >/dev/null
+            periodSeconds: 5
+            timeoutSeconds: 4
+            failureThreshold: 6
+      volumes:
+        - name: database-credentials
+          secret:
+            secretName: zglosto-database-credentials
+            optional: false
+            defaultMode: 0440
+            items:
+              - key: DATABASE_URL
+                path: database-url
+              - key: DATABASE_DIRECT_URL
+                path: database-direct-url
+        - name: database-ca
+          secret:
+            secretName: zglosto-database-tls
+            optional: false
+            defaultMode: 0440
+            items: [{ key: ca.crt, path: ca.crt }]
+        - name: pgbouncer-tls
+          secret:
+            secretName: zglosto-pgbouncer-tls
+            optional: false
+            defaultMode: 0440
+        - name: runtime-config
+          emptyDir:
+            medium: Memory
+            sizeLimit: 8Mi
+        - name: runtime-tls
+          emptyDir:
+            medium: Memory
+            sizeLimit: 8Mi
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 16Mi

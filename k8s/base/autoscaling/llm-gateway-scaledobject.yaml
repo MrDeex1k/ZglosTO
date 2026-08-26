@@ -1,0 +1,31 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: llm-gateway
+  namespace: zglosto
+spec:
+  scaleTargetRef:
+    name: llm-gateway
+  pollingInterval: 5
+  cooldownPeriod: 300
+  minReplicaCount: 0
+  maxReplicaCount: 4
+  advanced:
+    horizontalPodAutoscalerConfig:
+      name: llm-gateway
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: 0
+          selectPolicy: Max
+          policies:
+            - { type: Pods, value: 4, periodSeconds: 15 }
+        scaleDown:
+          stabilizationWindowSeconds: 60
+          selectPolicy: Max
+          policies:
+            - { type: Percent, value: 100, periodSeconds: 15 }
+  triggers:
+    - type: external-push
+      metadata:
+        scalerAddress: keda-add-ons-http-external-scaler.keda.svc.cluster.local:9090
+        interceptorRoute: llm-gateway

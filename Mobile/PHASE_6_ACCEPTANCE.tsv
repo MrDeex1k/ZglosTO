@@ -1,0 +1,8 @@
+ID	Obszar	Implementacja	Testy automatyczne	Android Emulator	iPhone Simulator	Stan checkpointu
+6.0.1	Centralna macierz ról	PASS	PASS	PASS	PASS	PASS
+6.0.2	Brak publicznego requestu dla służby/admina	PASS	PASS	PASS	PASS	PASS
+6.0.3	Przekierowanie pracownika do Panelu Służb	PASS	PASS	PASS	PASS	PASS
+6.0.4	Komunikat administratora bez przejścia do WEB	PASS	PASS	PASS	PASS	PASS
+6.0.5	Ochrona publicznych tras i deep linków	PASS	PASS	PASS	PASS	PASS
+6.0.6	Cold start, odtworzenie sesji i nawigacja Wstecz	PASS	PASS	PASS	PASS	PASS
+6.0.7	Dokumentacja i decyzja Fazy 6	PASS	PASS	PASS	PASS	PASS

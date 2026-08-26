@@ -1,0 +1,37 @@
+[Unit]
+Description=ZglosTO production Docker Compose profile
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=zglosto
+Group=docker
+WorkingDirectory=/opt/zglosto/current
+EnvironmentFile=/etc/zglosto/compose-host.env
+ExecStart=/opt/zglosto/current/scripts/production-compose.sh up
+ExecStop=/opt/zglosto/current/scripts/production-compose.sh stop
+TimeoutStartSec=900
+TimeoutStopSec=180
+UMask=0077
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+AmbientCapabilities=
+ReadWritePaths=/var/lib/zglosto-compose /var/backups/zglosto
+
+[Install]
+WantedBy=multi-user.target

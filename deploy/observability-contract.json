@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "phase": "9.8",
+  "modes": {
+    "disabled": {
+      "collector": false,
+      "localBackends": []
+    },
+    "external": {
+      "collector": true,
+      "localBackends": [],
+      "requiredSecret": "zglosto-otel-external",
+      "requiredSecretKeys": ["AUTHORIZATION"]
+    },
+    "local": {
+      "collector": true,
+      "localBackends": ["prometheus", "loki", "tempo", "grafana", "alertmanager"],
+      "requiredSecret": "zglosto-grafana-admin",
+      "requiredSecretKeys": ["ADMIN_PASSWORD"]
+    }
+  },
+  "compose": {
+    "disabled": ["docker-compose.yml"],
+    "external": ["docker-compose.yml", "docker-compose.observability.external.yml"],
+    "local": ["docker-compose.yml", "docker-compose.observability.local.yml"]
+  },
+  "clusterOverlays": {
+    "kubernetes": {
+      "disabled": "k8s/overlays/kubernetes",
+      "external": "k8s/overlays/kubernetes-observability-external",
+      "local": "k8s/overlays/kubernetes-observability-local"
+    },
+    "k3s": {
+      "disabled": "k8s/overlays/k3s",
+      "external": "k8s/overlays/k3s-observability-external",
+      "local": "k8s/overlays/k3s-observability-local"
+    }
+  },
+  "rustfsClusterOverlays": {
+    "kubernetes": {
+      "external": "k8s/overlays/kubernetes-rustfs-observability-external",
+      "local": "k8s/overlays/kubernetes-rustfs-observability-local"
+    },
+    "k3s": {
+      "external": "k8s/overlays/k3s-rustfs-observability-external",
+      "local": "k8s/overlays/k3s-rustfs-observability-local"
+    }
+  },
+  "applicationServices": ["authorization", "backend", "media-worker", "llm-gateway"],
+  "forbiddenMode": "both",
+  "externalCredentialsOwner": "otel-collector-only",
+  "failurePolicy": "telemetry-never-blocks-product"
+}

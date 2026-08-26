@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-applications-to-external-redis
+  namespace: zglosto
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values: [authorization, backend]
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - { protocol: TCP, port: 6379 }
+        - { protocol: TCP, port: 6380 }

@@ -1,0 +1,77 @@
+appId: pl.zglosto.app
+name: Phase 7 repository regression — administrator boundary
+tags:
+  - phase7
+  - repository-ready
+  - admin
+---
+- launchApp:
+    clearState: true
+- openLink:
+    link: ${EXPO_DEV_CLIENT_URL}
+- runFlow:
+    when:
+      visible: 'Development Build'
+    commands:
+      - openLink:
+          link: ${EXPO_DEV_CLIENT_URL}
+- runFlow:
+    when:
+      visible: '.*(Open|Otwórz).*'
+    commands:
+      - tapOn: '.*(Open|Otwórz).*'
+- runFlow:
+    when:
+      visible: 'Continue'
+    commands:
+      - tapOn: 'Continue'
+- runFlow:
+    when:
+      visible: 'Close'
+    commands:
+      - tapOn: 'Close'
+- runFlow: phase7-normalize-session.yaml
+- runFlow:
+    when:
+      visible: 'Polski'
+    commands:
+      - tapOn: 'Polski'
+- extendedWaitUntil:
+    visible: '.*Uszkodzony znak przy przejściu dla pieszych został wymieniony.*'
+    timeout: 30000
+- tapOn: 'Zaloguj się'
+- tapOn:
+    id: 'login-email'
+- inputText: ${PHASE7_ADMIN_EMAIL}
+- tapOn:
+    id: 'login-password'
+- inputText: ${PHASE7_ADMIN_PASSWORD}
+- tapOn:
+    id: 'login-submit'
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - runFlow:
+          when:
+            visible: '.*(Zachować hasło|Save Password).*'
+          commands:
+            - tapOn: '.*(Nie teraz|Not Now).*'
+- extendedWaitUntil:
+    visible: 'Panel Administratora niedostępny'
+    timeout: 30000
+- assertVisible: 'Panel Administratora niedostępny'
+- assertVisible: 'Wymagany komputer'
+- assertNotVisible: 'Zobacz ostatnio rozwiązane zgłoszenia w mieście.'
+- assertNotVisible: 'Panel służby — Zarząd Dróg Miejskich'
+- assertNotVisible: '.*(Otwórz panel webowy|Open web dashboard).*'
+- openLink:
+    link: 'zglosto://open/incidents/00000000-0000-4000-8000-000000000076?target=public'
+- extendedWaitUntil:
+    visible: 'Panel Administratora niedostępny'
+    timeout: 15000
+- tapOn:
+    id: 'admin-mobile-sign-out'
+- extendedWaitUntil:
+    visible: '.*Uszkodzony znak przy przejściu dla pieszych został wymieniony.*'
+    timeout: 30000

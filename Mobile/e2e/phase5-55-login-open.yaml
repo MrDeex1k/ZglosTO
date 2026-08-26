@@ -1,0 +1,64 @@
+appId: pl.zglosto.app
+---
+- extendedWaitUntil:
+    visible: '.*(Continue|Zgłoś problem|Report a problem).*'
+    timeout: 30000
+- runFlow:
+    when:
+      visible: 'Continue'
+    commands:
+      - tapOn: 'Continue'
+- runFlow:
+    when:
+      visible: 'Close'
+    commands:
+      - tapOn: 'Close'
+- extendedWaitUntil:
+    visible: '.*(Zgłoś problem|Report a problem).*'
+    timeout: 30000
+- runFlow:
+    when:
+      visible: 'Report a problem'
+    commands:
+      - tapOn: 'Polski'
+- tapOn: 'Zaloguj się'
+- extendedWaitUntil:
+    visible: 'Logowanie'
+    timeout: 10000
+- tapOn:
+    id: 'login-email'
+- inputText: ${PHASE5_SERVICE_EMAIL}
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - hideKeyboard
+- tapOn:
+    id: 'login-password'
+- inputText: ${PHASE5_SERVICE_PASSWORD}
+- hideKeyboard
+- tapOn:
+    id: 'login-submit'
+- extendedWaitUntil:
+    visible: 'Panel służby.*'
+    timeout: 30000
+- runFlow:
+    when:
+      visible: '.*(Zachować hasło|Save Password).*'
+    commands:
+      - tapOn: '.*(Nie teraz|Not Now).*'
+- assertVisible: 'roads'
+- scrollUntilVisible:
+    element:
+      text: '.*PHASE55-ROADS-ONLY.*'
+    direction: DOWN
+    timeout: 30000
+- tapOn: '.*PHASE55-ROADS-ONLY.*'
+- extendedWaitUntil:
+    visible: 'PHASE55-ROADS-ONLY'
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      text: 'Działania służby'
+    direction: DOWN
+- assertVisible: 'Działania służby'

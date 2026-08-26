@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "phase": "11.10",
+  "status": "implemented",
+  "baseFiles": ["docker-compose.no-rustfs.yml", "docker-compose.production.yml"],
+  "imageEnvironment": {
+    "defaultFile": ".state/production-build/candidate/images.env",
+    "manifestFile": ".state/production-build/candidate/manifest.json",
+    "requiredVariables": [
+      "AUTHORIZATION_IMAGE",
+      "BACKEND_IMAGE",
+      "DATABASE_IMAGE",
+      "FRONTEND_IMAGE",
+      "LLM_GATEWAY_IMAGE",
+      "NGINX_IMAGE",
+      "PGBOUNCER_IMAGE",
+      "RABBITMQ_IMAGE"
+    ]
+  },
+  "defaults": {
+    "objectStorage": "local",
+    "redis": "disabled",
+    "observability": "disabled",
+    "llm": "disabled"
+  },
+  "modes": {
+    "objectStorage": {
+      "environmentVariable": "OBJECT_STORAGE_MODE",
+      "local": {
+        "files": ["docker-compose.storage.local.yml"],
+        "services": ["rustfs"]
+      },
+      "external": {
+        "files": ["docker-compose.storage.external.yml"],
+        "services": []
+      }
+    },
+    "redis": {
+      "environmentVariable": "REDIS_MODE",
+      "disabled": {
+        "files": [],
+        "services": []
+      },
+      "local": {
+        "files": ["docker-compose.redis.local.yml"],
+        "services": ["redis"]
+      },
+      "external": {
+        "files": ["docker-compose.redis.external.yml"],
+        "services": []
+      }
+    },
+    "observability": {
+      "environmentVariable": "OBSERVABILITY_MODE",
+      "disabled": {
+        "files": [],
+        "services": []
+      },
+      "local": {
+        "files": ["docker-compose.observability.local.yml"],
+        "services": ["alertmanager", "grafana", "loki", "otel-collector", "prometheus", "tempo"]
+      },
+      "external": {
+        "files": ["docker-compose.observability.external.yml"],
+        "services": ["otel-collector"]
+      }
+    },
+    "llm": {
+      "environmentVariable": "LLM_MODE",
+      "disabled": {
+        "files": [],
+        "services": []
+      },
+      "local": {
+        "files": ["docker-compose.llm.yml"],
+        "services": []
+      },
+      "external": {
+        "files": ["docker-compose.llm.external.yml"],
+        "services": []
+      }
+    }
+  },
+  "forbiddenMode": "both",
+  "supportedCombinationCount": 54
+}

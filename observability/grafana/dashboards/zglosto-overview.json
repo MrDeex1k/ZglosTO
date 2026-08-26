@@ -1,0 +1,189 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "panels": [
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "id": 1,
+      "targets": [
+        {
+          "expr": "sum by (service_name) (rate(zglosto_http_server_requests_total[5m]))",
+          "legendFormat": "{{service_name}}"
+        }
+      ],
+      "title": "HTTP request rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "id": 2,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, service_name) (rate(zglosto_http_server_duration_seconds_bucket[5m])))",
+          "legendFormat": "{{service_name}}"
+        }
+      ],
+      "title": "HTTP p95 duration",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 8 },
+      "id": 3,
+      "targets": [{ "expr": "{service_name=~\".+\"} | json", "refId": "A" }],
+      "title": "Structured application logs",
+      "type": "logs"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "min": 0, "max": 1 }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 18 },
+      "id": 4,
+      "targets": [
+        {
+          "expr": "zglosto_redis_dependency_up{redis_mode=~\"local|external\"}",
+          "legendFormat": "{{service_name}} / {{redis_mode}}"
+        }
+      ],
+      "title": "Redis dependency state",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 18 },
+      "id": 5,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, service_name, redis_mode) (rate(zglosto_redis_operation_duration_seconds_bucket[5m])))",
+          "legendFormat": "{{service_name}} / {{redis_mode}}"
+        }
+      ],
+      "title": "Redis p95 duration",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 26 },
+      "id": 6,
+      "targets": [
+        {
+          "expr": "sum(rate(zglosto_http_server_requests_total{http_response_status_code=~\"5..\"}[5m])) / clamp_min(sum(rate(zglosto_http_server_requests_total[5m])), 0.001)",
+          "legendFormat": "HTTP 5xx"
+        }
+      ],
+      "title": "HTTP error ratio",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 26 },
+      "id": 7,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, service_name, operation) (rate(zglosto_database_operation_duration_seconds_bucket[5m])))",
+          "legendFormat": "{{service_name}} / {{operation}}"
+        }
+      ],
+      "title": "PostgreSQL through PgBouncer p95",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 34 },
+      "id": 8,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, service_name, operation) (rate(zglosto_object_storage_operation_duration_seconds_bucket[5m])))",
+          "legendFormat": "{{service_name}} / {{operation}}"
+        }
+      ],
+      "title": "Object Storage p95",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 34 },
+      "id": 9,
+      "targets": [
+        {
+          "expr": "sum by (queue) (rabbitmq_queue_messages_ready{queue=~\"zglosto\\\\.(media|llm)\\\\..+\"})",
+          "legendFormat": "{{queue}}"
+        }
+      ],
+      "title": "RabbitMQ ready messages",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 42 },
+      "id": 10,
+      "targets": [
+        {
+          "expr": "sum by (result) (rate(zglosto_outbox_messages_total[5m]))",
+          "legendFormat": "{{result}}"
+        }
+      ],
+      "title": "Transactional outbox",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 42 },
+      "id": 11,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(zglosto_media_processing_duration_seconds_bucket[5m])))",
+          "legendFormat": "Sharp/WebP p95"
+        }
+      ],
+      "title": "Media worker p95",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 50 },
+      "id": 12,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, result) (rate(zglosto_llm_backend_duration_seconds_bucket[5m])))",
+          "legendFormat": "{{result}}"
+        }
+      ],
+      "title": "LLM path p95",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 50 },
+      "id": 13,
+      "targets": [
+        {
+          "expr": "sum by (outcome) (rate(zglosto_homepage_cache_requests_total[5m]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "title": "Homepage cache outcomes",
+      "type": "timeseries"
+    }
+  ],
+  "schemaVersion": 42,
+  "tags": ["zglosto", "foundation"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "title": "ZglosTO overview",
+  "uid": "zglosto-overview",
+  "version": 1
+}

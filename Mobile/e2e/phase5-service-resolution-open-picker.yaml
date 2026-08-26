@@ -1,0 +1,53 @@
+appId: pl.zglosto.app
+name: Phase 5 service resolution picker
+tags:
+  - phase5
+  - service
+  - resolution-image
+---
+- runFlow:
+    when:
+      visible: 'Otwórz panel'
+    commands:
+      - tapOn: 'Otwórz panel'
+- runFlow:
+    when:
+      visible: 'Obsługa zgłoszenia'
+    commands:
+      - runFlow:
+          when:
+            platform: iOS
+          commands:
+            - tapOn:
+                id: 'BackButton'
+      - runFlow:
+          when:
+            platform: Android
+          commands:
+            - back
+- extendedWaitUntil:
+    visible:
+      id: 'service-queue-ready'
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: 'service-filter-all'
+    direction: UP
+    timeout: 20000
+- tapOn:
+    id: 'service-filter-all'
+- scrollUntilVisible:
+    element:
+      text: 'Naprawiono uszkodzoną nawierzchnię chodnika.*'
+    direction: DOWN
+    timeout: 30000
+- tapOn: 'Naprawiono uszkodzoną nawierzchnię chodnika.*'
+- extendedWaitUntil:
+    visible: 'Obsługa zgłoszenia'
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: 'resolution-pick-library'
+    direction: DOWN
+- tapOn:
+    id: 'resolution-pick-library'

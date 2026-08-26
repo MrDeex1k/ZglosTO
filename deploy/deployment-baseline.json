@@ -1,0 +1,122 @@
+{
+  "schemaVersion": 1,
+  "phase": "9.1",
+  "status": "implemented",
+  "profiles": {
+    "compose": {
+      "topology": "single-host",
+      "renderCommand": "docker compose --env-file .env.example config",
+      "currentServices": [
+        "authorization",
+        "backend",
+        "database",
+        "frontend",
+        "llm_gateway",
+        "media_worker",
+        "nginx",
+        "pgbouncer",
+        "rabbitmq",
+        "rustfs"
+      ],
+      "plannedServices": []
+    },
+    "kubernetes": {
+      "topology": "cluster",
+      "renderCommand": "kubectl kustomize k8s/overlays/kubernetes",
+      "currentWorkloads": [
+        "authorization",
+        "backend",
+        "database",
+        "frontend",
+        "llm-gateway",
+        "media-worker",
+        "nginx",
+        "pgbouncer",
+        "rabbitmq"
+      ],
+      "plannedWorkloads": ["rustfs"]
+    },
+    "k3s": {
+      "topology": "single-node-or-ha",
+      "renderCommand": "kubectl kustomize k8s/overlays/k3s",
+      "currentWorkloads": [
+        "authorization",
+        "backend",
+        "database",
+        "frontend",
+        "llm-gateway",
+        "media-worker",
+        "nginx",
+        "pgbouncer",
+        "rabbitmq"
+      ],
+      "plannedWorkloads": ["rustfs"]
+    }
+  },
+  "canonicalServices": [
+    {
+      "logicalName": "authorization",
+      "composeService": "authorization",
+      "kubernetesWorkload": "authorization"
+    },
+    {
+      "logicalName": "backend",
+      "composeService": "backend",
+      "kubernetesWorkload": "backend"
+    },
+    {
+      "logicalName": "database",
+      "composeService": "database",
+      "kubernetesWorkload": "database"
+    },
+    {
+      "logicalName": "frontend",
+      "composeService": "frontend",
+      "kubernetesWorkload": "frontend"
+    },
+    {
+      "logicalName": "llm_gateway",
+      "composeService": "llm_gateway",
+      "kubernetesWorkload": "llm-gateway"
+    },
+    {
+      "logicalName": "media_worker",
+      "composeService": "media_worker",
+      "kubernetesWorkload": "media-worker"
+    },
+    {
+      "logicalName": "nginx",
+      "composeService": "nginx",
+      "kubernetesWorkload": "nginx"
+    },
+    {
+      "logicalName": "pgbouncer",
+      "composeService": "pgbouncer",
+      "kubernetesWorkload": "pgbouncer"
+    },
+    {
+      "logicalName": "rabbitmq",
+      "composeService": "rabbitmq",
+      "kubernetesWorkload": "rabbitmq"
+    },
+    {
+      "logicalName": "rustfs",
+      "composeService": "rustfs",
+      "kubernetesWorkload": "rustfs"
+    }
+  ],
+  "sharedContracts": {
+    "publicRoutes": ["/", "/api", "/api/auth", "/llm"],
+    "whiteLabelMode": "single-city-config-per-installation",
+    "imagePolicyAtStep1": "explicit-tag-without-latest",
+    "targetImagePolicy": "native-source-build-with-local-immutable-tag",
+    "imageProductionContract": "deploy/image-production-contract.json",
+    "clusterPlatformContract": "deploy/cluster-profiles.json",
+    "clusterSecretContract": "deploy/cluster-secret-contract.json",
+    "clusterRuntimeConfig": "k8s/base/config/runtime.env",
+    "clusterWhiteLabelSource": "config/white-label/zglosto.yaml",
+    "clusterStatefulContract": "deploy/cluster-stateful-contract.json",
+    "secretPolicy": "external-or-mounted-secret-not-rendered-in-kustomize",
+    "forbiddenRuntimeComponents": ["pgadmin", "llm-service", "llm_service", "fastapi"]
+  }
+}

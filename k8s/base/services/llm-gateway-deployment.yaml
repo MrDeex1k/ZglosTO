@@ -1,0 +1,139 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-gateway
+  namespace: zglosto
+  labels:
+    app: llm-gateway
+  annotations:
+    secret.reloader.stakater.com/reload: zglosto-llm-gateway-tls,zglosto-llm-gateway-healthcheck-tls,zglosto-llm-auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: llm-gateway
+  template:
+    metadata:
+      labels:
+        app: llm-gateway
+    spec:
+      serviceAccountName: llm-gateway
+      enableServiceLinks: false
+      securityContext:
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: llm-gateway
+          image: docker.io/zglosto/llm-gateway:phase9-baseline
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          ports:
+            - name: https
+              containerPort: 8130
+          env:
+            - { name: OBSERVABILITY_MODE, value: disabled }
+            - { name: OTEL_SERVICE_NAME, value: llm_gateway }
+            - name: LLM_GATEWAY_PORT
+              value: '8130'
+            - { name: LLM_GATEWAY_TLS_CA_PATH, value: /run/secrets/service/ca.crt }
+            - { name: LLM_GATEWAY_TLS_CERT_PATH, value: /run/secrets/llm-gateway/tls.crt }
+            - { name: LLM_GATEWAY_TLS_KEY_PATH, value: /run/secrets/llm-gateway/tls.key }
+            - {
+                name: LLM_GATEWAY_HEALTHCHECK_CERT_PATH,
+                value: /run/secrets/llm-gateway-healthcheck/tls.crt,
+              }
+            - {
+                name: LLM_GATEWAY_HEALTHCHECK_KEY_PATH,
+                value: /run/secrets/llm-gateway-healthcheck/tls.key,
+              }
+            - { name: LLM_GATEWAY_HEALTHCHECK_SERVER_NAME, value: llm-gateway }
+            - { name: LLM_GATEWAY_HMAC_KEY_FILE, value: /run/secrets/llm-auth/hmac-key }
+            - { name: LLM_GATEWAY_HMAC_KEY_ID, value: backend-v1 }
+            - { name: LLM_GATEWAY_AUTH_CLOCK_SKEW_SECONDS, value: '30' }
+            - { name: LLM_GATEWAY_AUTH_REPLAY_MAX_ENTRIES, value: '10000' }
+            - { name: LLM_GATEWAY_MAX_BODY_BYTES, value: '32768' }
+            - { name: LLM_GATEWAY_MAX_CONCURRENT_CLASSIFICATIONS, value: '4' }
+            - name: LLM_RUNTIME
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: LLM_RUNTIME
+            - name: LLM_UPSTREAM_TIMEOUT_MS
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: LLM_UPSTREAM_TIMEOUT_MS
+            - name: DOCKER_MODEL_RUNNER_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: DOCKER_MODEL_RUNNER_URL
+            - name: DOCKER_MODEL_RUNNER_MODEL
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: DOCKER_MODEL_RUNNER_MODEL
+            - name: DOCKER_MODEL_RUNNER_ENGINE
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: DOCKER_MODEL_RUNNER_ENGINE
+            - name: DOCKER_MODEL_RUNNER_TEMPERATURE
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: DOCKER_MODEL_RUNNER_TEMPERATURE
+            - name: DOCKER_MODEL_RUNNER_MAX_TOKENS
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: DOCKER_MODEL_RUNNER_MAX_TOKENS
+          volumeMounts:
+            - { name: service-ca, mountPath: /run/secrets/service, readOnly: true }
+            - { name: llm-gateway-tls, mountPath: /run/secrets/llm-gateway, readOnly: true }
+            - {
+                name: llm-gateway-healthcheck-tls,
+                mountPath: /run/secrets/llm-gateway-healthcheck,
+                readOnly: true,
+              }
+            - { name: llm-auth, mountPath: /run/secrets/llm-auth, readOnly: true }
+          resources:
+            requests:
+              memory: '64Mi'
+              cpu: '50m'
+            limits:
+              memory: '256Mi'
+              cpu: '500m'
+          livenessProbe:
+            exec:
+              command: [node, dist/src/healthcheck.js]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command: [node, dist/src/healthcheck.js]
+            initialDelaySeconds: 2
+            periodSeconds: 5
+      volumes:
+        - name: service-ca
+          secret:
+            secretName: zglosto-llm-gateway-tls
+            defaultMode: 0440
+            items: [{ key: ca.crt, path: ca.crt }]
+        - name: llm-gateway-tls
+          secret: { secretName: zglosto-llm-gateway-tls, defaultMode: 0440 }
+        - name: llm-gateway-healthcheck-tls
+          secret: { secretName: zglosto-llm-gateway-healthcheck-tls, defaultMode: 0440 }
+        - name: llm-auth
+          secret:
+            secretName: zglosto-llm-auth
+            defaultMode: 0440
+            items: [{ key: hmac-key, path: hmac-key }]

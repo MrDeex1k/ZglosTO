@@ -1,0 +1,14 @@
+services:
+  backend:
+    networks:
+      - internal-net
+      - object-storage-external-net
+
+  media_worker:
+    networks:
+      - internal-net
+      - object-storage-external-net
+
+networks:
+  object-storage-external-net:
+    driver: bridge

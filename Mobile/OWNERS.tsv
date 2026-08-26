@@ -1,0 +1,18 @@
+artifact_or_area	required_role	owner	status	responsibility
+MIGRATION.md	product-and-engineering-decision	TBD	OPEN	accept path, checkpoint and terminal decision
+SCREENS.tsv	product-owner	TBD	OPEN	accept scope, parity and ordering
+STATE_AND_STORAGE.tsv	security-privacy-owner	TBD	OPEN	retention, PII and storage policy
+DEPENDENCIES.tsv	mobile-tech-lead	TBD	OPEN	versions, supply chain and native compatibility
+EVENTS.tsv	product-analytics-and-privacy	TBD	OPEN	KPI, event allowlist and consent
+PARITY_CHECKS.md	QA-lead	TBD	OPEN	device evidence and independent review
+auth	authorization-owner	TBD	OPEN	Better Auth Expo, trusted origins, CORS and deep links
+domain-api	backend-owner	TBD	OPEN	endpoints, idempotency, pagination and role enforcement
+media	backend-mobile-joint-owner	TBD	OPEN	checksum, presigned upload, private image access
+white-label	product-platform-owner	TBD	OPEN	config rollout, assets and theme
+accessibility	accessibility-reviewer	TBD	OPEN	VoiceOver, TalkBack, large text and contrast
+release	local-and-store-release-owner	TBD	OPEN	local signing now; stores, OTA, rollout and rollback later
+observability	operations-owner	TBD	OPEN	crash, performance, alerts and runbooks
+security	security-reviewer	TBD	OPEN	threat review, secrets, PII and dependency risk
+resident-flow	mobile-feature-owner	TBD	OPEN	implementation and faithful/idiomatic passes
+service-flow	mobile-feature-owner	TBD	OPEN	implementation and field-work validation
+admin-flow	mobile-feature-owner	TBD	OPEN	separate scope and safety review

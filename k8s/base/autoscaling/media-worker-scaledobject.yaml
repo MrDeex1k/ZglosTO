@@ -1,0 +1,47 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: media-worker
+  namespace: zglosto
+spec:
+  scaleTargetRef:
+    name: media-worker
+    envSourceContainerName: media-worker
+  pollingInterval: 5
+  cooldownPeriod: 180
+  minReplicaCount: 1
+  maxReplicaCount: 4
+  fallback:
+    failureThreshold: 3
+    replicas: 1
+  advanced:
+    horizontalPodAutoscalerConfig:
+      name: media-worker
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: 0
+          selectPolicy: Max
+          policies:
+            - { type: Pods, value: 4, periodSeconds: 15 }
+        scaleDown:
+          stabilizationWindowSeconds: 180
+          selectPolicy: Max
+          policies:
+            - { type: Percent, value: 100, periodSeconds: 15 }
+    scalingModifiers:
+      formula: min(floor(backlog / 4) + 1, 4)
+      target: '1'
+      activationTarget: '0'
+      metricType: Value
+  triggers:
+    - type: rabbitmq
+      name: backlog
+      metricType: AverageValue
+      metadata:
+        protocol: auto
+        mode: QueueLength
+        queueName: zglosto.media.process.v1
+        value: '1'
+        activationValue: '0'
+      authenticationRef:
+        name: media-worker-rabbitmq

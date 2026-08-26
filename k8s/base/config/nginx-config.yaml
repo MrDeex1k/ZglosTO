@@ -1,0 +1,115 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  namespace: zglosto
+data:
+  default.conf: |
+    proxy_cache_path /var/cache/nginx/homepage
+        levels=1:2
+        keys_zone=homepage_resolved:1m
+        max_size=16m
+        inactive=30m
+        use_temp_path=off;
+
+    server {
+        listen       1235;
+        server_name  _;
+
+        location = /health {
+            default_type application/json;
+            return 200 '{"status":"ok","service":"nginx"}\n';
+        }
+
+        location / {
+            proxy_pass http://frontend:8080;
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        location /api/auth/ {
+            proxy_pass https://authorization:9956/api/auth/;
+            proxy_http_version 1.1;
+            proxy_ssl_certificate /run/secrets/nginx/tls.crt;
+            proxy_ssl_certificate_key /run/secrets/nginx/tls.key;
+            proxy_ssl_trusted_certificate /run/secrets/service/ca.crt;
+            proxy_ssl_verify on;
+            proxy_ssl_server_name on;
+            proxy_ssl_name authorization;
+            proxy_ssl_protocols TLSv1.3;
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header Cookie $http_cookie;
+            proxy_pass_header Set-Cookie;
+        }
+
+        location = /api/mieszkaniec/incydenty/glowna {
+            limit_except GET {
+                deny all;
+            }
+
+            proxy_pass http://backend:3000/mieszkaniec/incydenty/glowna;
+            proxy_http_version 1.1;
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header Authorization "";
+            proxy_set_header Cookie "";
+
+            proxy_cache homepage_resolved;
+            proxy_cache_key "homepage-resolved-v1";
+            proxy_cache_methods GET HEAD;
+            proxy_cache_valid 200 15m;
+            proxy_cache_lock on;
+            proxy_cache_lock_age 5s;
+            proxy_cache_lock_timeout 5s;
+            proxy_cache_use_stale error timeout http_500 http_502 http_503 http_504;
+
+            proxy_hide_header X-Accel-Expires;
+            add_header Cache-Control "public, max-age=0, must-revalidate" always;
+            add_header X-Cache-Status $upstream_cache_status always;
+        }
+
+        location /api/ {
+            proxy_pass http://backend:3000/;
+            proxy_http_version 1.1;
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header Cookie $http_cookie;
+        }
+
+        location = /llm/health {
+            proxy_pass https://llm-gateway:8130/health;
+            proxy_ssl_trusted_certificate /run/secrets/service/ca.crt;
+            proxy_ssl_certificate /run/secrets/nginx/tls.crt;
+            proxy_ssl_certificate_key /run/secrets/nginx/tls.key;
+            proxy_ssl_verify on;
+            proxy_ssl_verify_depth 2;
+            proxy_ssl_server_name on;
+            proxy_ssl_name llm-gateway;
+            proxy_ssl_protocols TLSv1.3;
+            proxy_http_version 1.1;
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_read_timeout 7s;
+            proxy_connect_timeout 2s;
+        }
+
+        location /llm/ {
+            return 404;
+        }
+    }

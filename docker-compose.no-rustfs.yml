@@ -1,0 +1,474 @@
+# Provider-neutral runtime for an externally provisioned S3-compatible bucket.
+services:
+  database:
+    build:
+      context: .
+      dockerfile: database/Dockerfile
+    container_name: zglosto-postgres
+    restart: unless-stopped
+    environment:
+      PGDATA: /var/lib/postgresql/18/docker
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
+      POSTGRES_PASSWORD_FILE: ${POSTGRES_PASSWORD_FILE:-}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_PORT: ${POSTGRES_PORT:?POSTGRES_PORT is required}
+      DATABASE_DIRECT_URL: ${DATABASE_DIRECT_URL:-}
+      DATABASE_DIRECT_URL_FILE: ${DATABASE_DIRECT_URL_FILE:-}
+      PGSSLMODE: verify-full
+      PGSSLROOTCERT: /run/secrets/database/ca.crt
+    ports:
+      - '127.0.0.1:${POSTGRES_PORT}:${POSTGRES_PORT}'
+    command:
+      [
+        'postgres',
+        '-c',
+        'port=${POSTGRES_PORT}',
+        '-c',
+        'ssl=on',
+        '-c',
+        'ssl_cert_file=/run/postgresql/tls/server.crt',
+        '-c',
+        'ssl_key_file=/run/postgresql/tls/server.key',
+        '-c',
+        'ssl_min_protocol_version=TLSv1.3',
+        '-c',
+        'hba_file=/etc/postgresql/pg_hba.conf',
+      ]
+    volumes:
+      - postgres-data:/var/lib/postgresql
+      - pgbackrest-data:/var/lib/pgbackrest
+      - ./database/init-scripts:/docker-entrypoint-initdb.d
+      - ./database/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf
+      - ./.certs/database/ca.crt:/run/secrets/database/ca.crt:ro
+      - ./.certs/database/postgres-server.crt:/run/secrets/database/postgres-server.crt:ro
+      - ./.certs/database/postgres-server.key:/run/secrets/database/postgres-server.key:ro
+    networks:
+      - internal-net
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'psql -v ON_ERROR_STOP=1 "$${DATABASE_DIRECT_URL}" -c "SELECT 1" >/dev/null 2>&1',
+        ]
+      interval: 4s
+      timeout: 4s
+      retries: 10
+      start_period: 30s
+
+  pgbouncer:
+    build:
+      context: .
+      dockerfile: pgbouncer/Dockerfile
+    restart: unless-stopped
+    environment:
+      # The image uses DATABASE_URL as its upstream PostgreSQL connection.
+      DATABASE_URL: ${DATABASE_DIRECT_URL:-}
+      DATABASE_URL_FILE: ${DATABASE_DIRECT_URL_FILE:-}
+      PGBOUNCER_CLIENT_URL: ${DATABASE_URL:-}
+      PGBOUNCER_CLIENT_URL_FILE: ${DATABASE_URL_FILE:-}
+      PGSSLMODE: verify-full
+      PGSSLROOTCERT: /var/run/pgbouncer/tls/ca.crt
+      LISTEN_PORT: ${PGBOUNCER_PORT:-6432}
+      AUTH_TYPE: scram-sha-256
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: ${PGBOUNCER_MAX_CLIENT_CONN:-100}
+      DEFAULT_POOL_SIZE: ${PGBOUNCER_DEFAULT_POOL_SIZE:-20}
+      RESERVE_POOL_SIZE: ${PGBOUNCER_RESERVE_POOL_SIZE:-5}
+      MAX_PREPARED_STATEMENTS: ${PGBOUNCER_MAX_PREPARED_STATEMENTS:-200}
+      SERVER_CHECK_QUERY: SELECT 1
+      IGNORE_STARTUP_PARAMETERS: extra_float_digits
+      CLIENT_TLS_SSLMODE: require
+      CLIENT_TLS_CERT_FILE: /var/run/pgbouncer/tls/server.crt
+      CLIENT_TLS_KEY_FILE: /var/run/pgbouncer/tls/server.key
+      CLIENT_TLS_PROTOCOLS: tlsv1.3
+      SERVER_TLS_SSLMODE: verify-full
+      SERVER_TLS_CA_FILE: /var/run/pgbouncer/tls/ca.crt
+      SERVER_TLS_PROTOCOLS: tlsv1.3
+    volumes:
+      - ./.certs/database/ca.crt:/run/secrets/database/ca.crt:ro
+      - ./.certs/database/pgbouncer-server.crt:/run/secrets/database/pgbouncer-server.crt:ro
+      - ./.certs/database/pgbouncer-server.key:/run/secrets/database/pgbouncer-server.key:ro
+    depends_on:
+      database:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'psql -v ON_ERROR_STOP=1 "$${PGBOUNCER_CLIENT_URL}" -c "SELECT 1" >/dev/null 2>&1',
+        ]
+      interval: 4s
+      timeout: 4s
+      retries: 10
+      start_period: 10s
+    networks:
+      - internal-net
+
+  rabbitmq:
+    build:
+      context: .
+      dockerfile: rabbitmq/Dockerfile
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-}
+      RABBITMQ_USER_FILE: ${RABBITMQ_USER_FILE:-}
+      RABBITMQ_PASSWORD_FILE: ${RABBITMQ_PASSWORD_FILE:-}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-zglosto}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+      - ./.certs/service/ca.crt:/run/secrets/service/ca.crt:ro
+      - ./.certs/service/rabbitmq-server.crt:/run/secrets/service/rabbitmq-server.crt:ro
+      - ./.certs/service/rabbitmq-server.key:/run/secrets/service/rabbitmq-server.key:ro
+    healthcheck:
+      test: ['CMD', '/usr/local/bin/rabbitmq-tls-healthcheck']
+      interval: 5s
+      timeout: 8s
+      retries: 20
+      start_period: 15s
+    networks:
+      - internal-net
+
+  authorization:
+    build:
+      context: .
+      dockerfile: authorization/Dockerfile
+      args:
+        WHITE_LABEL_CONFIG_FILE: ${WHITE_LABEL_CONFIG_FILE:-config/white-label/zglosto.yaml}
+    environment:
+      OBSERVABILITY_MODE: ${OBSERVABILITY_MODE:-disabled}
+      OTEL_SERVICE_NAME: authorization
+      NODE_ENV: ${NODE_ENV:-development}
+      AUTHORIZATION_MTLS_PORT: ${AUTHORIZATION_MTLS_PORT:-9956}
+      AUTHORIZATION_MTLS_CA_PATH: ${AUTHORIZATION_MTLS_CA_PATH:-/run/secrets/service/ca.crt}
+      AUTHORIZATION_MTLS_CERT_PATH: ${AUTHORIZATION_MTLS_CERT_PATH:-/run/secrets/service/authorization-server.crt}
+      AUTHORIZATION_MTLS_KEY_PATH: ${AUTHORIZATION_MTLS_KEY_PATH:-/run/secrets/service/authorization-server.key}
+      AUTHORIZATION_MTLS_BACKEND_IDENTITY: ${AUTHORIZATION_MTLS_BACKEND_IDENTITY:-spiffe://zglosto.local/workload/backend}
+      AUTHORIZATION_MTLS_HEALTHCHECK_IDENTITY: ${AUTHORIZATION_MTLS_HEALTHCHECK_IDENTITY:-spiffe://zglosto.local/workload/authorization-healthcheck}
+      AUTHORIZATION_MTLS_NGINX_IDENTITY: ${AUTHORIZATION_MTLS_NGINX_IDENTITY:-spiffe://zglosto.local/workload/nginx}
+      AUTHORIZATION_HEALTHCHECK_CA_PATH: ${AUTHORIZATION_HEALTHCHECK_CA_PATH:-/run/secrets/service/ca.crt}
+      AUTHORIZATION_HEALTHCHECK_CERT_PATH: ${AUTHORIZATION_HEALTHCHECK_CERT_PATH:-/run/secrets/service/authorization-healthcheck-client.crt}
+      AUTHORIZATION_HEALTHCHECK_KEY_PATH: ${AUTHORIZATION_HEALTHCHECK_KEY_PATH:-/run/secrets/service/authorization-healthcheck-client.key}
+      AUTHORIZATION_HEALTHCHECK_SERVER_NAME: ${AUTHORIZATION_HEALTHCHECK_SERVER_NAME:-authorization}
+      DATABASE_URL: ${DATABASE_URL:-}
+      DATABASE_URL_FILE: ${DATABASE_URL_FILE:-}
+      DATABASE_TLS_CA_PATH: ${DATABASE_TLS_CA_PATH:-/run/secrets/database/ca.crt}
+      REDIS_MODE: ${REDIS_MODE:-disabled}
+      REDIS_URL_FILE: ${REDIS_URL_FILE:-}
+      REDIS_TLS_CA_PATH: ${REDIS_TLS_CA_PATH:-}
+      REDIS_CONNECT_TIMEOUT_MS: ${REDIS_CONNECT_TIMEOUT_MS:-1000}
+      REDIS_COMMAND_TIMEOUT_MS: ${REDIS_COMMAND_TIMEOUT_MS:-500}
+      REDIS_KEY_PREFIX: ${REDIS_KEY_PREFIX:-zglosto}
+      RATE_LIMIT_HMAC_KEY_FILE: ${RATE_LIMIT_HMAC_KEY_FILE:-}
+      CLIENT_IP_TRUSTED_PROXY_HOPS: ${CLIENT_IP_TRUSTED_PROXY_HOPS:-1}
+      AUTH_LOCAL_RATE_LIMIT_WINDOW_MS: ${AUTH_LOCAL_RATE_LIMIT_WINDOW_MS:-1000}
+      AUTH_LOCAL_RATE_LIMIT_MAX_REQUESTS: ${AUTH_LOCAL_RATE_LIMIT_MAX_REQUESTS:-50}
+      AUTH_LOCAL_RATE_LIMIT_MAX_KEYS: ${AUTH_LOCAL_RATE_LIMIT_MAX_KEYS:-50000}
+      AUTH_LOCAL_RATE_LIMIT_CLEANUP_INTERVAL_MS: ${AUTH_LOCAL_RATE_LIMIT_CLEANUP_INTERVAL_MS:-60000}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-}
+      BETTER_AUTH_SECRET_FILE: ${BETTER_AUTH_SECRET_FILE:-}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:?BETTER_AUTH_URL is required}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:?FRONTEND_ORIGIN is required}
+      EMAIL_DELIVERY_MODE: ${EMAIL_DELIVERY_MODE:-disabled}
+      WHITE_LABEL_CONFIG: ${WHITE_LABEL_CONFIG:-/app/config/city.yaml}
+    volumes:
+      - ${WHITE_LABEL_CONFIG_FILE:-./config/white-label/zglosto.yaml}:/app/config/city.yaml:ro
+      - ./.certs/service/ca.crt:/run/secrets/service/ca.crt:ro
+      - ./.certs/service/authorization-server.crt:/run/secrets/service/authorization-server.crt:ro
+      - ./.certs/service/authorization-server.key:/run/secrets/service/authorization-server.key:ro
+      - ./.certs/service/authorization-healthcheck-client.crt:/run/secrets/service/authorization-healthcheck-client.crt:ro
+      - ./.certs/service/authorization-healthcheck-client.key:/run/secrets/service/authorization-healthcheck-client.key:ro
+      - ./.certs/database/ca.crt:/run/secrets/database/ca.crt:ro
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'node', 'dist/src/healthcheck.js']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - internal-net
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      args:
+        WHITE_LABEL_CONFIG_FILE: ${WHITE_LABEL_CONFIG_FILE:-config/white-label/zglosto.yaml}
+    environment:
+      OBSERVABILITY_MODE: ${OBSERVABILITY_MODE:-disabled}
+      OTEL_SERVICE_NAME: backend
+      NODE_ENV: ${NODE_ENV:-development}
+      SERVICE_NAME: backend
+      BACKEND_PORT: '3000'
+      DATABASE_URL: ${DATABASE_URL:-}
+      DATABASE_URL_FILE: ${DATABASE_URL_FILE:-}
+      DATABASE_TLS_CA_PATH: ${DATABASE_TLS_CA_PATH:-/run/secrets/database/ca.crt}
+      DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-10}
+      DATABASE_IDLE_TIMEOUT_MS: ${DATABASE_IDLE_TIMEOUT_MS:-30000}
+      DATABASE_CONNECTION_TIMEOUT_MS: ${DATABASE_CONNECTION_TIMEOUT_MS:-5000}
+      REDIS_MODE: ${REDIS_MODE:-disabled}
+      REDIS_URL_FILE: ${REDIS_URL_FILE:-}
+      REDIS_TLS_CA_PATH: ${REDIS_TLS_CA_PATH:-}
+      REDIS_CONNECT_TIMEOUT_MS: ${REDIS_CONNECT_TIMEOUT_MS:-1000}
+      REDIS_COMMAND_TIMEOUT_MS: ${REDIS_COMMAND_TIMEOUT_MS:-500}
+      REDIS_KEY_PREFIX: ${REDIS_KEY_PREFIX:-zglosto}
+      RATE_LIMIT_HMAC_KEY_FILE: ${RATE_LIMIT_HMAC_KEY_FILE:-}
+      CLIENT_IP_TRUSTED_PROXY_HOPS: ${CLIENT_IP_TRUSTED_PROXY_HOPS:-1}
+      HOMEPAGE_CACHE_TTL_SECONDS: ${HOMEPAGE_CACHE_TTL_SECONDS:-900}
+      HOMEPAGE_NGINX_MICROCACHE_SECONDS: ${HOMEPAGE_NGINX_MICROCACHE_SECONDS:-30}
+      HOMEPAGE_NGINX_DISABLED_TTL_SECONDS: ${HOMEPAGE_NGINX_DISABLED_TTL_SECONDS:-900}
+      INCIDENT_LOCAL_RATE_LIMIT_WINDOW_MS: ${INCIDENT_LOCAL_RATE_LIMIT_WINDOW_MS:-10000}
+      INCIDENT_LOCAL_RATE_LIMIT_MAX_REQUESTS: ${INCIDENT_LOCAL_RATE_LIMIT_MAX_REQUESTS:-5}
+      INCIDENT_LOCAL_RATE_LIMIT_MAX_KEYS: ${INCIDENT_LOCAL_RATE_LIMIT_MAX_KEYS:-50000}
+      INCIDENT_LOCAL_RATE_LIMIT_CLEANUP_INTERVAL_MS: ${INCIDENT_LOCAL_RATE_LIMIT_CLEANUP_INTERVAL_MS:-60000}
+      INCIDENT_IP_RATE_LIMIT_WINDOW_MS: ${INCIDENT_IP_RATE_LIMIT_WINDOW_MS:-900000}
+      INCIDENT_IP_RATE_LIMIT_MAX_REQUESTS: ${INCIDENT_IP_RATE_LIMIT_MAX_REQUESTS:-10}
+      INCIDENT_USER_RATE_LIMIT_WINDOW_MS: ${INCIDENT_USER_RATE_LIMIT_WINDOW_MS:-900000}
+      INCIDENT_USER_RATE_LIMIT_MAX_REQUESTS: ${INCIDENT_USER_RATE_LIMIT_MAX_REQUESTS:-20}
+      INCIDENT_GLOBAL_RATE_LIMIT_WINDOW_MS: ${INCIDENT_GLOBAL_RATE_LIMIT_WINDOW_MS:-60000}
+      INCIDENT_GLOBAL_RATE_LIMIT_MAX_REQUESTS: ${INCIDENT_GLOBAL_RATE_LIMIT_MAX_REQUESTS:-300}
+      RABBITMQ_URL: ${RABBITMQ_URL:-}
+      RABBITMQ_URL_FILE: ${RABBITMQ_URL_FILE:-}
+      RABBITMQ_TLS_CA_PATH: ${RABBITMQ_TLS_CA_PATH:-/run/secrets/service/ca.crt}
+      RABBITMQ_SERVER_NAME: ${RABBITMQ_SERVER_NAME:-rabbitmq}
+      RABBITMQ_HEARTBEAT_SECONDS: ${RABBITMQ_HEARTBEAT_SECONDS:-30}
+      RABBITMQ_RECONNECT_DELAY_MS: ${RABBITMQ_RECONNECT_DELAY_MS:-1000}
+      RABBITMQ_PUBLISHER_ENABLED: ${RABBITMQ_PUBLISHER_ENABLED:-true}
+      OUTBOX_POLL_INTERVAL_MS: ${OUTBOX_POLL_INTERVAL_MS:-1000}
+      OUTBOX_BATCH_SIZE: ${OUTBOX_BATCH_SIZE:-25}
+      OUTBOX_LOCK_TIMEOUT_MS: ${OUTBOX_LOCK_TIMEOUT_MS:-30000}
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-https://authorization:9956}
+      AUTH_SERVICE_CA_PATH: ${AUTH_SERVICE_CA_PATH:-/run/secrets/service/ca.crt}
+      AUTH_SERVICE_CERT_PATH: ${AUTH_SERVICE_CERT_PATH:-/run/secrets/service/backend-client.crt}
+      AUTH_SERVICE_KEY_PATH: ${AUTH_SERVICE_KEY_PATH:-/run/secrets/service/backend-client.key}
+      AUTH_SERVICE_SERVER_NAME: ${AUTH_SERVICE_SERVER_NAME:-authorization}
+      AUTH_SERVICE_TIMEOUT_MS: ${AUTH_SERVICE_TIMEOUT_MS:-5000}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:?FRONTEND_ORIGIN is required}
+      LLM_GATEWAY_URL: https://llm_gateway:8130
+      LLM_GATEWAY_CA_PATH: /run/secrets/service/ca.crt
+      LLM_GATEWAY_CERT_PATH: /run/secrets/service/backend-client.crt
+      LLM_GATEWAY_KEY_PATH: /run/secrets/service/backend-client.key
+      LLM_GATEWAY_SERVER_NAME: llm-gateway
+      LLM_GATEWAY_HMAC_KEY_FILE: /run/secrets/llm-auth/hmac-key
+      LLM_GATEWAY_HMAC_KEY_ID: ${LLM_GATEWAY_HMAC_KEY_ID:-backend-v1}
+      LLM_TIMEOUT_MS: ${LLM_TIMEOUT_MS:-7000}
+      S3_ENDPOINT: ${S3_ENDPOINT:?S3_ENDPOINT is required}
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:?S3_PUBLIC_ENDPOINT is required}
+      S3_UPLOAD_EXPIRY_SECONDS: ${S3_UPLOAD_EXPIRY_SECONDS:-300}
+      S3_REGION: ${S3_REGION:-eu-central-1}
+      S3_BUCKET: ${S3_BUCKET:?S3_BUCKET is required}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+      S3_ACCESS_KEY_ID_FILE: ${S3_ACCESS_KEY_ID_FILE:-}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+      S3_SECRET_ACCESS_KEY_FILE: ${S3_SECRET_ACCESS_KEY_FILE:-}
+      S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-false}
+      S3_OBJECT_PREFIX: ${S3_OBJECT_PREFIX:-incidents}
+      S3_AUTO_CREATE_BUCKET: ${S3_AUTO_CREATE_BUCKET:-false}
+      WHITE_LABEL_CONFIG: ${WHITE_LABEL_CONFIG:-/app/config/city.yaml}
+    volumes:
+      - ${WHITE_LABEL_CONFIG_FILE:-./config/white-label/zglosto.yaml}:/app/config/city.yaml:ro
+      - ./.certs/service/ca.crt:/run/secrets/service/ca.crt:ro
+      - ./.certs/service/backend-client.crt:/run/secrets/service/backend-client.crt:ro
+      - ./.certs/service/backend-client.key:/run/secrets/service/backend-client.key:ro
+      - ./.certs/service/llm-hmac-key:/run/secrets/llm-auth/hmac-key:ro
+      - ./.certs/database/ca.crt:/run/secrets/database/ca.crt:ro
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/health/ready').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    stop_grace_period: 30s
+    networks:
+      - internal-net
+
+  media_worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      args:
+        WHITE_LABEL_CONFIG_FILE: ${WHITE_LABEL_CONFIG_FILE:-config/white-label/zglosto.yaml}
+    command: [node, --import, '@zglosto/observability/register', dist/nest/media-worker/main.js]
+    restart: unless-stopped
+    environment:
+      OBSERVABILITY_MODE: ${OBSERVABILITY_MODE:-disabled}
+      OTEL_SERVICE_NAME: media_worker
+      NODE_ENV: ${NODE_ENV:-development}
+      SERVICE_NAME: media_worker
+      DATABASE_URL: ${DATABASE_URL:-}
+      DATABASE_URL_FILE: ${DATABASE_URL_FILE:-}
+      DATABASE_TLS_CA_PATH: ${DATABASE_TLS_CA_PATH:-/run/secrets/database/ca.crt}
+      DATABASE_POOL_MAX: ${MEDIA_WORKER_DATABASE_POOL_MAX:-2}
+      DATABASE_IDLE_TIMEOUT_MS: ${DATABASE_IDLE_TIMEOUT_MS:-30000}
+      DATABASE_CONNECTION_TIMEOUT_MS: ${DATABASE_CONNECTION_TIMEOUT_MS:-5000}
+      RABBITMQ_URL: ${RABBITMQ_URL:-}
+      RABBITMQ_URL_FILE: ${RABBITMQ_URL_FILE:-}
+      RABBITMQ_TLS_CA_PATH: ${RABBITMQ_TLS_CA_PATH:-/run/secrets/service/ca.crt}
+      RABBITMQ_SERVER_NAME: ${RABBITMQ_SERVER_NAME:-rabbitmq}
+      RABBITMQ_HEARTBEAT_SECONDS: ${RABBITMQ_HEARTBEAT_SECONDS:-30}
+      RABBITMQ_RECONNECT_DELAY_MS: ${RABBITMQ_RECONNECT_DELAY_MS:-1000}
+      RABBITMQ_PUBLISHER_ENABLED: 'false'
+      MEDIA_WORKER_HEALTH_FILE: ${MEDIA_WORKER_HEALTH_FILE:-/tmp/zglosto-media-worker.json}
+      MEDIA_WORKER_HEALTH_INTERVAL_MS: ${MEDIA_WORKER_HEALTH_INTERVAL_MS:-5000}
+      MEDIA_WORKER_HEALTH_STALE_MS: ${MEDIA_WORKER_HEALTH_STALE_MS:-20000}
+      MEDIA_WORKER_PREFETCH: ${MEDIA_WORKER_PREFETCH:-1}
+      MEDIA_MAX_INPUT_BYTES: ${MEDIA_MAX_INPUT_BYTES:-5242880}
+      MEDIA_MAX_INPUT_WIDTH: ${MEDIA_MAX_INPUT_WIDTH:-8192}
+      MEDIA_MAX_INPUT_HEIGHT: ${MEDIA_MAX_INPUT_HEIGHT:-8192}
+      MEDIA_MAX_INPUT_PIXELS: ${MEDIA_MAX_INPUT_PIXELS:-32000000}
+      MEDIA_MAX_OUTPUT_DIMENSION: ${MEDIA_MAX_OUTPUT_DIMENSION:-2000}
+      MEDIA_SHARP_CONCURRENCY: ${MEDIA_SHARP_CONCURRENCY:-1}
+      MEDIA_WEBP_QUALITY: ${MEDIA_WEBP_QUALITY:-85}
+      MEDIA_WEBP_EFFORT: ${MEDIA_WEBP_EFFORT:-4}
+      S3_ENDPOINT: ${S3_ENDPOINT:?S3_ENDPOINT is required}
+      S3_REGION: ${S3_REGION:-eu-central-1}
+      S3_BUCKET: ${S3_BUCKET:?S3_BUCKET is required}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+      S3_ACCESS_KEY_ID_FILE: ${S3_ACCESS_KEY_ID_FILE:-}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+      S3_SECRET_ACCESS_KEY_FILE: ${S3_SECRET_ACCESS_KEY_FILE:-}
+      S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-false}
+      S3_OBJECT_PREFIX: ${S3_OBJECT_PREFIX:-incidents}
+      S3_AUTO_CREATE_BUCKET: ${S3_AUTO_CREATE_BUCKET:-false}
+    volumes:
+      - ./.certs/service/ca.crt:/run/secrets/service/ca.crt:ro
+      - ./.certs/database/ca.crt:/run/secrets/database/ca.crt:ro
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'node', 'dist/nest/media-worker/healthcheck.js']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    networks:
+      - internal-net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+
+  llm_gateway:
+    build:
+      context: .
+      dockerfile: llm_gateway/Dockerfile
+    environment:
+      OBSERVABILITY_MODE: ${OBSERVABILITY_MODE:-disabled}
+      OTEL_SERVICE_NAME: llm_gateway
+      LLM_GATEWAY_PORT: '8130'
+      LLM_GATEWAY_TLS_CA_PATH: /run/secrets/service/ca.crt
+      LLM_GATEWAY_TLS_CERT_PATH: /run/secrets/service/llm-gateway-server.crt
+      LLM_GATEWAY_TLS_KEY_PATH: /run/secrets/service/llm-gateway-server.key
+      LLM_GATEWAY_HEALTHCHECK_CERT_PATH: /run/secrets/service/llm-gateway-healthcheck-client.crt
+      LLM_GATEWAY_HEALTHCHECK_KEY_PATH: /run/secrets/service/llm-gateway-healthcheck-client.key
+      LLM_GATEWAY_HEALTHCHECK_SERVER_NAME: llm-gateway
+      LLM_GATEWAY_HMAC_KEY_FILE: /run/secrets/llm-auth/hmac-key
+      LLM_GATEWAY_HMAC_KEY_ID: ${LLM_GATEWAY_HMAC_KEY_ID:-backend-v1}
+      LLM_GATEWAY_AUTH_CLOCK_SKEW_SECONDS: ${LLM_GATEWAY_AUTH_CLOCK_SKEW_SECONDS:-30}
+      LLM_GATEWAY_AUTH_REPLAY_MAX_ENTRIES: ${LLM_GATEWAY_AUTH_REPLAY_MAX_ENTRIES:-10000}
+      LLM_GATEWAY_MAX_BODY_BYTES: ${LLM_GATEWAY_MAX_BODY_BYTES:-32768}
+      LLM_GATEWAY_MAX_CONCURRENT_CLASSIFICATIONS: ${LLM_GATEWAY_MAX_CONCURRENT_CLASSIFICATIONS:-4}
+      LLM_RUNTIME: ${LLM_RUNTIME:-disabled}
+      LLM_UPSTREAM_TIMEOUT_MS: ${LLM_UPSTREAM_TIMEOUT_MS:-5000}
+      DOCKER_MODEL_RUNNER_URL: ${DOCKER_MODEL_RUNNER_URL:-http://model-runner.docker.internal:12434}
+      DOCKER_MODEL_RUNNER_MODEL: ${DOCKER_MODEL_RUNNER_MODEL:-ai/gemma3-qat:1B-Q4_K_M}
+      DOCKER_MODEL_RUNNER_ENGINE: ${DOCKER_MODEL_RUNNER_ENGINE:-llama.cpp}
+      DOCKER_MODEL_RUNNER_TEMPERATURE: ${DOCKER_MODEL_RUNNER_TEMPERATURE:-0.1}
+      DOCKER_MODEL_RUNNER_MAX_TOKENS: ${DOCKER_MODEL_RUNNER_MAX_TOKENS:-64}
+    volumes:
+      - ./.certs/service/ca.crt:/run/secrets/service/ca.crt:ro
+      - ./.certs/service/llm-gateway-server.crt:/run/secrets/service/llm-gateway-server.crt:ro
+      - ./.certs/service/llm-gateway-server.key:/run/secrets/service/llm-gateway-server.key:ro
+      - ./.certs/service/llm-gateway-healthcheck-client.crt:/run/secrets/service/llm-gateway-healthcheck-client.crt:ro
+      - ./.certs/service/llm-gateway-healthcheck-client.key:/run/secrets/service/llm-gateway-healthcheck-client.key:ro
+      - ./.certs/service/llm-hmac-key:/run/secrets/llm-auth/hmac-key:ro
+    healthcheck:
+      test: ['CMD', 'node', 'dist/src/healthcheck.js']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - internal-net
+      - llm-runtime-net
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        WHITE_LABEL_CONFIG_FILE: ${WHITE_LABEL_CONFIG_FILE:-config/white-label/zglosto.yaml}
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:8080/health/ready']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - external-net
+
+  nginx:
+    build:
+      context: ./nginx
+    ports:
+      - '1235:1235'
+    volumes:
+      - ./.certs/service/ca.crt:/run/secrets/service/ca.crt:ro
+      - ./.certs/service/nginx-client.crt:/run/secrets/service/nginx-client.crt:ro
+      - ./.certs/service/nginx-client.key:/run/secrets/service/nginx-client.key:ro
+    depends_on:
+      authorization:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+      llm_gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:1235/api/auth/get-session']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - internal-net
+      - external-net
+
+volumes:
+  postgres-data:
+    driver: local
+  pgbackrest-data:
+    driver: local
+  rabbitmq-data:
+    driver: local
+
+networks:
+  internal-net:
+    driver: bridge
+    internal: true
+  external-net:
+    driver: bridge
+  llm-runtime-net:
+    driver: bridge

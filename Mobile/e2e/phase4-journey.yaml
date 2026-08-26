@@ -1,0 +1,123 @@
+appId: pl.zglosto.app
+---
+- runFlow:
+    when:
+      visible: 'Continue'
+    commands:
+      - tapOn: 'Continue'
+- runFlow:
+    when:
+      visible: 'Close'
+    commands:
+      - tapOn: 'Close'
+- extendedWaitUntil:
+    visible: '.*(Report a problem|Zgłoś problem).*'
+    timeout: 30000
+- runFlow:
+    when:
+      visible: 'Report a problem'
+    commands:
+      - tapOn: 'Polski'
+- extendedWaitUntil:
+    visible: 'Zgłoś problem'
+    timeout: 30000
+- assertVisible: 'Zaloguj się'
+- assertVisible: 'Polski'
+- tapOn: 'English'
+- assertVisible: 'Report a problem'
+- tapOn: 'Polski'
+- tapOn: 'Zaloguj się'
+- assertVisible: 'Logowanie'
+- tapOn: 'Utwórz konto'
+- assertVisible: 'Rejestracja'
+- tapOn: 'Utwórz konto'
+- assertVisible: 'Podaj imię i nazwisko.'
+- assertVisible: 'Podaj prawidłowy adres e-mail.'
+- tapOn:
+    id: 'registration-name'
+- runFlow:
+    when:
+      visible: 'Try out your stylus'
+    commands:
+      - tapOn: 'Cancel'
+      - tapOn:
+          id: 'registration-name'
+- inputText: 'Maestro Resident'
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - hideKeyboard
+- tapOn:
+    id: 'registration-email'
+- inputText: 'maestro.${MAESTRO_RUN_ID}@example.test'
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: 'registration-password-visibility'
+    direction: DOWN
+- tapOn:
+    id: 'registration-password-visibility'
+- tapOn:
+    id: 'registration-password'
+- inputText: 'Phase4Test2026'
+- hideKeyboard
+- scrollUntilVisible:
+    centerElement: true
+    element:
+      id: 'registration-privacy'
+    direction: DOWN
+- waitForAnimationToEnd
+- tapOn:
+    id: 'registration-privacy'
+- scrollUntilVisible:
+    centerElement: true
+    element:
+      id: 'registration-terms'
+    direction: DOWN
+- waitForAnimationToEnd
+- tapOn:
+    id: 'registration-terms'
+- scrollUntilVisible:
+    centerElement: true
+    element:
+      id: 'registration-submit'
+    direction: DOWN
+- waitForAnimationToEnd
+- tapOn:
+    id: 'registration-submit'
+- extendedWaitUntil:
+    visible: 'Moje zgłoszenia'
+    timeout: 30000
+- assertVisible: 'Konto i ustawienia'
+- tapOn: 'Konto i ustawienia'
+- assertVisible: 'Diagnostyka'
+- assertVisible: 'Informacje prawne'
+- tapOn: 'Informacje prawne'
+- assertVisible: 'Dokumenty przed betą'
+- tapOn: 'Skontaktuj się z operatorem'
+- assertVisible: 'Dane kontaktowe właściwe dla tego wdrożenia miejskiego.'
+- openLink:
+    link: 'zglosto://account'
+- runFlow:
+    when:
+      visible: '.*(Open|Otwórz).*'
+    commands:
+      - tapOn: '.*(Open|Otwórz).*'
+- extendedWaitUntil:
+    visible: 'Konto'
+    timeout: 10000
+- scrollUntilVisible:
+    centerElement: true
+    element:
+      text: 'Wyloguj się'
+    direction: DOWN
+- tapOn: 'Wyloguj się'
+- extendedWaitUntil:
+    visible: 'Zgłoś problem'
+    timeout: 30000
+- assertVisible: 'Zaloguj się'

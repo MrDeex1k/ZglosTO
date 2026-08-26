@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "phase": "12",
+  "status": "active",
+  "implementationStatus": "automation-complete",
+  "localPreflightStatus": "passed",
+  "localResourceSizingStatus": "local-measured-provisional",
+  "certificationStatus": "pending-reference-host",
+  "referenceHost": {
+    "productionOperatingSystem": "ubuntu-server",
+    "compatibilityOperatingSystem": "windows-wsl2-docker-desktop",
+    "architecture": "amd64",
+    "minimumLogicalCpu": 8,
+    "preferredLogicalCpu": 12,
+    "minimumMemoryGiB": 16,
+    "minimumDiskGiB": 100,
+    "preferredDiskGiB": 150,
+    "windowsProductionCertified": false
+  },
+  "profiles": {
+    "minimal": {
+      "objectStorage": "local",
+      "redis": "disabled",
+      "observability": "disabled",
+      "llm": "local",
+      "llmRuntime": "docker-model-runner",
+      "llmModel": "ai/gemma3-qat:1B-Q4_K_M"
+    },
+    "recommended": {
+      "objectStorage": "local",
+      "redis": "local",
+      "observability": "disabled",
+      "llm": "disabled"
+    }
+  },
+  "resourceSizing": {
+    "measurementHost": {
+      "classification": "macos-arm64-orbstack",
+      "logicalCpu": 12,
+      "memoryGiB": 11.735
+    },
+    "profiles": {
+      "minimal": {
+        "measuredPeakCpuCores": 5.5756,
+        "measuredPeakContainerMemoryMiB": 2765.855,
+        "minimumLogicalCpu": 8,
+        "minimumMemoryGiB": 8,
+        "preferredLogicalCpu": 12,
+        "preferredMemoryGiB": 12
+      },
+      "recommended": {
+        "measuredPeakCpuCores": 1.2403,
+        "measuredPeakContainerMemoryMiB": 921.019,
+        "minimumLogicalCpu": 2,
+        "minimumMemoryGiB": 4,
+        "preferredLogicalCpu": 4,
+        "preferredMemoryGiB": 8
+      },
+      "observabilityLocalWithoutLocalLlm": {
+        "measuredPeakCpuCores": 0.7431,
+        "measuredPeakContainerMemoryMiB": 2404.98,
+        "minimumLogicalCpu": 4,
+        "minimumMemoryGiB": 8,
+        "preferredLogicalCpu": 6,
+        "preferredMemoryGiB": 12
+      },
+      "localLlmAndObservabilityLocal": {
+        "measurement": "conservative-extrapolation",
+        "minimumLogicalCpu": 12,
+        "minimumMemoryGiB": 12,
+        "preferredLogicalCpu": 12,
+        "preferredMemoryGiB": 16
+      }
+    },
+    "minimumDiskGiB": 100,
+    "preferredDiskGiB": 150,
+    "evidence": "docs/phase-12-local-resource-sizing.md"
+  },
+  "externalProfiles": {
+    "configurationValidated": true,
+    "runtimeCertification": "conditional",
+    "requiresRealProviders": ["s3-or-r2", "redis", "otlp", "openai-compatible-llm"]
+  },
+  "provisionalObjectives": {
+    "monthlyAvailabilityPercent": 99.5,
+    "rpoHours": 24,
+    "rtoHours": 4,
+    "publicReadP95Ms": 500,
+    "incidentAcceptanceP95Ms": 7000,
+    "llmGatewayTotalTimeoutMs": 7000,
+    "dockerModelRunnerTimeoutMs": 5000,
+    "maximumHttpErrorRate": 0.01,
+    "concurrentPublicReaders": 100,
+    "incidentWritesPerMinute": 20,
+    "mediaScaleBacklogPerReplica": 4,
+    "mediaScaleDownStabilizationSeconds": 180,
+    "maximumImageBytes": 5242880,
+    "soakDurationMinutes": 60
+  },
+  "backupPolicy": {
+    "localDailyCopies": 7,
+    "offHostRetentionDays": 30,
+    "monthlyCopies": 12,
+    "restoreDrillRequired": true,
+    "offHostDestinationRequired": true
+  },
+  "certificationOrder": [
+    "static-quality",
+    "reference-host-audit",
+    "minimal-profile",
+    "recommended-profile",
+    "upgrade-and-recovery",
+    "backup-and-restore",
+    "dependency-failures",
+    "transport-security",
+    "load-and-soak",
+    "operational-sign-off",
+    "optional-k3s"
+  ],
+  "destructiveRuntimeGuard": "PHASE12_ALLOW_DESTRUCTIVE=1",
+  "kubernetesStatus": "frozen",
+  "k3sStatus": "optional-after-compose",
+  "completionRequires": [
+    "ubuntu-reference-host-evidence",
+    "real-dns-and-public-tls",
+    "off-host-backup-and-restore-evidence",
+    "minimal-profile-runtime-evidence",
+    "recommended-profile-runtime-evidence",
+    "load-and-soak-report",
+    "measured-rpo-rto",
+    "operator-sign-off"
+  ]
+}

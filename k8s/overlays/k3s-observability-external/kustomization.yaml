@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../k3s
+
+components:
+  - ../../components/observability-external
+
+configMapGenerator:
+  - name: zglosto-observability-external
+    namespace: zglosto
+    literals:
+      - endpoint=https://otel.example.invalid
+
+sortOptions:
+  order: legacy
+  legacySortOptions:
+    orderLast:
+      - TriggerAuthentication
+      - InterceptorRoute
+      - ScaledObject

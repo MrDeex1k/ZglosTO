@@ -1,0 +1,8 @@
+ID	Obszar	Implementacja	Android Emulator	iPhone Simulator	Stan checkpointu	Pozostała bramka
+4.0	Baseline i kontrakt akceptacyjny	PASS	PASS	PASS	PASS	Brak
+4.1	Rejestracja i weryfikacja e-maila	PASS	PASS	PASS	PASS	Produkcyjny transport i zatwierdzone treści przed beta
+4.2	Konto mieszkańca i język	PASS	PASS	PASS	PASS	Pełny cold restart/401 iOS pozostaje w B-01
+4.3	Kontakt i informacje prawne	PASS	PASS	PASS	PASS-CONDITIONAL	Zatwierdzone URL regulaminu i polityki prywatności przed beta
+4.4	Stany danych, offline i reconnect	PASS	PASS	PASS	PASS	Brak dla zakresu fazy
+4.5	Dostępność i regresja	PASS	PASS	PASS	PASS-CONDITIONAL	Ręczny odsłuch VoiceOver i TalkBack przed beta
+GATE	E2E mieszkańca, cleanup i prywatność	PASS	PASS	PASS	CONTINUE	B-01–B-05 pozostają bramkami beta/release zgodnie z rejestrem ryzyk

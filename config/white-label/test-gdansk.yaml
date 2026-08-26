@@ -1,0 +1,96 @@
+schemaVersion: 1
+configVersion: 'test-gdansk-2026-07-18'
+
+city:
+  key: gdansk_test
+  displayName:
+    'pl-PL': 'Gdańsk Testowy'
+    en: 'Test Gdansk'
+  defaultLocale: 'pl-PL'
+  supportedLocales: ['pl-PL', 'en']
+  timezone: 'Europe/Warsaw'
+
+branding:
+  logoPath: '/assets/city-logo.svg'
+  emblemAlt:
+    'pl-PL': 'Testowy znak Gdańska'
+    en: 'Test Gdansk mark'
+  faviconPath: '/assets/favicon.svg'
+  colors:
+    primary: '#005CA9'
+    secondary: '#FFFFFF'
+    accent: '#D6B436'
+
+contact:
+  email: 'kontakt@gdansk-test.example'
+  phone: null
+  website: 'https://gdansk-test.example'
+  address:
+    'pl-PL': 'ul. Testowa 1, 80-001 Gdańsk'
+    en: '1 Test Street, 80-001 Gdansk'
+  officeHours: null
+
+localContent:
+  siteTitle:
+    'pl-PL': 'Mój Gdańsk — test White-Label'
+    en: 'My Gdansk — White-Label test'
+  siteDescription:
+    'pl-PL': 'Konfiguracja kontraktowa dla Gdańska.'
+    en: 'Contract test configuration for Gdansk.'
+  footerText:
+    'pl-PL': 'Testowa instalacja miasta Gdańsk.'
+    en: 'Test installation for the City of Gdansk.'
+  legalNotice:
+    'pl-PL': 'W nagłym przypadku zadzwoń pod numer 112.'
+    en: 'In an emergency, call 112.'
+  reportAddressPlaceholder:
+    'pl-PL': 'np. ul. Długa 1, Gdańsk'
+    en: 'e.g. 1 Dluga Street, Gdansk'
+
+services:
+  - key: tram_operations
+    label:
+      'pl-PL': 'Obsługa tramwajów'
+      en: 'Tram Operations'
+    shortLabel:
+      'pl-PL': 'Tramwaje'
+      en: 'Trams'
+    enabled: true
+    sortOrder: 10
+    iconKey: bus
+    description: null
+    color: '#005CA9'
+  - key: coastal_greenery
+    label:
+      'pl-PL': 'Zieleń nadmorska'
+      en: 'Coastal Greenery'
+    shortLabel:
+      'pl-PL': 'Zieleń'
+      en: 'Greenery'
+    enabled: true
+    sortOrder: 20
+    iconKey: greenery
+    description: null
+    color: '#15803D'
+  - key: gdansk_triage
+    label:
+      'pl-PL': 'Zespół weryfikacji zgłoszeń'
+      en: 'Report Triage Team'
+    shortLabel:
+      'pl-PL': 'Weryfikacja'
+      en: 'Triage'
+    enabled: true
+    sortOrder: 900
+    iconKey: circle_help
+    description: null
+    color: '#475569'
+
+routing:
+  fallbackServiceKey: gdansk_triage
+
+map: null
+
+features:
+  map: false
+  llmClassification: false
+  anonymousReports: true

@@ -1,0 +1,12 @@
+appId: pl.zglosto.app
+name: Phase 5 service queue — reconnect
+tags:
+  - phase5
+  - service
+  - reconnect
+---
+- extendedWaitUntil:
+    notVisible: 'Jesteś offline'
+    timeout: 30000
+- assertVisible: 'Naprawiono uszkodzoną nawierzchnię chodnika'
+- assertVisible: 'Widoczne: 1 z 1'

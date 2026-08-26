@@ -1,0 +1,156 @@
+{
+  "schemaVersion": 1,
+  "phase": "11.2",
+  "defaultEnforcement": "baseline",
+  "measurement": {
+    "sizeSource": "docker image inspect .Size",
+    "sizeUnit": "bytes",
+    "baselineArchitecture": "linux/arm64",
+    "baselineRegressionPercent": 5,
+    "buildClock": "wall",
+    "referenceRunner": {
+      "cpu": 4,
+      "memoryGiB": 8,
+      "storage": "local-ssd"
+    },
+    "parallelBuildColdMaxSeconds": 900,
+    "parallelBuildWarmMaxSeconds": 240,
+    "buildTimeEnforcementStartsAtStep": "11.9"
+  },
+  "commonTarget": {
+    "immutableReleaseReference": "zglosto/repository:version-architecture-revision",
+    "requiredPlatforms": ["linux/amd64", "linux/arm64"],
+    "buildStrategy": "native-source-build",
+    "registryRequired": false,
+    "requiredOciLabels": [],
+    "secretsOutsideLayers": true,
+    "platformHealthcheckRequired": true,
+    "gracefulShutdownRequired": true,
+    "readOnlyRootFilesystemWhenSupported": true,
+    "forbiddenSensitivePathPatterns": [
+      "(^|/)\\.env($|\\.)",
+      "(^|/)(secret|secrets|private)(/|$)",
+      "\\.(key|p12|pfx)$"
+    ],
+    "forbiddenApplicationPathPatterns": [
+      "^/app/(src|test|tests)(/|$)",
+      "^/app/(Dockerfile|README[^/]*|pnpm-lock\\.yaml|tsconfig[^/]*\\.json)$",
+      "^/app/.*\\.(ts|tsx|map)$"
+    ],
+    "forbiddenRuntimeNodePackages": ["image-size"]
+  },
+  "artifacts": [
+    {
+      "id": "authorization",
+      "services": ["authorization"],
+      "localImage": "zglosto-phase0-authorization:latest",
+      "runtimeClass": "node",
+      "runtimeAuditRoots": ["/app"],
+      "runtimeAuditExcludes": ["/app/node_modules"],
+      "baselineSizeBytes": 331998000,
+      "targetMaxSizeBytes": 260000000,
+      "coldBuildMaxSeconds": 360,
+      "warmBuildMaxSeconds": 90,
+      "targetPrivilegePolicy": "non-root",
+      "imageHealthcheckPolicy": "platform-probe-authoritative"
+    },
+    {
+      "id": "backend",
+      "services": ["backend", "media_worker"],
+      "localImage": "zglosto-phase0-backend:latest",
+      "runtimeClass": "node-shared",
+      "runtimeAuditRoots": ["/app"],
+      "runtimeAuditExcludes": ["/app/node_modules"],
+      "baselineSizeBytes": 297922844,
+      "targetMaxSizeBytes": 275000000,
+      "coldBuildMaxSeconds": 420,
+      "warmBuildMaxSeconds": 120,
+      "targetPrivilegePolicy": "non-root",
+      "imageHealthcheckPolicy": "platform-probe-required-per-command"
+    },
+    {
+      "id": "llm_gateway",
+      "services": ["llm_gateway"],
+      "localImage": "zglosto-phase0-llm_gateway:latest",
+      "runtimeClass": "node",
+      "runtimeAuditRoots": ["/app"],
+      "runtimeAuditExcludes": ["/app/node_modules"],
+      "baselineSizeBytes": 236252180,
+      "targetMaxSizeBytes": 205000000,
+      "coldBuildMaxSeconds": 300,
+      "warmBuildMaxSeconds": 90,
+      "targetPrivilegePolicy": "non-root",
+      "imageHealthcheckPolicy": "platform-probe-authoritative"
+    },
+    {
+      "id": "frontend",
+      "services": ["frontend"],
+      "localImage": "zglosto-phase0-frontend:latest",
+      "runtimeClass": "static-nginx",
+      "runtimeAuditRoots": ["/usr/share/nginx/html"],
+      "runtimeAuditExcludes": [],
+      "baselineSizeBytes": 62932354,
+      "targetMaxSizeBytes": 65000000,
+      "coldBuildMaxSeconds": 360,
+      "warmBuildMaxSeconds": 90,
+      "targetPrivilegePolicy": "unprivileged-runtime",
+      "imageHealthcheckPolicy": "platform-probe-authoritative"
+    },
+    {
+      "id": "database",
+      "services": ["database"],
+      "localImage": "zglosto-phase0-database:latest",
+      "runtimeClass": "stateful-postgres",
+      "runtimeAuditRoots": ["/docker-entrypoint-initdb.d", "/etc/pgbackrest", "/usr/local/bin"],
+      "runtimeAuditExcludes": [],
+      "baselineSizeBytes": 483307354,
+      "targetMaxSizeBytes": 490000000,
+      "coldBuildMaxSeconds": 240,
+      "warmBuildMaxSeconds": 60,
+      "targetPrivilegePolicy": "root-init-then-postgres",
+      "imageHealthcheckPolicy": "platform-probe-authoritative"
+    },
+    {
+      "id": "pgbouncer",
+      "services": ["pgbouncer"],
+      "localImage": "zglosto-phase0-pgbouncer:latest",
+      "runtimeClass": "stateful-proxy",
+      "runtimeAuditRoots": ["/etc/pgbouncer", "/usr/local/bin"],
+      "runtimeAuditExcludes": [],
+      "baselineSizeBytes": 17611888,
+      "targetMaxSizeBytes": 20000000,
+      "coldBuildMaxSeconds": 120,
+      "warmBuildMaxSeconds": 30,
+      "targetPrivilegePolicy": "non-root",
+      "imageHealthcheckPolicy": "platform-probe-authoritative"
+    },
+    {
+      "id": "rabbitmq",
+      "services": ["rabbitmq"],
+      "localImage": "zglosto-phase0-rabbitmq:latest",
+      "runtimeClass": "stateful-rabbitmq",
+      "runtimeAuditRoots": ["/etc/rabbitmq", "/usr/local/bin"],
+      "runtimeAuditExcludes": [],
+      "baselineSizeBytes": 168567907,
+      "targetMaxSizeBytes": 175000000,
+      "coldBuildMaxSeconds": 120,
+      "warmBuildMaxSeconds": 30,
+      "targetPrivilegePolicy": "root-init-then-rabbitmq",
+      "imageHealthcheckPolicy": "platform-probe-authoritative"
+    },
+    {
+      "id": "nginx",
+      "services": ["nginx"],
+      "localImage": "zglosto-phase0-nginx:latest",
+      "runtimeClass": "edge-nginx",
+      "runtimeAuditRoots": ["/etc/nginx"],
+      "runtimeAuditExcludes": [],
+      "baselineSizeBytes": 61769741,
+      "targetMaxSizeBytes": 65000000,
+      "coldBuildMaxSeconds": 120,
+      "warmBuildMaxSeconds": 30,
+      "targetPrivilegePolicy": "unprivileged-runtime",
+      "imageHealthcheckPolicy": "platform-probe-authoritative"
+    }
+  ]
+}

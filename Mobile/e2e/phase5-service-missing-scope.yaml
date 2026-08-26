@@ -1,0 +1,17 @@
+appId: pl.zglosto.app
+name: Phase 5 service boundary — missing serviceKey
+tags:
+  - phase5
+  - service
+  - boundary
+---
+- launchApp
+- extendedWaitUntil:
+    visible: 'Otwórz panel'
+    timeout: 30000
+- tapOn: 'Otwórz panel'
+- extendedWaitUntil:
+    visible: 'Brak przypisanej służby'
+    timeout: 30000
+- assertVisible: 'Konto służby nie ma poprawnego przypisania serviceKey.'
+- assertNotVisible: 'Przypisane zgłoszenia'

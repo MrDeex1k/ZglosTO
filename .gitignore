@@ -1,0 +1,141 @@
+# Environment variables
+.env
+.env.*
+!.env.example
+!.env.*.example
+!.env.template
+!.env.*.template
+
+# Public frontend build configuration
+!frontend/.env.production
+
+# Local environment tools
+.direnv/
+*.local
+
+# Secrets and credentials
+.certs/
+secrets/
+.state/
+k8s/**/secret*.yaml
+!k8s/**/secret*.example.yaml
+*.kubeconfig
+.kube/
+*.key
+*.p12
+*.pfx
+
+# Node.js / PNPM / TypeScript / Vite
+node_modules/
+.pnpm-store/
+.turbo/
+.npm/
+**/dist/
+*.tsbuildinfo
+.vite/
+.expo/
+Mobile/ios/
+Mobile/android/
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+*.tgz
+
+# Lockfiles from unsupported package managers
+package-lock.json
+npm-shrinkwrap.json
+yarn.lock
+bun.lock
+bun.lockb
+
+# Python / uv
+__pycache__/
+*.py[codz]
+*$py.class
+*.so
+.venv/
+venv/
+env/
+ENV/
+build/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.pyright/
+.pytype/
+.ruff_cache/
+.tox/
+.nox/
+
+# Coverage and test artifacts
+coverage/
+htmlcov/
+.nyc_output/
+.coverage
+.coverage.*
+*.lcov
+coverage.xml
+test-results/
+playwright-report/
+.playwright-cli/
+blob-report/
+output/
+
+# Logs and diagnostics
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Application-generated logs
+
+# Database dumps and backups
+backups/
+*.dump
+*.backup
+*.sql.gz
+
+# Local Docker Compose overrides
+docker-compose.override.yml
+docker-compose.override.yaml
+compose.override.yml
+compose.override.yaml
+
+# LLM model artifacts and caches
+llm_service/.cache/
+llm_service/models/
+.cache/huggingface/
+
+# Editors
+.idea/
+*.iml
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+*.vsix
+
+# OS-generated files
+.DS_Store
+._*
+__MACOSX/
+Thumbs.db
+Desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*.orig
+*.rej
+*~
+tmp/
+temp/
+
+# Local AI-agent configuration
+.agents/

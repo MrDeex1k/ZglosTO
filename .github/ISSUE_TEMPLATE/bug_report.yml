@@ -1,0 +1,63 @@
+name: Zgłoszenie błędu
+description: Zgłoś niewrażliwy, powtarzalny problem w ZgłosTO.
+title: 'bug: '
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Nie umieszczaj tutaj podatności, sekretów ani prawdziwych danych użytkowników.
+        Problemy bezpieczeństwa zgłaszaj prywatnie zgodnie z `SECURITY.md`.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Obszar
+      options:
+        - Mobile
+        - WEB
+        - Backend
+        - Infrastructure
+        - Shared
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Wersja lub commit
+      placeholder: v1.0.0 albo SHA commita
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Kroki reprodukcji
+      description: Użyj wyłącznie danych syntetycznych.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Oczekiwane zachowanie
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Rzeczywiste zachowanie
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Środowisko
+      description: System, urządzenie lub emulator, przeglądarka oraz istotna konfiguracja bez sekretów.
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Bezpieczeństwo danych
+      options:
+        - label: Zgłoszenie nie zawiera podatności, sekretów, PII ani prawdziwych danych wdrożeniowych.
+          required: true

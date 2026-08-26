@@ -1,0 +1,20 @@
+id	route	role	source_web	priority	presentation	data	dependencies	acceptance
+S-001	/	public	HomeView	P0	tab-root	GET /api/config/public; GET /api/mieszkaniec/incydenty/glowna	white-label; query; expo-image	CTA, feed, loading/empty/error/retry, PL/EN
+S-002	/incidents/[id]	public-or-authenticated	IncidentDetailsDialog	P0	stack-detail	selected incident; authenticated image GET when private	expo-image; linking	information, address, dates, before/after images, map action
+S-003	/report/new	public-or-resident	IncidentForm	P0	modal-route	POST /api/mieszkaniec/incydenty; next: upload contract and presigned PUT	query; next: image-picker, file-system, crypto	3.4 implemented: emergency notice, contract validation, active service, optional session, success/error; image pending
+S-004	/(auth)/login	anonymous	LoginForm	P0	stack	Better Auth sign-in	expo auth client; secure-store	valid/invalid credentials, rate limit, safe redirect
+S-005	/(auth)/register	anonymous	RegisterForm	P0	stack	Better Auth sign-up	expo auth client; secure-store	name/email/password/consents, success, existing user
+S-006	/(resident)/resident	resident	ResidentDashboard	P0	stack	GET /api/mieszkaniec/incydenty	auth; query	implemented private list, loading/empty/error/refresh, session isolation
+S-007	/(resident)/account	resident	Header/UserSummaryCard	P0	stack	session; config	auth; i18n	4.2 implemented: profile, role, verification, language, diagnostics, legal, sign-out
+S-008	/(service)/queue	service	ServiceDashboard	P0	tab	GET /api/sluzby/incydenty	auth; query	filters and counts, empty/list, refresh
+S-009	/(service)/queue/[id]	service	ServiceIncidentDialog	P0	stack-detail	PATCH status/check; resolution upload	auth; query; media	scope-safe detail, status, checked, image, retry
+S-010	/(service)/account	service	UserSummaryCard	P0	tab	session; service catalog	auth; white-label	service label, language, sign-out
+S-011	/(admin)	admin	AdminPanel	P1	tab-root	GET /api/admin/statystyki; local summaries	auth; query	overview cards and navigation
+S-012	/(admin)/incidents	admin	AdminPanel/AdminIncidentDialog	P1	tab	GET/PATCH /api/admin/incydenty	auth; query	all/unassigned, status, checked, service
+S-013	/(admin)/users	admin	AdminPanel	P1	tab	PATCH /api/admin/uzytkownicy/service-key	auth; query	role/service validation and confirmation
+S-014	/(admin)/account	admin	Header/UserSummaryCard	P1	tab	session	auth; i18n	role, language, sign-out
+S-015	/settings/language	all	LanguageSwitcher	P0	stack	preferences	i18n; async-storage	4.2 implemented: PL/EN, persistence, immediate UI update
+S-016	/error/config	all	none	P0	blocking-state	GET /api/config/public	contracts; storage	invalid/missing config, retry, no partial app
+S-017	/error/access	authenticated	route guards	P0	state-screen	session/auth errors	auth	401 redirect, 403 explanation, no data leak
+S-018	/support/contact	all	Footer	P0	stack	public White-Label config	i18n; expo-linking	4.3 implemented: localized contact, email, phone, website, external-link error
+S-019	/legal	all	Footer/local content	P0	stack	public White-Label config	i18n	4.3 implemented: localized legal notice and explicit pre-beta document gate

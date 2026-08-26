@@ -1,0 +1,104 @@
+services:
+  database:
+    container_name: '${INTEGRATION_PROJECT_NAME:-zglosto-phase0}-postgres'
+    ports: !override
+      - '127.0.0.1:${INTEGRATION_DATABASE_PORT:-16432}:${POSTGRES_PORT}'
+    volumes: !override
+      - type: tmpfs
+        target: /var/lib/postgresql
+      - type: tmpfs
+        target: /var/lib/pgbackrest
+      - ./database/init-scripts:/docker-entrypoint-initdb.d:ro
+      - ./database/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro
+      - ./.certs/database/ca.crt:/run/secrets/database/ca.crt:ro
+      - ./.certs/database/postgres-server.crt:/run/secrets/database/postgres-server.crt:ro
+      - ./.certs/database/postgres-server.key:/run/secrets/database/postgres-server.key:ro
+      - ./.certs/service/ca.crt:/run/test-secrets/foreign-database-ca.crt:ro
+
+  pgbouncer:
+    container_name: '${INTEGRATION_PROJECT_NAME:-zglosto-phase0}-pgbouncer'
+
+  rustfs:
+    container_name: '${INTEGRATION_PROJECT_NAME:-zglosto-phase0}-rustfs'
+
+  rabbitmq:
+    container_name: '${INTEGRATION_PROJECT_NAME:-zglosto-phase0}-rabbitmq'
+    ports:
+      - '127.0.0.1:${INTEGRATION_RABBITMQ_TLS_PORT:-15671}:5671'
+    volumes: !override
+      - type: tmpfs
+        target: /var/lib/rabbitmq
+      - ./.certs/service/ca.crt:/run/secrets/service/ca.crt:ro
+      - ./.certs/service/rabbitmq-server.crt:/run/secrets/service/rabbitmq-server.crt:ro
+      - ./.certs/service/rabbitmq-server.key:/run/secrets/service/rabbitmq-server.key:ro
+
+  authorization:
+    ports: !override
+      - '127.0.0.1:${INTEGRATION_AUTHORIZATION_MTLS_PORT:-19956}:9956'
+    environment:
+      NODE_ENV: test
+      BETTER_AUTH_URL: 'http://localhost:${INTEGRATION_HTTP_PORT:-11335}'
+      FRONTEND_ORIGIN: 'http://localhost:${INTEGRATION_HTTP_PORT:-11335}'
+      EMAIL_DELIVERY_MODE: test
+
+  backend:
+    environment:
+      INCIDENT_LOCAL_RATE_LIMIT_MAX_REQUESTS: '100'
+      LLM_GATEWAY_URL: https://llm_gateway:8130
+      LLM_TIMEOUT_MS: '500'
+      S3_AUTO_CREATE_BUCKET: 'true'
+      S3_PUBLIC_ENDPOINT: 'http://uploads.localhost:${INTEGRATION_HTTP_PORT:-11335}'
+      S3_UPLOAD_EXPIRY_SECONDS: '300'
+      RABBITMQ_PUBLISHER_ENABLED: 'false'
+
+  media_worker:
+    environment:
+      MEDIA_WORKER_HEALTH_INTERVAL_MS: '1000'
+      MEDIA_WORKER_HEALTH_STALE_MS: '5000'
+      MEDIA_WORKER_PREFETCH: '1'
+
+  model_runner_stub:
+    build:
+      context: .
+      dockerfile: tests/integration/Dockerfile.llm-stub
+    env_file: !override
+      - ./tests/integration/integration.env
+    volumes: !override []
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    networks:
+      - llm-runtime-net
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:8123/engines/v1/models').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 2s
+      timeout: 2s
+      retries: 10
+      start_period: 2s
+
+  llm_gateway:
+    environment:
+      LLM_RUNTIME: docker-model-runner
+      LLM_UPSTREAM_TIMEOUT_MS: '200'
+      DOCKER_MODEL_RUNNER_URL: http://model_runner_stub:8123
+      DOCKER_MODEL_RUNNER_MODEL: ai/gemma3-qat:1B-Q4_K_M
+    depends_on:
+      model_runner_stub:
+        condition: service_healthy
+
+  nginx:
+    ports: !override
+      - '127.0.0.1:${INTEGRATION_HTTP_PORT:-11335}:1235'
+
+networks:
+  # The isolated suite deliberately reaches selected TLS endpoints from the host.
+  # Production and the normal local runtime keep this network internal.
+  internal-net:
+    internal: false

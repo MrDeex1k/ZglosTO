@@ -1,0 +1,53 @@
+appId: pl.zglosto.app
+---
+- extendedWaitUntil:
+    visible: '.*(Continue|Zgłoś problem|Report a problem).*'
+    timeout: 30000
+- runFlow:
+    when:
+      visible: 'Continue'
+    commands:
+      - tapOn: 'Continue'
+- runFlow:
+    when:
+      visible: 'Close'
+    commands:
+      - tapOn: 'Close'
+- runFlow:
+    when:
+      visible: 'Report a problem'
+    commands:
+      - tapOn: 'Polski'
+- tapOn: 'Zaloguj się'
+- extendedWaitUntil:
+    visible: 'Logowanie'
+    timeout: 10000
+- tapOn:
+    id: 'login-email'
+- inputText: ${PHASE5_SERVICE_EMAIL}
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - hideKeyboard
+- tapOn:
+    id: 'login-password'
+- inputText: ${PHASE5_SERVICE_PASSWORD}
+- hideKeyboard
+- tapOn:
+    id: 'login-submit'
+- extendedWaitUntil:
+    visible:
+      id: 'service-queue-ready'
+    timeout: 30000
+- runFlow:
+    when:
+      visible: '.*(Zachować hasło|Save Password).*'
+    commands:
+      - tapOn: '.*(Nie teraz|Not Now).*'
+- assertVisible: 'roads'
+- assertVisible: 'Wszystkie \(20[0-9]\)'
+- assertVisible: 'Zgłoszone \(100\)'
+- assertVisible: 'W realizacji \(6[0-9]\)'
+- assertVisible: 'Rozwiązane \(40\)'
+- assertVisible: 'Widoczne: 20[0-9] z 20[0-9]'

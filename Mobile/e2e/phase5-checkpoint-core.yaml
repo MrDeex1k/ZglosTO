@@ -1,0 +1,90 @@
+appId: pl.zglosto.app
+---
+- extendedWaitUntil:
+    visible: '.*(Continue|Zgłoś problem|Report a problem).*'
+    timeout: 30000
+- runFlow:
+    when:
+      visible: 'Continue'
+    commands:
+      - tapOn: 'Continue'
+- runFlow:
+    when:
+      visible: 'Close'
+    commands:
+      - tapOn: 'Close'
+- runFlow:
+    when:
+      visible: 'Report a problem'
+    commands:
+      - tapOn: 'Polski'
+- tapOn: 'Zaloguj się'
+- extendedWaitUntil:
+    visible: 'Logowanie'
+    timeout: 10000
+- tapOn:
+    id: 'login-email'
+- inputText: ${PHASE5_SERVICE_EMAIL}
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - hideKeyboard
+- tapOn:
+    id: 'login-password'
+- inputText: ${PHASE5_SERVICE_PASSWORD}
+- hideKeyboard
+- tapOn:
+    id: 'login-submit'
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - extendedWaitUntil:
+          visible: '.*(Zachować hasło|Save Password).*'
+          timeout: 10000
+      - tapOn: '.*(Nie teraz|Not Now).*'
+- extendedWaitUntil:
+    visible:
+      id: 'service-queue-ready'
+    timeout: 30000
+- assertVisible: 'roads'
+- assertVisible: 'Wszystkie \(14\)'
+- assertVisible: 'Zgłoszone \(5\)'
+- assertVisible: 'W realizacji \(6\)'
+- assertVisible: 'Rozwiązane \(3\)'
+- assertVisible: 'Widoczne: 14 z 14'
+- assertNotVisible: '.*QUEUE-B-.*'
+- tapOn:
+    id: 'service-filter-reported'
+- extendedWaitUntil:
+    visible: 'Widoczne: 5 z 14'
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      text: '.*QUEUE-A-05.*'
+    direction: DOWN
+    timeout: 15000
+- assertNotVisible: '.*QUEUE-B-.*'
+- tapOn: '.*QUEUE-A-05.*'
+- extendedWaitUntil:
+    visible: 'Obsługa zgłoszenia'
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      text: 'W trakcie naprawy'
+    direction: DOWN
+- tapOn: 'W trakcie naprawy'
+- extendedWaitUntil:
+    visible: 'Status zgłoszenia został zapisany.'
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: 'service-toggle-verification'
+    direction: DOWN
+- tapOn:
+    id: 'service-toggle-verification'
+- extendedWaitUntil:
+    visible: 'Oznaczenie sprawdzenia zostało zapisane.'
+    timeout: 15000
+- assertNotVisible: '.*QUEUE-B-.*'

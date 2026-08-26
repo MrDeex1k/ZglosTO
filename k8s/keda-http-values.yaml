@@ -1,0 +1,8 @@
+interceptor:
+  tls:
+    enabled: true
+    certSecret: zglosto-keda-http-tls
+    certPath: /certs/tls.crt
+    keyPath: /certs/tls.key
+    port: 8443
+    minVersion: '1.3'

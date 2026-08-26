@@ -1,0 +1,5 @@
+services:
+  authorization:
+    environment:
+      NODE_ENV: test
+      EMAIL_DELIVERY_MODE: test

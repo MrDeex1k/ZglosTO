@@ -1,0 +1,138 @@
+schemaVersion: 1
+configVersion: 'zglosto-2026-07-24-phase8-step14'
+
+city:
+  key: zglosto
+  displayName:
+    'pl-PL': 'Warszawa'
+    en: 'Warsaw'
+  defaultLocale: 'pl-PL'
+  supportedLocales:
+    - 'pl-PL'
+    - 'en'
+  timezone: 'Europe/Warsaw'
+
+branding:
+  logoPath: '/assets/city-logo.svg'
+  emblemAlt:
+    'pl-PL': 'Herb miasta Warszawy'
+    en: 'Coat of arms of Warsaw'
+  faviconPath: '/assets/favicon.svg'
+  colors:
+    primary: '#0057B8'
+    secondary: '#FFFFFF'
+    accent: '#F5A623'
+
+contact:
+  email: 'kontakt@zglosto.example'
+  phone: '+48 22 000 00 00'
+  website: 'https://zglosto.example'
+  address:
+    'pl-PL': 'ul. Przykładowa 1, 00-001 Warszawa'
+    en: '1 Example Street, 00-001 Warsaw'
+  officeHours:
+    'pl-PL': 'Poniedziałek–piątek, 8:00–16:00'
+    en: 'Monday–Friday, 8:00–16:00'
+
+localContent:
+  siteTitle:
+    'pl-PL': 'ZgłośTO — Warszawa'
+    en: 'ZgłośTO — Warsaw'
+  siteDescription:
+    'pl-PL': 'Miejski system zgłaszania incydentów w Warszawie.'
+    en: 'Municipal incident reporting system for Warsaw.'
+  footerText:
+    'pl-PL': 'Warszawa dziękuje za odpowiedzialne zgłaszanie problemów.'
+    en: 'Warsaw thanks you for reporting local problems responsibly.'
+  legalNotice:
+    'pl-PL': 'Zgłoszenie nie zastępuje kontaktu z numerem alarmowym 112.'
+    en: 'A report does not replace contacting the 112 emergency number.'
+  reportAddressPlaceholder:
+    'pl-PL': 'np. ul. Główna 123, Warszawa'
+    en: 'e.g. 123 Main Street, Warsaw'
+
+services:
+  - key: district_heating
+    label:
+      'pl-PL': 'Miejskie Przedsiębiorstwo Energetyki Cieplnej'
+      en: 'Municipal District Heating Company'
+    shortLabel:
+      'pl-PL': 'MPEC'
+      en: 'Heating'
+    enabled: true
+    sortOrder: 10
+    iconKey: utilities
+    description: null
+    color: '#DC2626'
+  - key: public_transit
+    label:
+      'pl-PL': 'Miejskie Przedsiębiorstwo Komunikacyjne'
+      en: 'Municipal Public Transport Company'
+    shortLabel:
+      'pl-PL': 'MPK'
+      en: 'Transit'
+    enabled: true
+    sortOrder: 20
+    iconKey: bus
+    description: null
+    color: '#2563EB'
+  - key: municipal_services
+    label:
+      'pl-PL': 'Zakład Gospodarki Komunalnej'
+      en: 'Municipal Services Department'
+    shortLabel:
+      'pl-PL': 'ZGK'
+      en: 'Municipal'
+    enabled: true
+    sortOrder: 30
+    iconKey: trash
+    description: null
+    color: '#16A34A'
+  - key: sewer_emergency
+    label:
+      'pl-PL': 'Pogotowie Kanalizacyjne'
+      en: 'Sewer Emergency Service'
+    shortLabel:
+      'pl-PL': 'PK'
+      en: 'Sewer'
+    enabled: true
+    sortOrder: 40
+    iconKey: water
+    description: null
+    color: '#9333EA'
+  - key: roads
+    label:
+      'pl-PL': 'Zarząd Dróg'
+      en: 'Road Authority'
+    shortLabel:
+      'pl-PL': 'ZD'
+      en: 'Roads'
+    enabled: true
+    sortOrder: 50
+    iconKey: road
+    description: null
+    color: '#EA580C'
+  - key: other
+    label:
+      'pl-PL': 'Inne'
+      en: 'Other'
+    shortLabel:
+      'pl-PL': 'Inne'
+      en: 'Other'
+    enabled: true
+    sortOrder: 999
+    iconKey: circle_help
+    description:
+      'pl-PL': 'Zgłoszenia wymagające ręcznej weryfikacji'
+      en: 'Reports requiring manual review'
+    color: '#6B7280'
+
+routing:
+  fallbackServiceKey: other
+
+map: null
+
+features:
+  map: false
+  llmClassification: true
+  anonymousReports: true

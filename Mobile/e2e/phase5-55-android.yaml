@@ -1,0 +1,6 @@
+appId: pl.zglosto.app
+---
+- launchApp
+- openLink:
+    link: ${EXPO_DEV_CLIENT_URL}
+- runFlow: phase5-55-login-open.yaml

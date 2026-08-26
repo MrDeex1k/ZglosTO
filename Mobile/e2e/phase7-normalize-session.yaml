@@ -1,0 +1,28 @@
+appId: pl.zglosto.app
+---
+- runFlow:
+    when:
+      visible: 'Panel Administratora niedostępny'
+    commands:
+      - tapOn:
+          id: 'admin-mobile-sign-out'
+- runFlow:
+    when:
+      visible: 'Panel służby — Zarząd Dróg Miejskich'
+    commands:
+      - scrollUntilVisible:
+          element:
+            text: 'Wyloguj się'
+          direction: DOWN
+          timeout: 30000
+      - tapOn: 'Wyloguj się'
+- runFlow:
+    when:
+      visible: 'Moje zgłoszenia'
+    commands:
+      - scrollUntilVisible:
+          element:
+            text: 'Wyloguj się'
+          direction: DOWN
+          timeout: 30000
+      - tapOn: 'Wyloguj się'

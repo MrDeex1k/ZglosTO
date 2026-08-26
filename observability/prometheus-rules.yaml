@@ -1,0 +1,112 @@
+groups:
+  - name: zglosto-foundation
+    rules:
+      - alert: ZglostoHighHttpErrorRate
+        expr: |
+          (
+            sum(rate(zglosto_http_server_requests_total{http_response_status_code=~"5.."}[5m]))
+            /
+            clamp_min(sum(rate(zglosto_http_server_requests_total[5m])), 0.001)
+          ) > 0.05
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: ZglosTO HTTP 5xx rate exceeds 5%
+      - alert: ZglostoTelemetryMissing
+        expr: absent(up{job="zglosto-application"})
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: Application telemetry has not reached Prometheus
+      - alert: ZglostoRedisUnavailable
+        expr: |
+          min by (service_name, redis_mode) (
+            zglosto_redis_dependency_up{redis_mode=~"local|external"}
+          ) == 0
+        for: 2m
+        labels: { severity: warning }
+        annotations:
+          summary: ZglosTO Redis is unavailable and the application is using fallback paths
+      - alert: ZglostoRedisOperationErrors
+        expr: |
+          sum by (service_name, redis_mode) (
+            rate(zglosto_redis_operations_total{outcome="error"}[5m])
+          ) > 0
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: ZglosTO Redis operations keep failing
+      - alert: ZglostoRedisHighLatency
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le, service_name, redis_mode) (
+              rate(zglosto_redis_operation_duration_seconds_bucket{outcome="success"}[5m])
+            )
+          ) > 0.25
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: ZglosTO Redis p95 operation latency exceeds 250 ms
+      - alert: ZglostoDatabaseOperationErrors
+        expr: |
+          sum by (service_name) (
+            rate(zglosto_database_operations_total{result="error"}[5m])
+          ) > 0
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: ZglosTO database operations keep failing
+      - alert: ZglostoObjectStorageErrors
+        expr: |
+          sum by (service_name, operation) (
+            rate(zglosto_object_storage_operations_total{result="error"}[5m])
+          ) > 0
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: ZglosTO Object Storage operations keep failing
+      - alert: ZglostoOutboxPublishFailures
+        expr: |
+          sum(rate(zglosto_outbox_messages_total{result=~"failed|claim_failed"}[5m])) > 0
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: ZglosTO cannot publish the transactional outbox
+      - alert: ZglostoMediaProcessingFailures
+        expr: |
+          sum(rate(zglosto_media_images_failed_total[5m])) > 0
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: ZglosTO media worker keeps rejecting or failing images
+      - alert: ZglostoMediaQueueBacklog
+        expr: |
+          sum(rabbitmq_queue_messages_ready{queue="zglosto.media.process.v1"}) > 3
+        for: 3m
+        labels: { severity: warning }
+        annotations:
+          summary: ZglosTO media backlog requires another worker replica in K3s
+      - alert: ZglostoLlmFallbackRate
+        expr: |
+          (
+            sum(rate(zglosto_llm_backend_requests_total{result!="success"}[5m]))
+            /
+            clamp_min(sum(rate(zglosto_llm_backend_requests_total[5m])), 0.001)
+          ) > 0.25
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: More than 25% of ZglosTO LLM requests use an error fallback
+      - alert: ZglostoPublicReadP95Budget
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (
+              rate(zglosto_http_server_duration_seconds_bucket{http_route="incydenty/glowna"}[5m])
+            )
+          ) > 0.5
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: ZglosTO public incident list exceeds the 500 ms p95 budget

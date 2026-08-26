@@ -1,0 +1,13 @@
+appId: pl.zglosto.app
+name: Phase 5 service queue — cached offline state
+tags:
+  - phase5
+  - service
+  - offline
+---
+- extendedWaitUntil:
+    visible: 'Jesteś offline'
+    timeout: 15000
+- assertVisible: 'Brak połączenia. Pokazujemy ostatnie dane zapisane na tym urządzeniu.'
+- assertVisible: 'Naprawiono uszkodzoną nawierzchnię chodnika'
+- assertVisible: 'Widoczne: 1 z 1'

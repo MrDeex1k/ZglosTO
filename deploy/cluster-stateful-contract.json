@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "phase": "9.5",
+  "status": "implemented",
+  "databaseRouting": {
+    "applicationEndpoint": "pgbouncer:6432",
+    "directEndpoint": "database:54325",
+    "applicationConsumers": ["authorization", "backend", "media-worker"],
+    "directConsumers": ["database", "migration-job", "pgbouncer", "pgbackrest"],
+    "directFallbackAllowed": false
+  },
+  "workloads": {
+    "database": {
+      "kind": "StatefulSet",
+      "replicas": 1,
+      "headlessService": "database-headless",
+      "privateService": "database",
+      "retention": {
+        "whenDeleted": "Retain",
+        "whenScaled": "Retain"
+      },
+      "claims": {
+        "postgres-data": "20Gi",
+        "pgbackrest-data": "40Gi"
+      },
+      "backup": {
+        "executor": "pgbackrest-scheduler-sidecar",
+        "intervalSeconds": 86400,
+        "weeklyFullOtherwiseDifferential": true,
+        "finalRestoreCertificationPhase": 12
+      }
+    },
+    "pgbouncer": {
+      "kind": "Deployment",
+      "replicas": 2,
+      "privateService": "pgbouncer",
+      "persistent": false,
+      "poolMode": "transaction",
+      "podDisruptionBudget": "minAvailable:1"
+    },
+    "rabbitmq": {
+      "kind": "StatefulSet",
+      "replicas": 1,
+      "headlessService": "rabbitmq-headless",
+      "privateService": "rabbitmq",
+      "managementEnabled": false,
+      "retention": {
+        "whenDeleted": "Retain",
+        "whenScaled": "Retain"
+      },
+      "claims": {
+        "rabbitmq-data": "10Gi"
+      }
+    },
+    "rustfs": {
+      "kind": "StatefulSet",
+      "mode": "optional-component",
+      "replicas": 1,
+      "headlessService": "rustfs-headless",
+      "privateService": "rustfs",
+      "consoleEnabled": false,
+      "retention": {
+        "whenDeleted": "Retain",
+        "whenScaled": "Retain"
+      },
+      "claims": {
+        "rustfs-data": "50Gi"
+      }
+    }
+  },
+  "profiles": {
+    "kubernetes": {
+      "externalObjectStorageOverlay": "k8s/overlays/kubernetes",
+      "rustfsOverlay": "k8s/overlays/kubernetes-rustfs",
+      "storageClassName": "standard"
+    },
+    "k3s": {
+      "externalObjectStorageOverlay": "k8s/overlays/k3s",
+      "rustfsOverlay": "k8s/overlays/k3s-rustfs",
+      "storageClassName": "local-path",
+      "singleNodeHostFailureResilience": false,
+      "haRequiresReplicatedOrExternalStorage": true
+    }
+  }
+}

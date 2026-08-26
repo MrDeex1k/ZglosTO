@@ -1,0 +1,29 @@
+appId: pl.zglosto.app
+---
+- assertVisible: 'Przypisane zgłoszenia'
+- assertVisible:
+    id: 'service-filter-all'
+- assertVisible:
+    id: 'service-filter-reported'
+- assertVisible:
+    id: 'service-filter-in_progress'
+- assertVisible:
+    id: 'service-filter-resolved'
+- scrollUntilVisible:
+    element:
+      text: '.*LOAD-A-100.*'
+    direction: DOWN
+    timeout: 30000
+- tapOn: '.*LOAD-A-100.*'
+- extendedWaitUntil:
+    visible: 'Obsługa zgłoszenia'
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      text: 'Działania służby'
+    direction: DOWN
+- assertVisible: 'Zgłoszony'
+- assertVisible: 'W trakcie naprawy'
+- assertVisible: 'Naprawiony'
+- assertVisible:
+    id: 'service-toggle-verification'

@@ -1,0 +1,338 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: zglosto
+  labels:
+    app: backend
+  annotations:
+    secret.reloader.stakater.com/reload: zglosto-backend-tls,zglosto-pgbouncer-tls,zglosto-rabbitmq-tls,zglosto-database-credentials,zglosto-rabbitmq-credentials,zglosto-object-storage-credentials,zglosto-llm-auth
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      serviceAccountName: backend
+      enableServiceLinks: false
+      securityContext:
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: backend
+          image: docker.io/zglosto/backend:phase9-baseline
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - { name: OBSERVABILITY_MODE, value: disabled }
+            - { name: OTEL_SERVICE_NAME, value: backend }
+            - { name: REDIS_MODE, value: disabled }
+            - name: SERVICE_NAME
+              value: backend
+            - name: DATABASE_URL_FILE
+              value: /run/secrets/database-credentials/database-url
+            - name: RABBITMQ_URL_FILE
+              value: /run/secrets/rabbitmq-credentials/rabbitmq-url
+            - name: S3_ACCESS_KEY_ID_FILE
+              value: /run/secrets/object-storage-credentials/access-key-id
+            - name: S3_SECRET_ACCESS_KEY_FILE
+              value: /run/secrets/object-storage-credentials/secret-access-key
+            - name: NODE_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: NODE_ENV
+            - name: BACKEND_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: BACKEND_PORT
+            - name: CLIENT_IP_TRUSTED_PROXY_HOPS
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: CLIENT_IP_TRUSTED_PROXY_HOPS
+            - name: WHITE_LABEL_CONFIG
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: WHITE_LABEL_CONFIG
+            - name: DATABASE_TLS_CA_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: DATABASE_TLS_CA_PATH
+            - name: DATABASE_POOL_MAX
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: DATABASE_POOL_MAX
+            - name: DATABASE_IDLE_TIMEOUT_MS
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: DATABASE_IDLE_TIMEOUT_MS
+            - name: DATABASE_CONNECTION_TIMEOUT_MS
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: DATABASE_CONNECTION_TIMEOUT_MS
+            - name: RABBITMQ_TLS_CA_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: RABBITMQ_TLS_CA_PATH
+            - name: RABBITMQ_SERVER_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: RABBITMQ_SERVER_NAME
+            - name: RABBITMQ_HEARTBEAT_SECONDS
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: RABBITMQ_HEARTBEAT_SECONDS
+            - name: RABBITMQ_RECONNECT_DELAY_MS
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: RABBITMQ_RECONNECT_DELAY_MS
+            - name: RABBITMQ_PUBLISHER_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: RABBITMQ_PUBLISHER_ENABLED
+            - name: OUTBOX_POLL_INTERVAL_MS
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: OUTBOX_POLL_INTERVAL_MS
+            - name: OUTBOX_BATCH_SIZE
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: OUTBOX_BATCH_SIZE
+            - name: OUTBOX_LOCK_TIMEOUT_MS
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: OUTBOX_LOCK_TIMEOUT_MS
+            - name: AUTH_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: AUTH_SERVICE_URL
+            - name: AUTH_SERVICE_CA_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: AUTH_SERVICE_CA_PATH
+            - name: AUTH_SERVICE_CERT_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: AUTH_SERVICE_CERT_PATH
+            - name: AUTH_SERVICE_KEY_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: AUTH_SERVICE_KEY_PATH
+            - name: AUTH_SERVICE_SERVER_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: AUTH_SERVICE_SERVER_NAME
+            - name: AUTH_SERVICE_TIMEOUT_MS
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: AUTH_SERVICE_TIMEOUT_MS
+            - name: FRONTEND_ORIGIN
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: FRONTEND_ORIGIN
+            - name: LLM_GATEWAY_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: LLM_GATEWAY_URL
+            - name: LLM_TIMEOUT_MS
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: LLM_TIMEOUT_MS
+            - name: LLM_GATEWAY_CA_PATH
+              valueFrom:
+                configMapKeyRef: { name: zglosto-config, key: LLM_GATEWAY_CA_PATH }
+            - name: LLM_GATEWAY_CERT_PATH
+              valueFrom:
+                configMapKeyRef: { name: zglosto-config, key: LLM_GATEWAY_CERT_PATH }
+            - name: LLM_GATEWAY_KEY_PATH
+              valueFrom:
+                configMapKeyRef: { name: zglosto-config, key: LLM_GATEWAY_KEY_PATH }
+            - name: LLM_GATEWAY_SERVER_NAME
+              valueFrom:
+                configMapKeyRef: { name: zglosto-config, key: LLM_GATEWAY_SERVER_NAME }
+            - name: LLM_GATEWAY_HMAC_KEY_FILE
+              valueFrom:
+                configMapKeyRef: { name: zglosto-config, key: LLM_GATEWAY_HMAC_KEY_FILE }
+            - name: LLM_GATEWAY_HMAC_KEY_ID
+              valueFrom:
+                configMapKeyRef: { name: zglosto-config, key: LLM_GATEWAY_HMAC_KEY_ID }
+            - name: S3_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: S3_ENDPOINT
+            - name: S3_PUBLIC_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: S3_PUBLIC_ENDPOINT
+            - name: S3_UPLOAD_EXPIRY_SECONDS
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: S3_UPLOAD_EXPIRY_SECONDS
+            - name: S3_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: S3_REGION
+            - name: S3_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: S3_BUCKET
+            - name: S3_FORCE_PATH_STYLE
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: S3_FORCE_PATH_STYLE
+            - name: S3_OBJECT_PREFIX
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: S3_OBJECT_PREFIX
+            - name: S3_AUTO_CREATE_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: S3_AUTO_CREATE_BUCKET
+          volumeMounts:
+            - name: white-label-config
+              mountPath: /app/config
+              readOnly: true
+            - name: database-credentials
+              mountPath: /run/secrets/database-credentials
+              readOnly: true
+            - name: rabbitmq-credentials
+              mountPath: /run/secrets/rabbitmq-credentials
+              readOnly: true
+            - name: object-storage-credentials
+              mountPath: /run/secrets/object-storage-credentials
+              readOnly: true
+            - name: database-ca
+              mountPath: /run/secrets/database
+              readOnly: true
+            - name: service-ca
+              mountPath: /run/secrets/service
+              readOnly: true
+            - name: backend-tls
+              mountPath: /run/secrets/backend
+              readOnly: true
+            - name: llm-auth
+              mountPath: /run/secrets/llm-auth
+              readOnly: true
+          resources:
+            requests:
+              memory: '1Gi'
+              cpu: '500m'
+            limits:
+              memory: '2Gi'
+              cpu: '2000m'
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: white-label-config
+          configMap:
+            name: zglosto-white-label
+            optional: false
+            items:
+              - key: city.yaml
+                path: city.yaml
+        - name: database-credentials
+          secret:
+            secretName: zglosto-database-credentials
+            optional: false
+            defaultMode: 0440
+            items:
+              - key: DATABASE_URL
+                path: database-url
+        - name: rabbitmq-credentials
+          secret:
+            secretName: zglosto-rabbitmq-credentials
+            optional: false
+            defaultMode: 0440
+            items:
+              - key: RABBITMQ_URL
+                path: rabbitmq-url
+        - name: object-storage-credentials
+          secret:
+            secretName: zglosto-object-storage-credentials
+            optional: false
+            defaultMode: 0440
+            items:
+              - key: S3_ACCESS_KEY_ID
+                path: access-key-id
+              - key: S3_SECRET_ACCESS_KEY
+                path: secret-access-key
+        - name: database-ca
+          secret:
+            secretName: zglosto-pgbouncer-tls
+            optional: false
+            defaultMode: 0440
+            items: [{ key: ca.crt, path: ca.crt }]
+        - name: service-ca
+          secret:
+            secretName: zglosto-backend-tls
+            optional: false
+            defaultMode: 0440
+            items: [{ key: ca.crt, path: ca.crt }]
+        - name: backend-tls
+          secret:
+            secretName: zglosto-backend-tls
+            optional: false
+            defaultMode: 0440
+        - name: llm-auth
+          secret:
+            secretName: zglosto-llm-auth
+            optional: false
+            defaultMode: 0440
+            items: [{ key: hmac-key, path: hmac-key }]

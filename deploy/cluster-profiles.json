@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "phase": "9.3",
+  "profiles": {
+    "kubernetes": {
+      "overlay": "k8s/overlays/kubernetes",
+      "ingressController": "ingress-nginx",
+      "ingressClassName": "nginx",
+      "ingressNamespace": "ingress-nginx",
+      "ingressPodNameLabel": "ingress-nginx",
+      "storageClassName": "standard",
+      "metricsServer": "required",
+      "eventAutoscaler": "keda-required",
+      "certificateController": "cert-manager-required",
+      "secretReloadController": "stakater-reloader-required",
+      "topology": "multi-node"
+    },
+    "k3s": {
+      "overlay": "k8s/overlays/k3s",
+      "ingressController": "traefik-packaged",
+      "ingressClassName": "traefik",
+      "ingressNamespace": "kube-system",
+      "ingressPodNameLabel": "traefik",
+      "storageClassName": "local-path",
+      "metricsServer": "packaged",
+      "eventAutoscaler": "keda-required-external",
+      "certificateController": "cert-manager-required-external",
+      "secretReloadController": "stakater-reloader-required-external",
+      "topology": "single-node-or-ha",
+      "variants": {
+        "singleNode": {
+          "serverNodes": 1,
+          "hostFailureResilience": false
+        },
+        "ha": {
+          "minimumServerNodes": 3,
+          "embeddedEtcd": true,
+          "fixedRegistrationAddress": true,
+          "replicatedOrExternalWorkloadStorage": true,
+          "hostFailureResilience": true
+        }
+      }
+    }
+  }
+}

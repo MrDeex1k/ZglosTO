@@ -1,0 +1,9 @@
+appId: pl.zglosto.app
+name: Phase 4 resident MVP — Android setup
+tags:
+  - phase4
+  - resident
+  - android
+---
+- launchApp
+- runFlow: phase4-journey.yaml

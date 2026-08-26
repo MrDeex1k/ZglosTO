@@ -1,0 +1,17 @@
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: media-worker-rabbitmq
+  namespace: zglosto
+spec:
+  env:
+    - parameter: tls
+      name: KEDA_RABBITMQ_TLS
+      containerName: media-worker
+  secretTargetRef:
+    - parameter: host
+      name: zglosto-rabbitmq-credentials
+      key: RABBITMQ_URL
+    - parameter: ca
+      name: zglosto-rabbitmq-tls
+      key: ca.crt

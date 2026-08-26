@@ -1,0 +1,41 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignoreBinaries": ["kubectl"],
+  "ignoreUnresolved": ["./scripts/generate-dev-certificates.sh"],
+  "workspaces": {
+    ".": {
+      "entry": ["scripts/production-build.ts", "scripts/phase12-*.ts", "tests/integration/**/*.ts"]
+    },
+    "authorization": {
+      "entry": ["src/auth.ts", "src/healthcheck.ts"]
+    },
+    "backend": {
+      "entry": [
+        "contracts/http-contract.ts",
+        "nest/media-worker/healthcheck.ts",
+        "operations/object-storage-archive-cli.ts",
+        "operations/object-storage-audit-cli.ts",
+        "storage/verify-storage.ts"
+      ]
+    },
+    "llm_gateway": {
+      "entry": ["src/healthcheck.ts"]
+    },
+    "Mobile": {
+      "entry": [
+        "app.config.ts",
+        "metro.config.cjs",
+        "plugins/**/*.cjs",
+        "scripts/**/*.{mjs,ts}",
+        "src/app/**/*.{ts,tsx}"
+      ],
+      "expo": false,
+      "ignoreDependencies": [
+        "expo-build-properties",
+        "expo-dev-client",
+        "react-native-css-interop"
+      ],
+      "metro": false
+    }
+  }
+}

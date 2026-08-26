@@ -1,0 +1,7 @@
+appId: pl.zglosto.app
+---
+- launchApp:
+    clearState: true
+- openLink:
+    link: ${EXPO_DEV_CLIENT_URL}
+- runFlow: phase5-checkpoint-core.yaml

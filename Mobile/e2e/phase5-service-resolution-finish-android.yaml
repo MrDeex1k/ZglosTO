@@ -1,0 +1,26 @@
+appId: pl.zglosto.app
+name: Phase 5 service resolution upload — Android
+tags:
+  - phase5
+  - service
+  - resolution-image
+  - android
+---
+- tapOn:
+    point: '17%,63%'
+- tapOn: 'Done'
+- scrollUntilVisible:
+    element:
+      id: 'resolution-upload'
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: 'resolution-upload'
+- extendedWaitUntil:
+    visible: 'Zdjęcie rozwiązania zostało zapisane.'
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      text: 'Zdjęcie po rozwiązaniu'
+    direction: UP
+- assertVisible: 'Zdjęcie po rozwiązaniu'

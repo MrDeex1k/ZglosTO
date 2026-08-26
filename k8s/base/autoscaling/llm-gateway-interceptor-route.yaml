@@ -1,0 +1,24 @@
+apiVersion: http.keda.sh/v1beta1
+kind: InterceptorRoute
+metadata:
+  name: llm-gateway
+  namespace: zglosto
+spec:
+  target:
+    service: llm-gateway
+    portName: https
+  rules:
+    - hosts:
+        - llm-gateway-proxy
+        - llm-gateway-proxy.zglosto
+        - llm-gateway-proxy.zglosto.svc
+        - llm-gateway-proxy.zglosto.svc.cluster.local
+      paths:
+        - value: /
+  scalingMetric:
+    concurrency:
+      targetValue: 4
+  timeouts:
+    readiness: 5s
+    request: 6s
+    responseHeader: 5s

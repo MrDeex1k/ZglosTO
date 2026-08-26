@@ -1,0 +1,12 @@
+appId: pl.zglosto.app
+---
+- runFlow:
+    when:
+      visible: 'Otwórz panel'
+    commands:
+      - tapOn: 'Otwórz panel'
+- extendedWaitUntil:
+    visible:
+      id: 'service-queue-ready'
+    timeout: 30000
+- assertVisible: 'Widoczne: 20[0-9] z 20[0-9]'

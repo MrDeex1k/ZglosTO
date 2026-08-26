@@ -1,0 +1,9 @@
+appId: pl.zglosto.app
+name: Phase 5 service queue — Android setup
+tags:
+  - phase5
+  - service
+  - android
+---
+- launchApp
+- runFlow: phase5-service-journey.yaml

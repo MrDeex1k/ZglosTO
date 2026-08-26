@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "phase": "12",
+  "environment": "replace-with-environment-id",
+  "gitRevision": "replace-with-full-git-revision",
+  "host": {
+    "report": "artifacts/phase-12/host.json",
+    "passed": false
+  },
+  "publicEdge": {
+    "report": "artifacts/phase-12/public-edge.json",
+    "dnsPassed": false,
+    "tlsPassed": false,
+    "hstsPassed": false
+  },
+  "profiles": {
+    "minimal": {
+      "installed": false,
+      "smokePassed": false,
+      "restartPassed": false,
+      "llmPassed": false,
+      "dmrReport": "artifacts/phase-12/dmr.json"
+    },
+    "recommended": {
+      "installed": false,
+      "smokePassed": false,
+      "restartPassed": false,
+      "redisFailurePassed": false
+    }
+  },
+  "operations": {
+    "upgradePassed": false,
+    "candidateRecoveryPassed": false,
+    "backupPassed": false,
+    "restorePassed": false,
+    "certificateRotationPassed": false,
+    "dependencyFailuresPassed": false,
+    "whiteLabelRolloutPassed": false
+  },
+  "security": {
+    "publicTlsPassed": false,
+    "internalMtlsPassed": false,
+    "databaseTlsPassed": false,
+    "plaintextRejected": false
+  },
+  "objectives": {
+    "measuredRpoHours": null,
+    "measuredRtoHours": null,
+    "availabilityPercent": null,
+    "publicReadP95Ms": null,
+    "incidentAcceptanceP95Ms": null,
+    "httpErrorRate": null,
+    "soakMinutes": null,
+    "mediaBacklogDrained": false
+  },
+  "observabilityDiagnostic": {
+    "mode": "local",
+    "pipelinePassed": false,
+    "correlationPassed": false,
+    "failureIsolationPassed": false
+  },
+  "offHostBackupDestination": null,
+  "operator": null,
+  "signedOffAt": null
+}

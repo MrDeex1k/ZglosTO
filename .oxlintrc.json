@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "perf": "warn"
+  },
+  "plugins": ["react", "typescript", "oxc", "import", "jsx-a11y", "promise", "node"],
+  "env": {
+    "browser": true,
+    "node": true,
+    "es2024": true
+  },
+  "rules": {
+    "typescript/no-extraneous-class": ["warn", { "allowWithDecorator": true }],
+    "react/react-in-jsx-scope": "off",
+    "jsx-a11y/prefer-tag-over-role": "warn",
+    "jsx-a11y/heading-has-content": "warn",
+    "jsx-a11y/anchor-has-content": "warn",
+    "jsx-a11y/label-has-associated-control": "warn"
+  },
+  "ignorePatterns": ["**/dist/**", "**/routeTree.gen.ts", ".pnpm-store/**"]
+}

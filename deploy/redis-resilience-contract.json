@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "phase": "10.10",
+  "status": "implemented",
+  "readiness": {
+    "disabled": { "httpStatus": 200, "status": "ok", "redis": "disabled" },
+    "available": { "httpStatus": 200, "status": "ok", "redis": "up" },
+    "unavailable": { "httpStatus": 200, "status": "degraded", "redis": "down" },
+    "hardDependencyFailure": { "httpStatus": 503, "status": "error" }
+  },
+  "metrics": [
+    "zglosto_redis_dependency_up",
+    "zglosto_redis_operations",
+    "zglosto_redis_operation_duration_seconds"
+  ],
+  "alerts": ["ZglostoRedisUnavailable", "ZglostoRedisOperationErrors", "ZglostoRedisHighLatency"],
+  "automatedFailureTest": "pnpm test:redis-failure",
+  "fallbacks": {
+    "authorizationRateLimit": "local-memory",
+    "incidentRateLimit": "local-memory",
+    "homepage": "postgresql"
+  }
+}

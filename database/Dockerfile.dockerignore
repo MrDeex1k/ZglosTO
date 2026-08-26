@@ -1,0 +1,14 @@
+**
+
+!database/
+!database/pgbackrest.conf
+!database/pg_hba.conf
+!database/init-scripts/
+!database/init-scripts/**
+!database/migrations/
+!database/migrations/**
+!database/start_db.sh
+!database/run_pgbackrest_backup.sh
+
+!scripts/
+!scripts/container-load-secrets.sh

@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+resources:
+  - serviceaccount.yaml
+  - statefulset.yaml
+  - service.yaml
+
+configMapGenerator:
+  - name: zglosto-config
+    namespace: zglosto
+    behavior: merge
+    literals:
+      - S3_ENDPOINT=http://rustfs:9000
+      - S3_FORCE_PATH_STYLE=true
+      - S3_AUTO_CREATE_BUCKET=true

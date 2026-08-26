@@ -1,0 +1,7 @@
+ID	Typ	Rola	serviceKey	Rozkład	Cel	Retencja
+SVC-A	konto	sluzby	roads	1 aktywna sesja	podstawowy operator Fazy 5	tylko lokalny tryb testowy
+SVC-B	konto	sluzby	other	1 aktywna sesja	negatywny test izolacji zakresu	tylko lokalny tryb testowy
+RES-A	konto	mieszkaniec	NULL	1 aktywna sesja	potwierdzenie zakazu tras służb	tylko lokalny tryb testowy
+QUEUE-A	zgłoszenia	N/A	roads	5 reported; 4 in_progress; 3 resolved	E2E filtrów, liczników i mutacji	reset po przebiegu
+QUEUE-B	zgłoszenia	N/A	other	1 reported; 1 in_progress; 1 resolved	dowód braku wycieku między służbami	reset po przebiegu
+LOAD-A	zgłoszenia	N/A	roads	100 reported; 60 in_progress; 40 resolved	profil FlatList, FPS i pamięci	osobny profil wydajności

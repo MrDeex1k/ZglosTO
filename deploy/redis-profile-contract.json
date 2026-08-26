@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "phase": "10.9",
+  "status": "implemented",
+  "image": "redis:8.10.0-alpine3.23",
+  "modes": {
+    "disabled": {
+      "compose": ["docker-compose.yml"],
+      "clusters": {
+        "kubernetes": "k8s/overlays/kubernetes",
+        "k3s": "k8s/overlays/k3s"
+      },
+      "redisWorkload": false,
+      "tlsRequired": false
+    },
+    "local": {
+      "compose": ["docker-compose.yml", "docker-compose.redis.local.yml"],
+      "clusters": {
+        "kubernetes": "k8s/overlays/kubernetes-redis-local",
+        "k3s": "k8s/overlays/k3s-redis-local"
+      },
+      "redisWorkload": true,
+      "tlsRequired": false
+    },
+    "external": {
+      "compose": ["docker-compose.yml", "docker-compose.redis.external.yml"],
+      "clusters": {
+        "kubernetes": "k8s/overlays/kubernetes-redis-external",
+        "k3s": "k8s/overlays/k3s-redis-external"
+      },
+      "redisWorkload": false,
+      "tlsRequired": true
+    }
+  },
+  "applicationConsumers": ["authorization", "backend"],
+  "localSecrets": {
+    "compose": ["redis_acl", "redis_rate_limit_hmac", "redis_url"],
+    "cluster": ["zglosto-redis-acl", "zglosto-redis-credentials"]
+  },
+  "externalSecrets": {
+    "compose": ["redis_external_ca", "redis_rate_limit_hmac", "redis_url"],
+    "cluster": ["zglosto-redis-credentials", "zglosto-redis-external-ca"]
+  },
+  "failurePolicy": "application-falls-back-without-making-redis-a-source-of-truth",
+  "persistence": "disabled-reconstructible-data-only"
+}

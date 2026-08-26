@@ -1,0 +1,7 @@
+**
+
+!rabbitmq/
+!rabbitmq/rabbitmq.conf
+!rabbitmq/healthcheck.sh
+!scripts/
+!scripts/container-load-secrets.sh

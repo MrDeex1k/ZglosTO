@@ -1,0 +1,13 @@
+appId: pl.zglosto.app
+---
+- scrollUntilVisible:
+    element:
+      id: 'service-toggle-verification'
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: 'service-toggle-verification'
+- extendedWaitUntil:
+    visible: 'Zgłoszenie zmieniło się na serwerze.*'
+    timeout: 15000
+- assertVisible: 'Zgłoszenie zmieniło się na serwerze.*'

@@ -1,0 +1,195 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: zglosto-service-selfsigned
+  namespace: zglosto
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: zglosto-service-ca
+  namespace: zglosto
+spec:
+  isCA: true
+  commonName: ZglosTO Service CA
+  secretName: zglosto-service-ca-key-pair
+  duration: 87600h
+  renewBefore: 8760h
+  # Root rotation is an explicit maintenance operation. Automatic leaf-key
+  # rotation below remains enabled and is handled by the reload controller.
+  privateKey: { algorithm: ECDSA, size: 256, rotationPolicy: Never }
+  issuerRef: { name: zglosto-service-selfsigned, kind: Issuer }
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: zglosto-service-ca
+  namespace: zglosto
+spec:
+  ca:
+    secretName: zglosto-service-ca-key-pair
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: zglosto-database-selfsigned
+  namespace: zglosto
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: zglosto-database-ca
+  namespace: zglosto
+spec:
+  isCA: true
+  commonName: ZglosTO Database CA
+  secretName: zglosto-database-ca-key-pair
+  duration: 87600h
+  renewBefore: 8760h
+  privateKey: { algorithm: ECDSA, size: 256, rotationPolicy: Never }
+  issuerRef: { name: zglosto-database-selfsigned, kind: Issuer }
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: zglosto-database-ca
+  namespace: zglosto
+spec:
+  ca:
+    secretName: zglosto-database-ca-key-pair
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata: { name: authorization-server, namespace: zglosto }
+spec:
+  secretName: zglosto-authorization-tls
+  duration: 720h
+  renewBefore: 168h
+  privateKey: { algorithm: ECDSA, size: 256, rotationPolicy: Always }
+  dnsNames: [authorization, authorization.zglosto.svc, authorization.zglosto.svc.cluster.local]
+  usages: [server auth]
+  issuerRef: { name: zglosto-service-ca, kind: Issuer }
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata: { name: backend-client, namespace: zglosto }
+spec:
+  secretName: zglosto-backend-tls
+  duration: 720h
+  renewBefore: 168h
+  privateKey: { algorithm: ECDSA, size: 256, rotationPolicy: Always }
+  uris: [spiffe://zglosto.local/workload/backend]
+  usages: [client auth]
+  issuerRef: { name: zglosto-service-ca, kind: Issuer }
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata: { name: nginx-client, namespace: zglosto }
+spec:
+  secretName: zglosto-nginx-tls
+  duration: 720h
+  renewBefore: 168h
+  privateKey: { algorithm: ECDSA, size: 256, rotationPolicy: Always }
+  uris: [spiffe://zglosto.local/workload/nginx]
+  usages: [client auth]
+  issuerRef: { name: zglosto-service-ca, kind: Issuer }
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata: { name: authorization-healthcheck-client, namespace: zglosto }
+spec:
+  secretName: zglosto-authorization-healthcheck-tls
+  duration: 720h
+  renewBefore: 168h
+  privateKey: { algorithm: ECDSA, size: 256, rotationPolicy: Always }
+  uris: [spiffe://zglosto.local/workload/authorization-healthcheck]
+  usages: [client auth]
+  issuerRef: { name: zglosto-service-ca, kind: Issuer }
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata: { name: llm-gateway-server, namespace: zglosto }
+spec:
+  secretName: zglosto-llm-gateway-tls
+  duration: 720h
+  renewBefore: 168h
+  privateKey: { algorithm: ECDSA, size: 256, rotationPolicy: Always }
+  dnsNames:
+    - llm-gateway
+    - llm-gateway.zglosto
+    - llm-gateway.zglosto.svc
+    - llm-gateway.zglosto.svc.cluster.local
+  usages: [server auth]
+  issuerRef: { name: zglosto-service-ca, kind: Issuer }
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata: { name: llm-gateway-healthcheck-client, namespace: zglosto }
+spec:
+  secretName: zglosto-llm-gateway-healthcheck-tls
+  duration: 720h
+  renewBefore: 168h
+  privateKey: { algorithm: ECDSA, size: 256, rotationPolicy: Always }
+  uris: [spiffe://zglosto.local/workload/llm-gateway-healthcheck]
+  usages: [client auth]
+  issuerRef: { name: zglosto-service-ca, kind: Issuer }
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata: { name: keda-http-interceptor, namespace: zglosto }
+spec:
+  secretName: zglosto-keda-http-tls
+  duration: 720h
+  renewBefore: 168h
+  privateKey: { algorithm: ECDSA, size: 256, rotationPolicy: Always }
+  dnsNames:
+    - llm-gateway-proxy
+    - llm-gateway-proxy.zglosto
+    - llm-gateway-proxy.zglosto.svc
+    - llm-gateway-proxy.zglosto.svc.cluster.local
+    - keda-add-ons-http-interceptor-proxy
+    - keda-add-ons-http-interceptor-proxy.keda.svc
+    - keda-add-ons-http-interceptor-proxy.keda.svc.cluster.local
+  uris: [spiffe://zglosto.local/workload/keda-http-interceptor]
+  usages: [server auth, client auth]
+  issuerRef: { name: zglosto-service-ca, kind: Issuer }
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata: { name: rabbitmq-server, namespace: zglosto }
+spec:
+  secretName: zglosto-rabbitmq-tls
+  duration: 720h
+  renewBefore: 168h
+  privateKey: { algorithm: ECDSA, size: 256, rotationPolicy: Always }
+  dnsNames: [rabbitmq, rabbitmq.zglosto.svc, rabbitmq.zglosto.svc.cluster.local]
+  usages: [server auth]
+  issuerRef: { name: zglosto-service-ca, kind: Issuer }
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata: { name: database-server, namespace: zglosto }
+spec:
+  secretName: zglosto-database-tls
+  duration: 720h
+  renewBefore: 168h
+  privateKey: { algorithm: ECDSA, size: 256, rotationPolicy: Always }
+  dnsNames: [database, database.zglosto.svc, database.zglosto.svc.cluster.local]
+  usages: [server auth]
+  issuerRef: { name: zglosto-database-ca, kind: Issuer }
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata: { name: pgbouncer-server, namespace: zglosto }
+spec:
+  secretName: zglosto-pgbouncer-tls
+  duration: 720h
+  renewBefore: 168h
+  privateKey: { algorithm: ECDSA, size: 256, rotationPolicy: Always }
+  dnsNames: [pgbouncer, pgbouncer.zglosto.svc, pgbouncer.zglosto.svc.cluster.local]
+  usages: [server auth]
+  issuerRef: { name: zglosto-database-ca, kind: Issuer }

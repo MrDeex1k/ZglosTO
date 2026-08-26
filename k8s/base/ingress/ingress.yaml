@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: zglosto-ingress
+  namespace: zglosto
+spec:
+  rules:
+    - host: zglosto.example.invalid
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nginx
+                port:
+                  number: 1235
+  tls:
+    - hosts:
+        - zglosto.example.invalid
+      secretName: zglosto-public-tls

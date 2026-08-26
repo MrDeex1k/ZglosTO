@@ -1,0 +1,19 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["APPLE_TEAM_ID.pl.zglosto.app"],
+        "components": [
+          {
+            "/": "/open/*",
+            "comment": "Allowlisted incident entry routes"
+          },
+          {
+            "/": "/auth/email-verified",
+            "comment": "Email verification callback without a token in the app URL"
+          }
+        ]
+      }
+    ]
+  }
+}

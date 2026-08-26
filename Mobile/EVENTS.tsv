@@ -1,0 +1,19 @@
+event	trigger	required_properties	forbidden_properties	status
+app_open	cold/warm start	app_version; platform; runtime_version; config_version	email; address; description; image; cookie	DRAFT
+config_load_result	white-label fetch/cache result	result; source; config_version; duration_bucket	config_payload; contact_details	DRAFT
+public_feed_result	public query settled	result; count_bucket; duration_bucket	incident_ids; addresses; descriptions	DRAFT
+incident_detail_open	detail screen visible	scope; status; has_public_image	incident_id; address; email; image_url	DRAFT
+report_start	report route visible	auth_state; source	user_id; email	DRAFT
+report_validation_result	submit validation	result; error_field_codes	field_values; description; address; email	DRAFT
+report_upload_result	presigned upload settled	result; mime_category; size_bucket; duration_bucket	upload_url; upload_id; checksum; image	DRAFT
+report_submit_result	create request settled	result; auth_state; duration_bucket	incident_id; email; address; description	DRAFT
+auth_sign_in_result	sign-in settled	result; role_if_success	email; name; cookie; service_key	DRAFT
+auth_sign_out	sign-out completed	role	user_id; email; cookie	DRAFT
+resident_list_result	private list settled	result; count_bucket	incident_ids; email; addresses	DRAFT
+service_filter_change	filter selected	status_filter; result_count_bucket	service_key; incident_ids	DRAFT
+service_update_result	status/check update settled	result; target_status; changed_checked	incident_id; user_id; service_key	DRAFT
+resolution_upload_result	resolution image settled	result; size_bucket; duration_bucket	upload_url; upload_id; checksum; image	DRAFT
+admin_role_update_result	role update settled	result; target_role	email; actor_id; target_user_id	DRAFT
+network_state_change	online/offline transition	state	ip; ssid; carrier	DRAFT
+deep_link_result	deep link handled	type; result	full_url; verification_token; email	DRAFT
+

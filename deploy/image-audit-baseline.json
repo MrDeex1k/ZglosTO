@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "phase": "11.1",
+  "capturedAt": "2026-07-26",
+  "engine": "OrbStack",
+  "platform": "linux/arm64",
+  "buildContextBytes": 465920,
+  "artifacts": [
+    {
+      "id": "authorization",
+      "sizeBytes": 331998000,
+      "configuredUser": "",
+      "hasImageHealthcheck": false,
+      "sensitivePathCount": 0,
+      "applicationSourceFileCount": 13,
+      "typescriptFileCountWithDependencies": 5797,
+      "sourceMapCountWithDependencies": 4730
+    },
+    {
+      "id": "backend",
+      "sizeBytes": 297922844,
+      "configuredUser": "",
+      "hasImageHealthcheck": false,
+      "sensitivePathCount": 0,
+      "applicationSourceFileCount": 72,
+      "typescriptFileCountWithDependencies": 8053,
+      "sourceMapCountWithDependencies": 4848
+    },
+    {
+      "id": "llm_gateway",
+      "sizeBytes": 236252180,
+      "configuredUser": "",
+      "hasImageHealthcheck": false,
+      "sensitivePathCount": 0,
+      "applicationSourceFileCount": 7,
+      "typescriptFileCountWithDependencies": 3282,
+      "sourceMapCountWithDependencies": 2292
+    },
+    {
+      "id": "frontend",
+      "sizeBytes": 62932354,
+      "configuredUser": "",
+      "hasImageHealthcheck": false,
+      "sensitivePathCount": 0,
+      "applicationSourceFileCount": 0,
+      "typescriptFileCountWithDependencies": 0,
+      "sourceMapCountWithDependencies": 0
+    },
+    {
+      "id": "database",
+      "sizeBytes": 483307354,
+      "configuredUser": "",
+      "hasImageHealthcheck": false,
+      "sensitivePathCount": 0,
+      "applicationSourceFileCount": 0,
+      "typescriptFileCountWithDependencies": 0,
+      "sourceMapCountWithDependencies": 0
+    },
+    {
+      "id": "pgbouncer",
+      "sizeBytes": 17611888,
+      "configuredUser": "root",
+      "hasImageHealthcheck": false,
+      "sensitivePathCount": 0,
+      "applicationSourceFileCount": 0,
+      "typescriptFileCountWithDependencies": 0,
+      "sourceMapCountWithDependencies": 0
+    },
+    {
+      "id": "rabbitmq",
+      "sizeBytes": 168567907,
+      "configuredUser": "",
+      "hasImageHealthcheck": false,
+      "sensitivePathCount": 0,
+      "applicationSourceFileCount": 0,
+      "typescriptFileCountWithDependencies": 0,
+      "sourceMapCountWithDependencies": 0
+    },
+    {
+      "id": "nginx",
+      "sizeBytes": 61769741,
+      "configuredUser": "",
+      "hasImageHealthcheck": false,
+      "sensitivePathCount": 0,
+      "applicationSourceFileCount": 0,
+      "typescriptFileCountWithDependencies": 0,
+      "sourceMapCountWithDependencies": 0
+    }
+  ]
+}

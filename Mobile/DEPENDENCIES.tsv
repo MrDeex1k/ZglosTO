@@ -1,0 +1,39 @@
+capability	preferred_package	status	reason	verification
+runtime	expo 57.0.16	REQUIRED	managed native runtime and tooling	pinned and verified on local iOS and Android builds
+ui-runtime	react; react-native	REQUIRED	platform UI	versions dictated by Expo SDK
+styling	nativewind 4.2.6; tailwindcss 3.4.19	INSTALLED	stable utility-first styling aligned with team experience	Metro, monorepo and dynamic White-Label color verified on iOS, iPadOS and Android; dark mode deferred
+styling-next	nativewind v5; react-native-css; tailwindcss v4	DEFERRED	v5 supports the desired CSS-first Tailwind v4 model but is officially pre-release	reconsider only after stable release and an iOS/Android checkpoint
+ui-registry	React Native Reusables patterns	ADOPTED-SOURCE-OWNED	shadcn-like patterns without adding a closed runtime UI kit	local Text, Button, Card, Badge, Input, Label and Separator reviewed in src/components/ui
+ui-primitives	@rn-primitives/*; @rn-primitives/portal	AS-NEEDED	interaction primitives used by selected React Native Reusables components	install only packages required by selected components; verify portals, focus and accessibility
+ui-variants	clsx 2.1.1; tailwind-merge 3.6.0	INSTALLED	class composition and conflict handling for local UI components	kept behind src/lib/cn.ts; CVA not needed for current component set
+routing	expo-router 57.0.16	REQUIRED	native stack, modal and tabs	file routes thin; typed routes verified
+server-state	@tanstack/react-query 5.101.4	INSTALLED	existing query model, cache and mutations	onlineManager, AppState focus, retry rules and private-cache clearing tested
+contracts	@zglosto/contracts	REQUIRED	shared Zod parsers, roles, statuses, image limits	Metro resolves workspace build/source
+i18n	@zglosto/i18n; i18next; react-i18next	REQUIRED	shared PL/EN catalogs	no DOM assumptions
+locale	expo-localization 57.0.1	INSTALLED	initial device locale	normalized through shared package and persisted with AsyncStorage
+auth	better-auth 1.6.29; @better-auth/expo 1.6.29	INSTALLED	official Better Auth integration for Expo	resident login and server session verified; iOS UI and Android end-to-end checkpoint pass
+secure-storage	expo-secure-store 57.0.1	INSTALLED	auth cookie/session cache	Android cold restart restores session and sign-out clears local auth data
+preferences	@react-native-async-storage/async-storage 2.2.0	INSTALLED	locale and public config only	cache migration/corruption tests pass; no auth token/cookie
+networking	expo/fetch	REQUIRED	Expo-preferred fetch, binary uploads	headers, AbortSignal, presigned PUT
+network-status	@react-native-community/netinfo 12.0.1	INSTALLED	offline state and TanStack onlineManager	Android cold-start cache and API revalidation verified
+network-info	expo-network 57.0.1	INSTALLED	native network state used by Better Auth Expo client	linked in local iOS and Android development builds
+images	expo-image 57.0.3	INSTALLED	image rendering and cache	linked in local iOS and Android development builds; public resolution-image path implemented
+image-input	expo-image-picker 57.0.13	INSTALLED	camera/library selection	Android library picker and iOS permission strings verified; physical camera deferred
+file-access	expo-file-system 57.0.5	INSTALLED	file metadata, bytes and binary PUT without base64	non-legacy File API, progress and AbortSignal verified in Phase 3.5
+hashing	expo-crypto 57.0.2	INSTALLED	SHA-256 upload contract	lowercase 64-character checksum accepted by backend in Android end-to-end test
+linking	expo-linking	REQUIRED	mail, tel, maps and deep links	allowlist and universal/app links
+safe-area	react-native-safe-area-context	REQUIRED	insets with native headers/tabs	all supported devices
+forms	@tanstack/react-form	CANDIDATE	alignment with web and headless API	check RN ergonomics in checkpoint
+validation	zod	REQUIRED	contracts and local form schemas	exact version compatible with workspace
+animations	react-native-reanimated	CANDIDATE	native animations without JS-thread jank	only where UX requires; reduce motion
+lists	react-native FlatList	REQUIRED	built-in virtualization	profile before third-party list
+advanced-lists	@shopify/flash-list	DEFERRED	only if measured FlatList issue	check installed major before recommendations
+location	expo-location	DEFERRED	not required for text address/link v1	separate permission and privacy decision
+maps	external Linking	START	link to installed/default map	app fallback URL
+native-maps	TBD	DEFERRED	no in-app map requirement	provider, tokens and privacy needed
+notifications	expo-notifications	DEFERRED	no backend push contract	separate architecture and consent
+crash-reporting	TBD	BLOCKER-BEFORE-RELEASE	operational readiness	privacy review and environment separation
+unit-testing	Vitest or Jest + React Native Testing Library	CANDIDATE	repo uses Vitest, Expo ecosystem may constrain	choose at bootstrap from current Expo support
+e2e	Maestro CLI 2.8.0	INSTALLED-LOCAL	device-level black-box flows on iOS Simulator and Android Emulator	Phase 4 resident flow is source-owned in e2e/phase4-resident.yaml; keep CLI version aligned across developer machines and future CI
+quality	React Doctor	REQUIRED-BY-REPO	mandatory after React changes	run after each React implementation slice
+quality	Expo Doctor	REQUIRED	Expo dependency/config compatibility	run locally; CI is intentionally deferred

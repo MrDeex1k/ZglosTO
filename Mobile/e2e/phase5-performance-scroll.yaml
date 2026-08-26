@@ -1,0 +1,36 @@
+appId: pl.zglosto.app
+---
+- extendedWaitUntil:
+    visible:
+      id: 'service-queue-ready'
+    timeout: 30000
+- repeat:
+    times: 8
+    commands:
+      - swipe:
+          direction: UP
+          duration: 450
+- scrollUntilVisible:
+    element:
+      id: 'service-filter-resolved'
+    direction: UP
+- tapOn:
+    id: 'service-filter-resolved'
+- extendedWaitUntil:
+    visible: 'Widoczne: 40 z 20[0-9]'
+    timeout: 10000
+- repeat:
+    times: 4
+    commands:
+      - swipe:
+          direction: UP
+          duration: 450
+- scrollUntilVisible:
+    element:
+      id: 'service-filter-all'
+    direction: UP
+- tapOn:
+    id: 'service-filter-all'
+- extendedWaitUntil:
+    visible: 'Widoczne: 20[0-9] z 20[0-9]'
+    timeout: 10000

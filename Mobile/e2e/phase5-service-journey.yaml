@@ -1,0 +1,66 @@
+appId: pl.zglosto.app
+---
+- extendedWaitUntil:
+    visible: '.*(Continue|Zgłoś problem|Report a problem).*'
+    timeout: 30000
+- runFlow:
+    when:
+      visible: 'Continue'
+    commands:
+      - tapOn: 'Continue'
+- runFlow:
+    when:
+      visible: 'Close'
+    commands:
+      - tapOn: 'Close'
+- extendedWaitUntil:
+    visible: '.*(Zgłoś problem|Report a problem).*'
+    timeout: 30000
+- runFlow:
+    when:
+      visible: 'Report a problem'
+    commands:
+      - tapOn: 'Polski'
+- extendedWaitUntil:
+    visible: 'Zgłoś problem'
+    timeout: 10000
+- tapOn: 'Zaloguj się'
+- extendedWaitUntil:
+    visible: 'Logowanie'
+    timeout: 10000
+- tapOn:
+    id: 'login-email'
+- inputText: ${PHASE5_SERVICE_EMAIL}
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - hideKeyboard
+- tapOn:
+    id: 'login-password'
+- inputText: ${PHASE5_SERVICE_PASSWORD}
+- hideKeyboard
+- tapOn:
+    id: 'login-submit'
+- extendedWaitUntil:
+    visible: 'Panel służby.*'
+    timeout: 30000
+- runFlow:
+    when:
+      visible: '.*(Zachować hasło|Save Password).*'
+    commands:
+      - tapOn: '.*(Nie teraz|Not Now).*'
+- assertVisible: 'Przypisana służba'
+- assertVisible: 'roads'
+- assertVisible: 'Przypisane zgłoszenia'
+- assertVisible: 'Wszystkie \(1\)'
+- assertVisible: 'Zgłoszone \(0\)'
+- assertVisible: 'W realizacji \(1\)'
+- assertVisible: 'Rozwiązane \(0\)'
+- assertVisible: 'Widoczne: 1 z 1'
+- tapOn: 'Zgłoszone \(0\)'
+- assertVisible: 'Brak zgłoszeń'
+- assertVisible: 'Widoczne: 0 z 1'
+- tapOn: 'W realizacji \(1\)'
+- assertVisible: 'Naprawiono uszkodzoną nawierzchnię chodnika'
+- assertVisible: 'Widoczne: 1 z 1'

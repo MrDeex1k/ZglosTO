@@ -1,0 +1,190 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: default-deny-all, namespace: zglosto }
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: allow-dns, namespace: zglosto }
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: kube-system }
+          podSelector:
+            matchLabels: { k8s-app: kube-dns }
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: allow-ingress-to-nginx, namespace: zglosto }
+spec:
+  podSelector: { matchLabels: { app: nginx } }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: ingress-nginx }
+          podSelector:
+            matchLabels: { app.kubernetes.io/name: ingress-nginx }
+      ports: [{ protocol: TCP, port: 1235 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: allow-nginx-egress, namespace: zglosto }
+spec:
+  podSelector: { matchLabels: { app: nginx } }
+  policyTypes: [Egress]
+  egress:
+    - to: [{ podSelector: { matchLabels: { app: frontend } } }]
+      ports: [{ protocol: TCP, port: 8080 }]
+    - to: [{ podSelector: { matchLabels: { app: backend } } }]
+      ports: [{ protocol: TCP, port: 3000 }]
+    - to: [{ podSelector: { matchLabels: { app: authorization } } }]
+      ports: [{ protocol: TCP, port: 9956 }]
+    - to: [{ podSelector: { matchLabels: { app: llm-gateway } } }]
+      ports: [{ protocol: TCP, port: 8130 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: allow-frontend-from-nginx, namespace: zglosto }
+spec:
+  podSelector: { matchLabels: { app: frontend } }
+  policyTypes: [Ingress]
+  ingress:
+    - from: [{ podSelector: { matchLabels: { app: nginx } } }]
+      ports: [{ protocol: TCP, port: 8080 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: allow-backend, namespace: zglosto }
+spec:
+  podSelector: { matchLabels: { app: backend } }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from: [{ podSelector: { matchLabels: { app: nginx } } }]
+      ports: [{ protocol: TCP, port: 3000 }]
+  egress:
+    - to: [{ podSelector: { matchLabels: { app: authorization } } }]
+      ports: [{ protocol: TCP, port: 9956 }]
+    - to: [{ podSelector: { matchLabels: { app: pgbouncer } } }]
+      ports: [{ protocol: TCP, port: 6432 }]
+    - to: [{ podSelector: { matchLabels: { app: rabbitmq } } }]
+      ports: [{ protocol: TCP, port: 5671 }]
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: keda }
+      ports: [{ protocol: TCP, port: 8443 }]
+    - to: [{ podSelector: { matchLabels: { app: rustfs } } }]
+      ports: [{ protocol: TCP, port: 9000 }]
+    - to: [{ ipBlock: { cidr: 0.0.0.0/0 } }]
+      ports: [{ protocol: TCP, port: 443 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: allow-authorization, namespace: zglosto }
+spec:
+  podSelector: { matchLabels: { app: authorization } }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector: { matchLabels: { app: backend } }
+        - podSelector: { matchLabels: { app: nginx } }
+      ports: [{ protocol: TCP, port: 9956 }]
+  egress:
+    - to: [{ podSelector: { matchLabels: { app: pgbouncer } } }]
+      ports: [{ protocol: TCP, port: 6432 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: allow-media-worker-egress, namespace: zglosto }
+spec:
+  podSelector: { matchLabels: { app: media-worker } }
+  policyTypes: [Egress]
+  egress:
+    - to: [{ podSelector: { matchLabels: { app: pgbouncer } } }]
+      ports: [{ protocol: TCP, port: 6432 }]
+    - to: [{ podSelector: { matchLabels: { app: rabbitmq } } }]
+      ports: [{ protocol: TCP, port: 5671 }]
+    - to: [{ podSelector: { matchLabels: { app: rustfs } } }]
+      ports: [{ protocol: TCP, port: 9000 }]
+    - to: [{ ipBlock: { cidr: 0.0.0.0/0 } }]
+      ports: [{ protocol: TCP, port: 443 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: allow-pgbouncer, namespace: zglosto }
+spec:
+  podSelector: { matchLabels: { app: pgbouncer } }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector: { matchLabels: { app: backend } }
+        - podSelector: { matchLabels: { app: authorization } }
+        - podSelector: { matchLabels: { app: media-worker } }
+      ports: [{ protocol: TCP, port: 6432 }]
+  egress:
+    - to: [{ podSelector: { matchLabels: { app: database } } }]
+      ports: [{ protocol: TCP, port: 54325 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: allow-database-from-pgbouncer, namespace: zglosto }
+spec:
+  podSelector: { matchLabels: { app: database } }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: { matchLabels: { app: pgbouncer } }
+        - podSelector: { matchLabels: { app: database-operator } }
+      ports: [{ protocol: TCP, port: 54325 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: allow-rabbitmq, namespace: zglosto }
+spec:
+  podSelector: { matchLabels: { app: rabbitmq } }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: { matchLabels: { app: backend } }
+        - podSelector: { matchLabels: { app: media-worker } }
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: keda }
+      ports: [{ protocol: TCP, port: 5671 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: allow-object-storage, namespace: zglosto }
+spec:
+  podSelector: { matchLabels: { app: rustfs } }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: { matchLabels: { app: backend } }
+        - podSelector: { matchLabels: { app: media-worker } }
+      ports: [{ protocol: TCP, port: 9000 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: allow-llm-gateway, namespace: zglosto }
+spec:
+  podSelector: { matchLabels: { app: llm-gateway } }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector: { matchLabels: { app: nginx } }
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: keda }
+      ports: [{ protocol: TCP, port: 8130 }]
+  egress:
+    - to: [{ ipBlock: { cidr: 0.0.0.0/0 } }]
+      ports:
+        - { protocol: TCP, port: 443 }
+        - { protocol: TCP, port: 12434 }

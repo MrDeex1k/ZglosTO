@@ -1,0 +1,6 @@
+appId: pl.zglosto.app
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- runFlow: phase5-checkpoint-core.yaml

@@ -1,0 +1,9 @@
+- op: replace
+  path: /spec/ingress/0/from/0
+  value:
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: kube-system
+    podSelector:
+      matchLabels:
+        app.kubernetes.io/name: traefik

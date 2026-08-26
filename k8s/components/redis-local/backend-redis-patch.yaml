@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  annotations:
+    secret.reloader.stakater.com/reload: zglosto-backend-tls,zglosto-pgbouncer-tls,zglosto-rabbitmq-tls,zglosto-database-credentials,zglosto-rabbitmq-credentials,zglosto-object-storage-credentials,zglosto-redis-credentials
+spec:
+  template:
+    spec:
+      containers:
+        - name: backend
+          env:
+            - { name: REDIS_MODE, value: local }
+            - { name: REDIS_URL_FILE, value: /run/secrets/redis/url }
+            - { name: REDIS_TLS_CA_PATH, value: '' }
+            - { name: RATE_LIMIT_HMAC_KEY_FILE, value: /run/secrets/redis/rate-limit-hmac }
+          volumeMounts:
+            - name: redis-credentials
+              mountPath: /run/secrets/redis
+              readOnly: true
+      volumes:
+        - name: redis-credentials
+          secret:
+            secretName: zglosto-redis-credentials
+            optional: false
+            defaultMode: 0440
+            items:
+              - key: REDIS_URL
+                path: url
+              - key: RATE_LIMIT_HMAC_KEY
+                path: rate-limit-hmac

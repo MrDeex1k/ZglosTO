@@ -1,0 +1,98 @@
+services:
+  redis:
+    image: ${REDIS_IMAGE:-redis:8.10.0-alpine3.23}
+    command:
+      [
+        'redis-server',
+        '--aclfile',
+        '/run/secrets/redis/users.acl',
+        '--appendonly',
+        'no',
+        '--save',
+        '',
+        '--maxmemory',
+        '${REDIS_MAXMEMORY:-256mb}',
+        '--maxmemory-policy',
+        'allkeys-lru',
+        '--protected-mode',
+        'yes',
+      ]
+    restart: always
+    init: true
+    pull_policy: missing
+    user: 999:999
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /data:rw,noexec,nosuid,nodev,size=16m
+      - /tmp:rw,noexec,nosuid,nodev,size=8m
+    secrets:
+      - source: redis_acl
+        target: /run/secrets/redis/users.acl
+        mode: 0440
+      - source: redis_url
+        target: /run/secrets/redis/url
+        mode: 0440
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'redis-cli --no-auth-warning -u "$$(cat /run/secrets/redis/url)" --raw PING | grep -qx PONG',
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks: [internal-net]
+    pids_limit: 128
+    cpus: 0.5
+    mem_limit: 320m
+    stop_grace_period: 10s
+    logging:
+      driver: local
+      options:
+        max-size: 10m
+        max-file: '5'
+
+  authorization:
+    environment:
+      REDIS_MODE: local
+      REDIS_URL_FILE: /run/secrets/redis/url
+      REDIS_TLS_CA_PATH: ''
+      RATE_LIMIT_HMAC_KEY_FILE: /run/secrets/redis/rate-limit-hmac
+    secrets:
+      - source: redis_url
+        target: /run/secrets/redis/url
+        mode: 0440
+      - source: redis_rate_limit_hmac
+        target: /run/secrets/redis/rate-limit-hmac
+        mode: 0440
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  backend:
+    environment:
+      REDIS_MODE: local
+      REDIS_URL_FILE: /run/secrets/redis/url
+      REDIS_TLS_CA_PATH: ''
+      RATE_LIMIT_HMAC_KEY_FILE: /run/secrets/redis/rate-limit-hmac
+    secrets:
+      - source: redis_url
+        target: /run/secrets/redis/url
+        mode: 0440
+      - source: redis_rate_limit_hmac
+        target: /run/secrets/redis/rate-limit-hmac
+        mode: 0440
+    depends_on:
+      redis:
+        condition: service_healthy
+
+secrets:
+  redis_acl:
+    file: ${REDIS_ACL_FILE:?REDIS_ACL_FILE is required for local Redis}
+  redis_rate_limit_hmac:
+    file: ${RATE_LIMIT_HMAC_KEY_SECRET_FILE:?RATE_LIMIT_HMAC_KEY_SECRET_FILE is required}
+  redis_url:
+    file: ${REDIS_URL_SECRET_FILE:?REDIS_URL_SECRET_FILE is required}

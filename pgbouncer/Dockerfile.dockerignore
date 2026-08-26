@@ -1,0 +1,6 @@
+**
+
+!pgbouncer/
+!pgbouncer/start-pgbouncer.sh
+!scripts/
+!scripts/container-load-secrets.sh

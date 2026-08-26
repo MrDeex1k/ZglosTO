@@ -1,0 +1,231 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: database-init-scripts
+  namespace: zglosto
+data:
+  01-init.sql: |
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+    CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+    CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+    DO $$
+    BEGIN
+    	IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'zglosto_admin') THEN
+    		CREATE ROLE zglosto_admin WITH LOGIN;
+    	END IF;
+
+    	IF NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = 'zglosto_db') THEN
+    		PERFORM dblink_connect('dbname=postgres');
+    		EXECUTE 'CREATE DATABASE zglosto_db OWNER zglosto_admin';
+    	ELSE
+    		EXECUTE 'ALTER DATABASE zglosto_db OWNER TO zglosto_admin';
+    	END IF;
+    EXCEPTION WHEN undefined_function THEN
+    	IF NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = 'zglosto_db') THEN
+    		EXECUTE 'CREATE DATABASE zglosto_db OWNER zglosto_admin';
+    	ELSE
+    		EXECUTE 'ALTER DATABASE zglosto_db OWNER TO zglosto_admin';
+    	END IF;
+    END$$;
+
+  02-create-auth.sql: |
+    CREATE TABLE IF NOT EXISTS "user" (
+    	id text PRIMARY KEY,
+    	name text,
+    	email text NOT NULL UNIQUE,
+    	email_verified boolean NOT NULL DEFAULT false,
+    	image text,
+    	is_active boolean NOT NULL DEFAULT true,
+    	created_at timestamptz NOT NULL DEFAULT now(),
+    	updated_at timestamptz NOT NULL DEFAULT now()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_user_email_lower ON "user" (LOWER(email));
+    CREATE TABLE IF NOT EXISTS session (
+    	id text PRIMARY KEY,
+    	user_id text NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+    	token text NOT NULL UNIQUE,
+    	expires_at timestamptz NOT NULL,
+    	ip_address text,
+    	user_agent text,
+    	created_at timestamptz NOT NULL DEFAULT now(),
+    	updated_at timestamptz NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS account (
+    	id text PRIMARY KEY,
+    	user_id text NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+    	account_id text NOT NULL,
+    	provider_id text NOT NULL,
+    	access_token text,
+    	refresh_token text,
+    	id_token text,
+    	access_token_expires_at timestamptz,
+    	refresh_token_expires_at timestamptz,
+    	scope text,
+    	password text,
+    	created_at timestamptz NOT NULL DEFAULT now(),
+    	updated_at timestamptz NOT NULL DEFAULT now(),
+    	UNIQUE (provider_id, account_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS verification (
+    	id text PRIMARY KEY,
+    	identifier text NOT NULL,
+    	value text NOT NULL,
+    	expires_at timestamptz NOT NULL,
+    	user_id text REFERENCES "user"(id) ON DELETE CASCADE,
+    	created_at timestamptz NOT NULL DEFAULT now(),
+    	updated_at timestamptz NOT NULL DEFAULT now()
+    );
+
+    -- Trigger aktualizujący updated_at
+    CREATE OR REPLACE FUNCTION trigger_set_timestamp()
+    RETURNS TRIGGER AS $$
+    BEGIN
+    	NEW.updated_at = now();
+    	RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+
+    DROP TRIGGER IF EXISTS set_timestamp ON "user";
+    CREATE TRIGGER set_timestamp
+    BEFORE UPDATE ON "user"
+    FOR EACH ROW
+    EXECUTE FUNCTION trigger_set_timestamp();
+
+    DROP TRIGGER IF EXISTS set_timestamp ON session;
+    CREATE TRIGGER set_timestamp
+    BEFORE UPDATE ON session
+    FOR EACH ROW
+    EXECUTE FUNCTION trigger_set_timestamp();
+
+    DROP TRIGGER IF EXISTS set_timestamp ON account;
+    CREATE TRIGGER set_timestamp
+    BEFORE UPDATE ON account
+    FOR EACH ROW
+    EXECUTE FUNCTION trigger_set_timestamp();
+
+    DROP TRIGGER IF EXISTS set_timestamp ON verification;
+    CREATE TRIGGER set_timestamp
+    BEFORE UPDATE ON verification
+    FOR EACH ROW
+    EXECUTE FUNCTION trigger_set_timestamp();
+
+  03-create-dbtables.sql: |
+    DO $$
+    BEGIN
+    	IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'status_incydentu_enum') THEN
+            CREATE TYPE status_incydentu_enum AS ENUM ('reported', 'in_progress', 'resolved');
+    	END IF;
+    	IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'uprawnienia_enum') THEN
+    		CREATE TYPE uprawnienia_enum AS ENUM ('mieszkaniec', 'sluzby', 'admin');
+    	END IF;
+    END$$;
+
+    CREATE TABLE IF NOT EXISTS service_types (
+      service_key varchar(64) PRIMARY KEY CHECK (service_key ~ '^[a-z][a-z0-9_]*$'),
+      enabled boolean NOT NULL DEFAULT TRUE,
+      sort_order integer NOT NULL CHECK (sort_order >= 0),
+      created_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    INSERT INTO service_types (service_key, enabled, sort_order)
+    VALUES
+      ('district_heating', TRUE, 10),
+      ('public_transit', TRUE, 20),
+      ('municipal_services', TRUE, 30),
+      ('sewer_emergency', TRUE, 40),
+      ('roads', TRUE, 50),
+      ('other', TRUE, 60)
+    ON CONFLICT (service_key) DO NOTHING;
+
+    CREATE TABLE IF NOT EXISTS incydenty (
+    	id_zgloszenia uuid PRIMARY KEY DEFAULT uuidv7(),
+    	opis_zgloszenia varchar(255) NOT NULL,
+      mail_zglaszajacego varchar(254) NOT NULL CHECK (mail_zglaszajacego = LOWER(BTRIM(mail_zglaszajacego))),
+      reporter_user_id text REFERENCES "user"(id) ON DELETE SET NULL,
+    	adres_zgloszenia varchar(50) NOT NULL,
+    	zdjecie_incydentu_zglaszanego bytea,
+    	zdjecie_incydentu_rozwiazanego bytea,
+    	sprawdzenie_incydentu boolean NOT NULL DEFAULT FALSE,
+        status_incydentu status_incydentu_enum NOT NULL DEFAULT 'reported',
+      service_key varchar(64) NOT NULL REFERENCES service_types(service_key) ON UPDATE CASCADE,
+      LLM_odpowiedz text,
+      llm_classification text NOT NULL DEFAULT 'unknown' CHECK (llm_classification IN ('municipal', 'emergency', 'unknown')),
+      llm_model_available boolean NOT NULL DEFAULT FALSE,
+      llm_source text NOT NULL DEFAULT 'fallback' CHECK (llm_source IN ('model', 'fallback')),
+      llm_reason text DEFAULT 'unavailable' CHECK (llm_reason IS NULL OR llm_reason IN ('timeout', 'disabled', 'unavailable', 'invalid_response')),
+    	data_zgloszenia date DEFAULT now(),
+    	godzina_zgloszenia time DEFAULT now(),
+    	data_rozwiazania date DEFAULT NULL,
+      godzina_rozwiazania time DEFAULT NULL,
+      CHECK (
+        (llm_source = 'model' AND llm_model_available = TRUE AND llm_reason IS NULL AND llm_classification <> 'unknown')
+        OR
+        (llm_source = 'fallback' AND llm_model_available = FALSE AND llm_reason IS NOT NULL AND llm_classification = 'unknown')
+      )
+    );
+
+    CREATE TABLE IF NOT EXISTS uzytkownicy (
+    	id_uzytkownika text PRIMARY KEY REFERENCES "user"(id) ON DELETE CASCADE,
+    	uprawnienia uprawnienia_enum NOT NULL DEFAULT 'mieszkaniec',
+      service_key varchar(64) DEFAULT NULL REFERENCES service_types(service_key) ON UPDATE CASCADE,
+      CHECK (uprawnienia = 'sluzby' OR service_key IS NULL)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_incydenty_mail_zglaszajacego ON incydenty (mail_zglaszajacego);
+    CREATE INDEX IF NOT EXISTS idx_incydenty_reporter_user_id ON incydenty (reporter_user_id);
+    CREATE INDEX IF NOT EXISTS idx_incydenty_status ON incydenty (status_incydentu);
+    CREATE INDEX IF NOT EXISTS idx_incydenty_service_key ON incydenty (service_key);
+    CREATE INDEX IF NOT EXISTS idx_incydenty_public_resolved_order
+      ON incydenty (
+        data_rozwiazania DESC NULLS LAST,
+        godzina_rozwiazania DESC NULLS LAST,
+        id_zgloszenia DESC
+      )
+      WHERE status_incydentu = 'resolved';
+    CREATE INDEX IF NOT EXISTS idx_uzytkownicy_service_key ON uzytkownicy (service_key);
+
+    CREATE OR REPLACE FUNCTION ensure_active_service_assignment()
+    RETURNS trigger AS $$
+    BEGIN
+      IF NEW.service_key IS NULL THEN
+        RETURN NEW;
+      END IF;
+      IF NOT EXISTS (
+        SELECT 1 FROM service_types
+        WHERE service_key = NEW.service_key AND enabled = TRUE
+      ) THEN
+        RAISE EXCEPTION USING
+          ERRCODE = '23514',
+          MESSAGE = format('serviceKey %s is inactive or unknown', NEW.service_key);
+      END IF;
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+
+    DROP TRIGGER IF EXISTS incydenty_require_active_service ON incydenty;
+    CREATE TRIGGER incydenty_require_active_service
+    BEFORE INSERT OR UPDATE OF service_key ON incydenty
+    FOR EACH ROW EXECUTE FUNCTION ensure_active_service_assignment();
+
+    DROP TRIGGER IF EXISTS uzytkownicy_require_active_service ON uzytkownicy;
+    CREATE TRIGGER uzytkownicy_require_active_service
+    BEFORE INSERT OR UPDATE OF service_key ON uzytkownicy
+    FOR EACH ROW EXECUTE FUNCTION ensure_active_service_assignment();
+
+  04-setup-backup.sql: |
+    CREATE EXTENSION IF NOT EXISTS pg_cron;
+
+    GRANT USAGE ON SCHEMA cron TO postgres;
+
+    CREATE OR REPLACE FUNCTION perform_backup() RETURNS void AS $$
+    BEGIN
+        PERFORM pg_execute_server_program('pgbackrest --stanza=zglosto_db --type=full backup');
+    END;
+    $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+    SELECT cron.schedule('backup-every-48h', '48 hours', 'SELECT perform_backup();');

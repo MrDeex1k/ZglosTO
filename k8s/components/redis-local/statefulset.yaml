@@ -1,0 +1,114 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  namespace: zglosto
+  labels:
+    app: redis
+  annotations:
+    secret.reloader.stakater.com/reload: zglosto-redis-acl,zglosto-redis-credentials
+spec:
+  serviceName: redis
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      serviceAccountName: redis
+      enableServiceLinks: false
+      securityContext:
+        fsGroup: 999
+        runAsGroup: 999
+        runAsNonRoot: true
+        runAsUser: 999
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: redis
+          image: redis:8.10.0-alpine3.23
+          imagePullPolicy: IfNotPresent
+          args:
+            - redis-server
+            - --aclfile
+            - /run/secrets/redis-acl/users.acl
+            - --appendonly
+            - 'no'
+            - --save
+            - ''
+            - --maxmemory
+            - 256mb
+            - --maxmemory-policy
+            - allkeys-lru
+            - --protected-mode
+            - 'yes'
+          ports:
+            - name: redis
+              containerPort: 6379
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 320Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            readOnlyRootFilesystem: true
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -ec
+                - redis-cli --no-auth-warning -u "$(cat /run/secrets/redis/url)" --raw PING | grep -qx PONG
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -ec
+                - redis-cli --no-auth-warning -u "$(cat /run/secrets/redis/url)" --raw PING | grep -qx PONG
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 3
+          volumeMounts:
+            - name: redis-acl
+              mountPath: /run/secrets/redis-acl
+              readOnly: true
+            - name: redis-credentials
+              mountPath: /run/secrets/redis
+              readOnly: true
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: redis-acl
+          secret:
+            secretName: zglosto-redis-acl
+            optional: false
+            defaultMode: 0440
+            items:
+              - key: users.acl
+                path: users.acl
+        - name: redis-credentials
+          secret:
+            secretName: zglosto-redis-credentials
+            optional: false
+            defaultMode: 0440
+            items:
+              - key: REDIS_URL
+                path: url
+        - name: data
+          emptyDir:
+            sizeLimit: 16Mi
+        - name: tmp
+          emptyDir:
+            sizeLimit: 8Mi

@@ -1,0 +1,75 @@
+appId: pl.zglosto.app
+name: Phase 5 service details and mutations
+tags:
+  - phase5
+  - service
+  - mutations
+---
+- extendedWaitUntil:
+    visible: '.*(Panel służby|Obsługa zgłoszenia|Otwórz panel).*'
+    timeout: 30000
+- runFlow:
+    when:
+      visible: 'Otwórz panel'
+    commands:
+      - tapOn: 'Otwórz panel'
+- runFlow:
+    when:
+      visible: 'Obsługa zgłoszenia'
+    commands:
+      - back
+- extendedWaitUntil:
+    visible: 'Panel służby.*'
+    timeout: 30000
+- tapOn: 'Naprawiono uszkodzoną nawierzchnię chodnika.*'
+- extendedWaitUntil:
+    visible: 'Obsługa zgłoszenia'
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      text: 'Naprawiony'
+    direction: DOWN
+- tapOn: 'Naprawiony'
+- extendedWaitUntil:
+    visible: 'Status zgłoszenia został zapisany.'
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      text: 'W TRAKCIE NAPRAWY'
+    direction: DOWN
+- tapOn: 'W TRAKCIE NAPRAWY'
+- extendedWaitUntil:
+    visible: 'Status zgłoszenia został zapisany.'
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: 'service-toggle-verification'
+    direction: DOWN
+- tapOn:
+    id: 'service-toggle-verification'
+- extendedWaitUntil:
+    visible: 'Oznaczenie sprawdzenia zostało zapisane.'
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: 'service-toggle-verification'
+    direction: DOWN
+- tapOn:
+    id: 'service-toggle-verification'
+- extendedWaitUntil:
+    visible: 'Oznaczenie sprawdzenia zostało zapisane.'
+    timeout: 15000
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          id: 'BackButton'
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - back
+- extendedWaitUntil:
+    visible: 'Panel służby.*'
+    timeout: 15000

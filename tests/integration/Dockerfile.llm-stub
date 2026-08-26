@@ -1,0 +1,10 @@
+FROM node:26.7.0-alpine3.24
+
+WORKDIR /app
+
+COPY package.json ./package.json
+COPY tests/integration/llm-stub.ts ./llm-stub.ts
+
+EXPOSE 8123
+
+CMD ["node", "llm-stub.ts"]

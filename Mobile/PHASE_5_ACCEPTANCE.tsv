@@ -1,0 +1,11 @@
+ID	Obszar	Implementacja	Android Emulator	iPhone Simulator	Stan checkpointu	Pozostała bramka
+5.0	Baseline i kontrakt akceptacyjny	PASS	N/A	N/A	PASS	Brak
+5.1	Routing, sesja i granice służby	PASS	PASS	PASS	PASS	Brak
+5.2	Kolejka zgłoszeń	PASS	PASS	PASS	PASS	Brak
+5.3	Szczegóły i mutacje	PASS	PASS	PASS	PASS	Brak
+5.4	Zdjęcie rozwiązania	PASS	PASS	PASS	PASS	Brak
+5.5	Konflikty i słaba sieć	PASS	PASS	PASS	PASS	Brak
+5.6	Bezpieczeństwo i prywatność	PASS	PASS	PASS	PASS	Brak
+5.7	Dostępność i ergonomia	PASS	PASS	PASS	PASS	Ręczny odsłuch VoiceOver/TalkBack przed betą (Faza 7)
+5.8	Wydajność	PASS	PASS	PASS	PASS	Release i urządzenia fizyczne przed betą (Faza 7)
+5.9	E2E i checkpoint	PASS	PASS	PASS	PASS	Brak

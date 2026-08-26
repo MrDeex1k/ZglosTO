@@ -1,0 +1,4 @@
+include:
+  - path:
+      - docker-compose.no-rustfs.yml
+      - docker-compose.rustfs.yml

@@ -1,0 +1,52 @@
+services:
+  authorization:
+    environment:
+      REDIS_MODE: external
+      REDIS_URL_FILE: /run/secrets/redis/url
+      REDIS_TLS_CA_PATH: /run/secrets/redis/ca.crt
+      RATE_LIMIT_HMAC_KEY_FILE: /run/secrets/redis/rate-limit-hmac
+    secrets:
+      - source: redis_external_ca
+        target: /run/secrets/redis/ca.crt
+        mode: 0440
+      - source: redis_rate_limit_hmac
+        target: /run/secrets/redis/rate-limit-hmac
+        mode: 0440
+      - source: redis_url
+        target: /run/secrets/redis/url
+        mode: 0440
+    networks:
+      - internal-net
+      - redis-external-net
+
+  backend:
+    environment:
+      REDIS_MODE: external
+      REDIS_URL_FILE: /run/secrets/redis/url
+      REDIS_TLS_CA_PATH: /run/secrets/redis/ca.crt
+      RATE_LIMIT_HMAC_KEY_FILE: /run/secrets/redis/rate-limit-hmac
+    secrets:
+      - source: redis_external_ca
+        target: /run/secrets/redis/ca.crt
+        mode: 0440
+      - source: redis_rate_limit_hmac
+        target: /run/secrets/redis/rate-limit-hmac
+        mode: 0440
+      - source: redis_url
+        target: /run/secrets/redis/url
+        mode: 0440
+    networks:
+      - internal-net
+      - redis-external-net
+
+secrets:
+  redis_external_ca:
+    file: ${REDIS_TLS_CA_FILE:?REDIS_TLS_CA_FILE is required for external Redis}
+  redis_rate_limit_hmac:
+    file: ${RATE_LIMIT_HMAC_KEY_SECRET_FILE:?RATE_LIMIT_HMAC_KEY_SECRET_FILE is required}
+  redis_url:
+    file: ${REDIS_URL_SECRET_FILE:?REDIS_URL_SECRET_FILE is required}
+
+networks:
+  redis-external-net:
+    driver: bridge

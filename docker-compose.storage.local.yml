@@ -1,0 +1,70 @@
+services:
+  rustfs:
+    image: ${RUSTFS_IMAGE:-rustfs/rustfs:1.0.0-rc.2}
+    pull_policy: missing
+    restart: always
+    init: true
+    user: 10001:10001
+    environment:
+      RUSTFS_ACCESS_KEY_FILE: /run/secrets/s3/access-key-id
+      RUSTFS_SECRET_KEY_FILE: /run/secrets/s3/secret-access-key
+      RUSTFS_CONSOLE_ENABLE: 'false'
+      RUSTFS_OBS_LOG_DIRECTORY: ''
+      RUSTFS_CORS_ALLOWED_ORIGINS: ${FRONTEND_ORIGIN:?FRONTEND_ORIGIN is required}
+    volumes:
+      - rustfs-data:/data
+    secrets:
+      - source: s3_access_key_id
+        target: /run/secrets/s3/access-key-id
+        mode: 0440
+      - source: s3_secret_access_key
+        target: /run/secrets/s3/secret-access-key
+        mode: 0440
+    networks:
+      - internal-net
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, http://127.0.0.1:9000/health/ready]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=32m
+    pids_limit: 256
+    cpus: 1
+    mem_limit: 1g
+    stop_grace_period: 30s
+    logging:
+      driver: local
+      options:
+        max-size: 10m
+        max-file: '5'
+
+  backend:
+    environment:
+      S3_ENDPOINT: http://rustfs:9000
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://uploads.127.0.0.1.nip.io:1235}
+      S3_UPLOAD_EXPIRY_SECONDS: ${S3_UPLOAD_EXPIRY_SECONDS:-300}
+      S3_FORCE_PATH_STYLE: 'true'
+      S3_AUTO_CREATE_BUCKET: 'true'
+    depends_on:
+      rustfs:
+        condition: service_healthy
+
+  media_worker:
+    environment:
+      S3_ENDPOINT: http://rustfs:9000
+      S3_FORCE_PATH_STYLE: 'true'
+      S3_AUTO_CREATE_BUCKET: 'true'
+    depends_on:
+      rustfs:
+        condition: service_healthy
+
+volumes:
+  rustfs-data:
+    driver: local

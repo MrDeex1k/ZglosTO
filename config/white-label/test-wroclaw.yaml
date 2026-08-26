@@ -1,0 +1,100 @@
+schemaVersion: 1
+configVersion: 'test-wroclaw-2026-07-18'
+
+city:
+  key: wroclaw_test
+  displayName:
+    'pl-PL': 'Wrocław Testowy'
+    en: 'Test Wroclaw'
+  defaultLocale: 'en'
+  supportedLocales: ['en', 'pl-PL']
+  timezone: 'Europe/Warsaw'
+
+branding:
+  logoPath: '/assets/city-logo.svg'
+  emblemAlt:
+    'pl-PL': 'Testowy znak Wrocławia'
+    en: 'Test Wroclaw mark'
+  faviconPath: '/assets/favicon.svg'
+  colors:
+    primary: '#6D1B2A'
+    secondary: '#F8FAFC'
+    accent: '#F4C430'
+
+contact:
+  email: 'kontakt@wroclaw-test.example'
+  phone: '+48 71 000 00 00'
+  website: null
+  address:
+    'pl-PL': 'Rynek 1, 50-001 Wrocław'
+    en: '1 Market Square, 50-001 Wroclaw'
+  officeHours:
+    'pl-PL': 'Poniedziałek–czwartek, 9:00–15:00'
+    en: 'Monday–Thursday, 9:00–15:00'
+
+localContent:
+  siteTitle:
+    'pl-PL': 'Wrocław Reaguje — test'
+    en: 'Wroclaw Responds — test'
+  siteDescription:
+    'pl-PL': 'Druga niezależna konfiguracja kontraktowa.'
+    en: 'A second independent contract configuration.'
+  footerText:
+    'pl-PL': 'Testowa instalacja miasta Wrocław.'
+    en: 'Test installation for the City of Wroclaw.'
+  legalNotice:
+    'pl-PL': 'System nie obsługuje zgłoszeń alarmowych.'
+    en: 'This system does not handle emergency reports.'
+  reportAddressPlaceholder:
+    'pl-PL': 'np. Rynek 12, Wrocław'
+    en: 'e.g. 12 Market Square, Wroclaw'
+
+services:
+  - key: street_lighting
+    label:
+      'pl-PL': 'Oświetlenie uliczne'
+      en: 'Street Lighting'
+    shortLabel:
+      'pl-PL': 'Oświetlenie'
+      en: 'Lighting'
+    enabled: true
+    sortOrder: 5
+    iconKey: lighting
+    description: null
+    color: '#CA8A04'
+  - key: river_safety
+    label:
+      'pl-PL': 'Bezpieczeństwo nad rzeką'
+      en: 'River Safety'
+    shortLabel:
+      'pl-PL': 'Rzeka'
+      en: 'River'
+    enabled: false
+    sortOrder: 15
+    iconKey: safety
+    description:
+      'pl-PL': 'Usługa celowo nieaktywna w teście.'
+      en: 'A service intentionally disabled in this test.'
+    color: '#0284C7'
+  - key: civic_support
+    label:
+      'pl-PL': 'Miejskie centrum wsparcia'
+      en: 'Civic Support Centre'
+    shortLabel:
+      'pl-PL': 'Wsparcie'
+      en: 'Support'
+    enabled: true
+    sortOrder: 100
+    iconKey: circle_help
+    description: null
+    color: null
+
+routing:
+  fallbackServiceKey: civic_support
+
+map: null
+
+features:
+  map: false
+  llmClassification: true
+  anonymousReports: false

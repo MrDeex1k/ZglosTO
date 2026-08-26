@@ -1,0 +1,21 @@
+state	classification	owner	source	storage	retention	clear_condition	notes
+auth-cookie	secret	auth	Better Auth	SecureStore	server session lifetime	sign-out; invalid session	never AsyncStorage or logs
+session-user	private	auth	Better Auth	memory; SecureStore only through official client	server session lifetime	sign-out; account change	role and serviceKey are server-controlled
+api-origin	public	config	local build environment	build-time app config	build lifetime	new build/update	EXPO_PUBLIC value, never contains credentials; EAS environment only if EAS Build is adopted
+white-label-config	public	config	GET /api/config/public	AsyncStorage or SQLite cache	until replaced	config schema/version invalid	last valid config supports offline start
+white-label-etag	public	config	response header	AsyncStorage	with cached config	config replaced	send If-None-Match
+locale	preference	i18n	device + user selection	AsyncStorage	until user changes	app reset	use expo-localization for initial candidate
+public-feed	public	query	backend	TanStack Query memory; optional persisted cache	short; product-defined	config/app reset	safe offline read
+resident-incidents	private	query	backend	TanStack Query memory	session	sign-out; account change	do not persist in v1
+service-incidents	private	query	backend	TanStack Query memory	session	sign-out; account/role change	do not persist in v1
+admin-incidents	private	query	backend	TanStack Query memory	session	sign-out; account/role change	do not persist in v1
+report-draft	private	form	user input	memory only	screen/session unless product decides	cancel; success; sign-out	address/description/email may be PII
+selected-media	private	media	image picker/camera	app-owned zglosto-selected-media cache	until upload/cancel	replace; cancel; success; unmount; sign-out	implemented explicit cleanup
+private-image-cache	private	media	authorized API	app-owned controlled cache	short	session end; sign-out; account change	implemented explicit cleanup
+public-image-cache	public	media	public API	expo-image cache	standard cache	config/app reset	no auth headers
+network-status	public	network	NetInfo	memory	process lifetime	process end	drives pause/resume and UI
+query-mutation-state	private	query	TanStack Query	memory	request lifetime	settled	no offline mutation persistence in v1
+safe-redirect	private	navigation	deep link/auth	memory	auth flow completion	completion; timeout	allowlisted internal route only
+device-push-token	secret-ish	push	Expo/APNs/FCM	not in v1	TBD	sign-out/revocation	requires separate backend contract
+analytics-consent	preference	privacy	user	not in v1	TBD	app reset	define before adding analytics SDK
+runtime-diagnostics	public	observability	app/config	memory or logs	short	log rotation	app version, runtime version, config version; no PII

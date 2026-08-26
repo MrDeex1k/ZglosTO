@@ -1,0 +1,84 @@
+appId: pl.zglosto.app
+name: Phase 7 repository regression — public and resident
+tags:
+  - phase7
+  - repository-ready
+  - resident
+---
+- launchApp:
+    clearState: true
+- openLink:
+    link: ${EXPO_DEV_CLIENT_URL}
+- runFlow:
+    when:
+      visible: 'Development Build'
+    commands:
+      - openLink:
+          link: ${EXPO_DEV_CLIENT_URL}
+- runFlow:
+    when:
+      visible: '.*(Open|Otwórz).*'
+    commands:
+      - tapOn: '.*(Open|Otwórz).*'
+- runFlow:
+    when:
+      visible: 'Continue'
+    commands:
+      - tapOn: 'Continue'
+- runFlow:
+    when:
+      visible: 'Close'
+    commands:
+      - tapOn: 'Close'
+- runFlow: phase7-normalize-session.yaml
+- runFlow:
+    when:
+      visible: 'Polski'
+    commands:
+      - tapOn: 'Polski'
+- extendedWaitUntil:
+    visible: '.*Uszkodzony znak przy przejściu dla pieszych został wymieniony.*'
+    timeout: 30000
+- assertVisible: '.*Uszkodzony znak przy przejściu dla pieszych został wymieniony.*'
+- openLink:
+    link: 'zglosto://open/incidents/00000000-0000-4000-8000-000000000076?target=public'
+- extendedWaitUntil:
+    visible: 'Szczegóły zgłoszenia'
+    timeout: 15000
+- assertVisible: 'ul. Lipowa 24'
+- back
+- tapOn: 'Zaloguj się'
+- extendedWaitUntil:
+    visible: 'Logowanie'
+    timeout: 10000
+- tapOn:
+    id: 'login-email'
+- inputText: ${PHASE7_RESIDENT_EMAIL}
+- tapOn:
+    id: 'login-password'
+- inputText: ${PHASE7_RESIDENT_PASSWORD}
+- tapOn:
+    id: 'login-submit'
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - runFlow:
+          when:
+            visible: '.*(Zachować hasło|Save Password).*'
+          commands:
+            - tapOn: '.*(Nie teraz|Not Now).*'
+- extendedWaitUntil:
+    visible: 'Moje zgłoszenia'
+    timeout: 30000
+- assertVisible: 'Witaj, Anna Kowalska'
+- assertVisible: '.*Głęboki ubytek w jezdni stwarza zagrożenie dla rowerzystów i kierowców.*'
+- scrollUntilVisible:
+    element:
+      text: 'Wyloguj się'
+    direction: DOWN
+    timeout: 30000
+- tapOn: 'Wyloguj się'
+- extendedWaitUntil:
+    visible: '.*Uszkodzony znak przy przejściu dla pieszych został wymieniony.*'
+    timeout: 30000

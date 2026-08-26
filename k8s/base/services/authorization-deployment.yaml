@@ -1,0 +1,223 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: authorization
+  namespace: zglosto
+  labels:
+    app: authorization
+  annotations:
+    secret.reloader.stakater.com/reload: zglosto-authorization-tls,zglosto-authorization-healthcheck-tls,zglosto-pgbouncer-tls,zglosto-database-credentials,zglosto-better-auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: authorization
+  template:
+    metadata:
+      labels:
+        app: authorization
+    spec:
+      serviceAccountName: authorization
+      enableServiceLinks: false
+      securityContext:
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: authorization
+          image: docker.io/zglosto/authorization:phase9-baseline
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          ports:
+            - name: mtls
+              containerPort: 9956
+          env:
+            - { name: OBSERVABILITY_MODE, value: disabled }
+            - { name: OTEL_SERVICE_NAME, value: authorization }
+            - { name: REDIS_MODE, value: disabled }
+            - name: NODE_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: NODE_ENV
+            - name: CLIENT_IP_TRUSTED_PROXY_HOPS
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: CLIENT_IP_TRUSTED_PROXY_HOPS
+            - name: WHITE_LABEL_CONFIG
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: WHITE_LABEL_CONFIG
+            - name: AUTHORIZATION_MTLS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: AUTHORIZATION_MTLS_PORT
+            - name: AUTHORIZATION_MTLS_CA_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: AUTHORIZATION_MTLS_CA_PATH
+            - name: AUTHORIZATION_MTLS_CERT_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: AUTHORIZATION_MTLS_CERT_PATH
+            - name: AUTHORIZATION_MTLS_KEY_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: AUTHORIZATION_MTLS_KEY_PATH
+            - name: AUTHORIZATION_MTLS_BACKEND_IDENTITY
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: AUTHORIZATION_MTLS_BACKEND_IDENTITY
+            - name: AUTHORIZATION_MTLS_HEALTHCHECK_IDENTITY
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: AUTHORIZATION_MTLS_HEALTHCHECK_IDENTITY
+            - name: AUTHORIZATION_MTLS_NGINX_IDENTITY
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: AUTHORIZATION_MTLS_NGINX_IDENTITY
+            - name: AUTHORIZATION_HEALTHCHECK_CA_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: AUTHORIZATION_HEALTHCHECK_CA_PATH
+            - name: AUTHORIZATION_HEALTHCHECK_CERT_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: AUTHORIZATION_HEALTHCHECK_CERT_PATH
+            - name: AUTHORIZATION_HEALTHCHECK_KEY_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: AUTHORIZATION_HEALTHCHECK_KEY_PATH
+            - name: AUTHORIZATION_HEALTHCHECK_SERVER_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: AUTHORIZATION_HEALTHCHECK_SERVER_NAME
+            - name: BETTER_AUTH_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: BETTER_AUTH_URL
+            - name: FRONTEND_ORIGIN
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: FRONTEND_ORIGIN
+            - name: EMAIL_DELIVERY_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: EMAIL_DELIVERY_MODE
+            - name: DATABASE_TLS_CA_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: DATABASE_TLS_CA_PATH
+            - name: DATABASE_URL_FILE
+              value: /run/secrets/database-credentials/database-url
+            - name: BETTER_AUTH_SECRET_FILE
+              value: /run/secrets/better-auth/better-auth-secret
+          volumeMounts:
+            - name: white-label-config
+              mountPath: /app/config
+              readOnly: true
+            - name: database-credentials
+              mountPath: /run/secrets/database-credentials
+              readOnly: true
+            - name: better-auth
+              mountPath: /run/secrets/better-auth
+              readOnly: true
+            - name: database-ca
+              mountPath: /run/secrets/database
+              readOnly: true
+            - name: service-ca
+              mountPath: /run/secrets/service
+              readOnly: true
+            - name: authorization-tls
+              mountPath: /run/secrets/authorization
+              readOnly: true
+            - name: authorization-healthcheck-tls
+              mountPath: /run/secrets/authorization-healthcheck
+              readOnly: true
+          resources:
+            requests:
+              memory: '512Mi'
+              cpu: '500m'
+            limits:
+              memory: '1Gi'
+              cpu: '500m'
+          livenessProbe:
+            exec:
+              command: ['node', 'dist/src/healthcheck.js']
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command: ['node', 'dist/src/healthcheck.js']
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: white-label-config
+          configMap:
+            name: zglosto-white-label
+            optional: false
+            items:
+              - key: city.yaml
+                path: city.yaml
+        - name: database-credentials
+          secret:
+            secretName: zglosto-database-credentials
+            optional: false
+            defaultMode: 0440
+            items:
+              - key: DATABASE_URL
+                path: database-url
+        - name: better-auth
+          secret:
+            secretName: zglosto-better-auth
+            optional: false
+            defaultMode: 0440
+            items:
+              - key: BETTER_AUTH_SECRET
+                path: better-auth-secret
+        - name: database-ca
+          secret:
+            secretName: zglosto-pgbouncer-tls
+            optional: false
+            defaultMode: 0440
+            items: [{ key: ca.crt, path: ca.crt }]
+        - name: service-ca
+          secret:
+            secretName: zglosto-authorization-tls
+            optional: false
+            defaultMode: 0440
+            items: [{ key: ca.crt, path: ca.crt }]
+        - name: authorization-tls
+          secret:
+            secretName: zglosto-authorization-tls
+            optional: false
+            defaultMode: 0440
+        - name: authorization-healthcheck-tls
+          secret:
+            secretName: zglosto-authorization-healthcheck-tls
+            optional: false
+            defaultMode: 0440

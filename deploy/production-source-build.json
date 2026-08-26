@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 1,
+  "phase": "11.9",
+  "strategy": "native-source-build",
+  "stateDirectory": ".state/production-build",
+  "requirements": {
+    "operatingSystem": "linux",
+    "supportedArchitectures": ["amd64", "arm64"],
+    "minimumCpuCount": 2,
+    "minimumMemoryBytes": 4294967296,
+    "minimumFreeDiskBytes": 15000000000,
+    "maximumTotalBuildSeconds": 900,
+    "requireDockerComposeV2": true,
+    "requireBuildx": true,
+    "requireCleanGitTree": true,
+    "requireExactGitTag": true,
+    "allowCrossBuild": false,
+    "allowRegistryPush": false
+  },
+  "sourceValidation": {
+    "publicRepositoryScript": "scripts/check-public-repository.ts"
+  },
+  "retention": {
+    "steadyStateReleaseCount": 1,
+    "previousReleaseCount": 0,
+    "keepActiveUntilCandidateSmokePasses": true,
+    "rollbackSource": "exact-git-tag-rebuild"
+  },
+  "defaultModules": {
+    "objectStorage": "local",
+    "redis": "disabled",
+    "observability": "disabled",
+    "llm": "disabled"
+  },
+  "moduleModes": {
+    "objectStorage": ["local", "external"],
+    "redis": ["disabled", "local", "external"],
+    "observability": ["disabled", "local", "external"],
+    "llm": ["disabled", "local", "external"]
+  },
+  "artifacts": [
+    {
+      "id": "database",
+      "repository": "zglosto/database",
+      "dockerfile": "database/Dockerfile",
+      "context": ".",
+      "services": ["database"],
+      "maximumBuildSeconds": 240,
+      "whiteLabel": false
+    },
+    {
+      "id": "pgbouncer",
+      "repository": "zglosto/pgbouncer",
+      "dockerfile": "pgbouncer/Dockerfile",
+      "context": ".",
+      "services": ["pgbouncer"],
+      "maximumBuildSeconds": 120,
+      "whiteLabel": false
+    },
+    {
+      "id": "rabbitmq",
+      "repository": "zglosto/rabbitmq",
+      "dockerfile": "rabbitmq/Dockerfile",
+      "context": ".",
+      "services": ["rabbitmq"],
+      "maximumBuildSeconds": 120,
+      "whiteLabel": false
+    },
+    {
+      "id": "authorization",
+      "repository": "zglosto/authorization",
+      "dockerfile": "authorization/Dockerfile",
+      "context": ".",
+      "services": ["authorization"],
+      "maximumBuildSeconds": 360,
+      "whiteLabel": true
+    },
+    {
+      "id": "backend",
+      "repository": "zglosto/backend",
+      "dockerfile": "backend/Dockerfile",
+      "context": ".",
+      "services": ["backend", "media_worker"],
+      "maximumBuildSeconds": 420,
+      "whiteLabel": true
+    },
+    {
+      "id": "llm_gateway",
+      "repository": "zglosto/llm-gateway",
+      "dockerfile": "llm_gateway/Dockerfile",
+      "context": ".",
+      "services": ["llm_gateway"],
+      "maximumBuildSeconds": 300,
+      "whiteLabel": false
+    },
+    {
+      "id": "frontend",
+      "repository": "zglosto/frontend",
+      "dockerfile": "frontend/Dockerfile",
+      "context": ".",
+      "services": ["frontend"],
+      "maximumBuildSeconds": 360,
+      "whiteLabel": true
+    },
+    {
+      "id": "nginx",
+      "repository": "zglosto/nginx",
+      "dockerfile": "Dockerfile",
+      "context": "nginx",
+      "services": ["nginx"],
+      "maximumBuildSeconds": 120,
+      "whiteLabel": false
+    }
+  ],
+  "externalComponents": [
+    {
+      "id": "rustfs",
+      "image": "rustfs/rustfs:1.0.0-rc.2",
+      "module": "objectStorage",
+      "mode": "local",
+      "includedByDefault": true
+    },
+    {
+      "id": "redis",
+      "image": "redis:8.10.0-alpine3.23",
+      "module": "redis",
+      "mode": "local",
+      "includedByDefault": false
+    },
+    {
+      "id": "otel_collector",
+      "image": "otel/opentelemetry-collector-contrib:0.159.0",
+      "module": "observability",
+      "mode": "local-or-external",
+      "includedByDefault": false
+    },
+    {
+      "id": "prometheus",
+      "image": "prom/prometheus:v3.14.0",
+      "module": "observability",
+      "mode": "local",
+      "includedByDefault": false
+    },
+    {
+      "id": "loki",
+      "image": "grafana/loki:3.7.6",
+      "module": "observability",
+      "mode": "local",
+      "includedByDefault": false
+    },
+    {
+      "id": "tempo",
+      "image": "grafana/tempo:3.0.3",
+      "module": "observability",
+      "mode": "local",
+      "includedByDefault": false
+    },
+    {
+      "id": "alertmanager",
+      "image": "prom/alertmanager:v0.34.0",
+      "module": "observability",
+      "mode": "local",
+      "includedByDefault": false
+    },
+    {
+      "id": "grafana",
+      "image": "grafana/grafana:13.2.0",
+      "module": "observability",
+      "mode": "local",
+      "includedByDefault": false
+    }
+  ]
+}

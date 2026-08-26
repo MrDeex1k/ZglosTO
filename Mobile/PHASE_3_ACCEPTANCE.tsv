@@ -1,0 +1,11 @@
+ID	Obszar	Implementacja	Android Emulator	iPhone Simulator	Stan checkpointu	Pozostała bramka
+3.0	Publiczny HTTPS i White-Label	PASS	PASS	PASS	PASS	Stały host przed beta/release
+3.1	Publiczny feed i szczegóły	PASS	PASS	PASS	PASS	Pełny regresyjny E2E przed beta
+3.2	Better Auth, SecureStore, 401/403, sign-out	PASS	PASS	PARTIAL	PASS-CONDITIONAL	Pełny login/restart/sign-out na iOS przed beta
+3.3	Historia mieszkańca	PASS	PASS	PARTIAL	PASS-CONDITIONAL	Pełna prywatna ścieżka na iOS przed beta
+3.4	Zgłoszenie bez zdjęcia	PASS	PASS	PARTIAL	PASS-CONDITIONAL	Ręczny zapis 201 na iOS przed beta
+3.5	Picker, checksum i presigned upload	PASS	PASS	PARTIAL	PASS-CONDITIONAL	Biblioteka na iOS; aparat na urządzeniu fizycznym po zgodzie
+3.6	Prywatne obrazy i cleanup	PASS	PASS	PARTIAL	PASS-CONDITIONAL	Render i cleanup na iOS przed beta
+3.7	Kolejka i mutacje służb	PASS	PASS	PARTIAL	PASS-CONDITIONAL	Pełny panel służb na iOS przed beta
+3.8	Custom deep links i kontrakt app links	PASS	PASS	PASS	PASS	Domena, .well-known i fallback web przed preview/release
+3.9	Ocena checkpointu	PASS	PASS	PASS	CONTINUE	Wykonać przeniesione bramki przed betą/release

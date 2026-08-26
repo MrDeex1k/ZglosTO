@@ -1,0 +1,75 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: zglosto
+
+resources:
+  - namespace.yaml
+  - serviceaccounts.yaml
+  - config/database-init-scripts.yaml
+  - config/nginx-config.yaml
+  - config/pgbackrest-config.yaml
+  - pki/internal-certificates.yaml
+  - services/database-statefulset.yaml
+  - services/database-service.yaml
+  - services/pgbouncer-deployment.yaml
+  - services/pgbouncer-service.yaml
+  - services/pgbouncer-pdb.yaml
+  - services/rabbitmq-statefulset.yaml
+  - services/rabbitmq-service.yaml
+  - services/authorization-deployment.yaml
+  - services/authorization-hpa.yaml
+  - services/authorization-service.yaml
+  - services/application-pdbs.yaml
+  - services/backend-deployment.yaml
+  - services/backend-hpa.yaml
+  - services/backend-pdb.yaml
+  - services/backend-service.yaml
+  - services/frontend-deployment.yaml
+  - services/frontend-hpa.yaml
+  - services/frontend-service.yaml
+  - services/media-worker-deployment.yaml
+  - autoscaling/media-worker-trigger-authentication.yaml
+  - autoscaling/media-worker-scaledobject.yaml
+  - services/llm-gateway-deployment.yaml
+  - services/llm-gateway-service.yaml
+  # InterceptorRoute must be reconciled before its external-push ScaledObject.
+  - autoscaling/llm-gateway-interceptor-route.yaml
+  - autoscaling/llm-gateway-scaledobject.yaml
+  - services/nginx-deployment.yaml
+  - services/nginx-service.yaml
+  - ingress/ingress.yaml
+  - network/network-policies.yaml
+
+configMapGenerator:
+  - name: zglosto-config
+    namespace: zglosto
+    envs:
+      - config/runtime.env
+    options:
+      immutable: true
+      labels:
+        app.kubernetes.io/component: runtime-config
+  - name: zglosto-white-label
+    namespace: zglosto
+    files:
+      - city.yaml=config/generated/city.yaml
+    options:
+      immutable: true
+      labels:
+        app.kubernetes.io/component: white-label-config
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: zglosto
+      app.kubernetes.io/managed-by: kustomize
+    includeSelectors: false
+    includeTemplates: true
+
+sortOptions:
+  order: legacy
+  legacySortOptions:
+    orderLast:
+      - TriggerAuthentication
+      - InterceptorRoute
+      - ScaledObject

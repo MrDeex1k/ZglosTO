@@ -1,0 +1,19 @@
+ID	Obszar	Implementacja	Kontrola automatyczna	Stan	Pozostała bramka
+7.0.1	Zakres Source Ready / Client-Built	PASS	PASS	PASS	Brak
+7.0.2	Wspólne LICENSE, SECURITY, CONTRIBUTING i CLA	PASS	PASS	PASS	Brak
+7.0.3	Strategia agent-device i Maestro	PASS	PASS	PASS	Pełna próba YAML w 7.6
+7.1.1	Kontrola sekretów, PII paths i governance	PASS	PASS	PASS	GitHub-native skan w 7.5
+7.1.2	Centralne szablony Issues i PR	PASS	PASS	PASS	Brak
+7.1.3	CODEOWNERS	DEFERRED	N/A	DEFERRED	Przypisanie właścicieli w OWNERS.tsv
+7.2.1	Dwa syntetyczne warianty White-Label	PASS	PASS	PASS	Brak
+7.2.2	Publiczny kontrakt konsumowany przez Mobile	PASS	PASS	PASS	Wizualna regresja urządzeń w 7.6
+7.2.3	Instrukcja konfiguracji klienta	PASS	PASS	PASS	Brak
+7.3.1	Kontrola wymagań i Compose	PASS	PASS	PASS	Brak
+7.3.2	Izolowany start, seed i cleanup demo	PASS	PASS	PASS	Pełne wykonanie na czystym klonie przed 7.9
+7.3.3	Instrukcja i troubleshooting	PASS	PASS	PASS	Brak
+7.4	Prezentacja projektu	PASS	PASS	PASS	Brak
+7.5	Centralne bramki GitHub Mobile	NOT-REQUIRED	N/A	NOT-REQUIRED	Klient buduje własny wariant i może dodać własne CI
+7.6	Regresja i narzędzia Mobile	PASS	PASS	PASS	Brak
+7.7	Wspólny build demonstracyjny	NOT-REQUIRED	N/A	NOT-REQUIRED	Binaria powstają osobno dla instancji klienta
+7.8	Dokument przekazania klientowi	PASS	PASS	PASS	Brak
+7.9	Checkpoint repozytorium bez release'u	PASS	PASS	PASS	Tag i release dopiero wspólnie dla całego produktu

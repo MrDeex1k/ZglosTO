@@ -1,0 +1,22 @@
+appId: pl.zglosto.app
+---
+- tapOn: '.*(Nie teraz|Not Now).*'
+- extendedWaitUntil:
+    visible:
+      id: 'service-queue-ready'
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      text: '.*QUEUE-A-05.*'
+    direction: DOWN
+    timeout: 30000
+- tapOn: '.*QUEUE-A-05.*'
+- extendedWaitUntil:
+    visible: 'Obsługa zgłoszenia'
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: 'service-toggle-verification'
+    direction: DOWN
+- assertVisible:
+    id: 'service-toggle-verification'

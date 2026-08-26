@@ -1,0 +1,36 @@
+name: Pytanie
+description: Zapytaj o uruchomienie, architekturę albo dozwolony sposób współtworzenia.
+title: 'question: '
+labels:
+  - question
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Obszar
+      options:
+        - Mobile
+        - WEB
+        - Backend
+        - Infrastructure
+        - Shared
+    validations:
+      required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: Pytanie
+      description: Nie podawaj sekretów, podatności ani danych użytkowników.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Kontekst i wykonane próby
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Bezpieczeństwo danych
+      options:
+        - label: Pytanie może być omawiane publicznie i nie zawiera informacji wrażliwych.
+          required: true

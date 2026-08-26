@@ -1,0 +1,71 @@
+x-observability-hardening: &observability-hardening
+  restart: always
+  init: true
+  pull_policy: missing
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  tmpfs:
+    - /tmp:rw,noexec,nosuid,nodev,size=32m
+  stop_grace_period: 30s
+  logging:
+    driver: local
+    options:
+      max-size: 10m
+      max-file: '5'
+
+services:
+  authorization:
+    environment: &otel-app-environment
+      OBSERVABILITY_MODE: external
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_DEPLOYMENT_ENVIRONMENT: ${OTEL_DEPLOYMENT_ENVIRONMENT:-production}
+      OTEL_SERVICE_VERSION: ${OTEL_SERVICE_VERSION:-development}
+      OTEL_SERVICE_NAME: authorization
+  backend:
+    environment:
+      <<: *otel-app-environment
+      OTEL_SERVICE_NAME: backend
+  media_worker:
+    command: [node, --import, '@zglosto/observability/register', dist/nest/media-worker/main.js]
+    environment:
+      <<: *otel-app-environment
+      OTEL_SERVICE_NAME: media_worker
+  llm_gateway:
+    environment:
+      <<: *otel-app-environment
+      OTEL_SERVICE_NAME: llm_gateway
+
+  otel-collector:
+    <<: *observability-hardening
+    image: otel/opentelemetry-collector-contrib:0.159.0
+    user: 10001:10001
+    command: [--config=/etc/otelcol-contrib/config.yaml]
+    environment:
+      OTEL_EXTERNAL_AUTH_HEADER_NAME: ${OTEL_EXTERNAL_AUTH_HEADER_NAME:-Authorization}
+      OTEL_EXTERNAL_ENDPOINT: ${OTEL_EXTERNAL_ENDPOINT:?OTEL_EXTERNAL_ENDPOINT is required}
+    volumes:
+      - ./observability/otel-collector-external.yaml:/etc/otelcol-contrib/config.yaml:ro
+    secrets:
+      - otel_external_authorization
+    networks:
+      - internal-net
+      - observability-external-net
+    healthcheck:
+      test: [CMD, /otelcol-contrib, validate, --config=/etc/otelcol-contrib/config.yaml]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    pids_limit: 128
+    cpus: 0.5
+    mem_limit: 512m
+
+secrets:
+  otel_external_authorization:
+    file: ${OTEL_EXTERNAL_AUTHORIZATION_FILE:?OTEL_EXTERNAL_AUTHORIZATION_FILE is required}
+
+networks:
+  observability-external-net:
+    driver: bridge

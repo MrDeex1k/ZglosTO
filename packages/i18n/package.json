@@ -1,0 +1,30 @@
+{
+  "name": "@zglosto/i18n",
+  "version": "1.0.0",
+  "private": true,
+  "license": "SEE LICENSE IN ../../LICENSE",
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run src",
+    "test:watch": "vitest src",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@zglosto/contracts": "workspace:*",
+    "i18next": "26.3.6"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2",
+    "vitest": "4.1.10"
+  }
+}

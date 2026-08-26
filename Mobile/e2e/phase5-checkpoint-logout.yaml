@@ -1,0 +1,32 @@
+appId: pl.zglosto.app
+---
+- runFlow:
+    when:
+      visible: 'Obsługa zgłoszenia'
+    commands:
+      - runFlow:
+          when:
+            platform: iOS
+          commands:
+            - tapOn:
+                id: 'BackButton'
+      - runFlow:
+          when:
+            platform: Android
+          commands:
+            - back
+- extendedWaitUntil:
+    visible:
+      id: 'service-queue-ready'
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      text: 'Wyloguj się'
+    direction: DOWN
+    timeout: 30000
+- tapOn: 'Wyloguj się'
+- extendedWaitUntil:
+    visible: 'Zaloguj się'
+    timeout: 15000
+- assertNotVisible: 'Przypisane zgłoszenia'
+- assertNotVisible: '.*QUEUE-A-.*'

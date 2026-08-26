@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: zglosto
+  labels:
+    name: zglosto
+    app: zglosto
+    # Stateful init nadal wymaga root, ale namespace egzekwuje co najmniej profil baseline.
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/enforce-version: v1.34
+    # Profil restricted pozostaje celem dla workloadów bez inicjalizacji uprzywilejowanej.
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/warn-version: v1.34

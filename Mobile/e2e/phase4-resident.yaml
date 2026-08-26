@@ -1,0 +1,23 @@
+appId: pl.zglosto.app
+name: Phase 4 resident MVP — iOS setup
+tags:
+  - phase4
+  - resident
+  - ios
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- openLink:
+    link: ${EXPO_DEV_CLIENT_URL}
+- runFlow:
+    when:
+      visible: '.*(Open|Otwórz).*'
+    commands:
+      - tapOn: '.*(Open|Otwórz).*'
+- runFlow:
+    when:
+      visible: 'Close'
+    commands:
+      - tapOn: 'Close'
+- runFlow: phase4-journey.yaml

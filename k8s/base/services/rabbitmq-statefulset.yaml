@@ -1,0 +1,157 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: rabbitmq
+  namespace: zglosto
+  labels:
+    app: rabbitmq
+  annotations:
+    secret.reloader.stakater.com/reload: zglosto-rabbitmq-tls,zglosto-rabbitmq-credentials
+spec:
+  serviceName: rabbitmq-headless
+  replicas: 1
+  podManagementPolicy: OrderedReady
+  updateStrategy:
+    type: RollingUpdate
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+    spec:
+      serviceAccountName: rabbitmq
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 120
+      securityContext:
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: prepare-rabbitmq-tls
+          image: docker.io/zglosto/rabbitmq:phase9-baseline
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -ec
+          args:
+            - |
+              cp /run/secrets/rabbitmq-tls-source/* /run/secrets/rabbitmq-tls/
+              chown 100:101 /run/secrets/rabbitmq-tls/*
+              chmod 0440 /run/secrets/rabbitmq-tls/*
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsUser: 0
+          volumeMounts:
+            - name: rabbitmq-tls-source
+              mountPath: /run/secrets/rabbitmq-tls-source
+              readOnly: true
+            - name: rabbitmq-tls
+              mountPath: /run/secrets/rabbitmq-tls
+      containers:
+        - name: rabbitmq
+          image: docker.io/zglosto/rabbitmq:phase9-baseline
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+          ports:
+            - name: amqps
+              containerPort: 5671
+            - name: metrics
+              containerPort: 15692
+          env:
+            - name: RABBITMQ_DEFAULT_USER_FILE
+              value: /run/secrets/rabbitmq-credentials/rabbitmq-user
+            - name: RABBITMQ_DEFAULT_PASS_FILE
+              value: /run/secrets/rabbitmq-credentials/rabbitmq-password
+            - name: RABBITMQ_DEFAULT_VHOST
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: RABBITMQ_VHOST
+            - name: RABBITMQ_NODENAME
+              value: rabbit@rabbitmq-0.rabbitmq-headless.zglosto.svc.cluster.local
+            - name: RABBITMQ_USE_LONGNAME
+              value: 'true'
+          volumeMounts:
+            - name: rabbitmq-data
+              mountPath: /var/lib/rabbitmq
+            - name: rabbitmq-credentials
+              mountPath: /run/secrets/rabbitmq-credentials
+              readOnly: true
+            - name: rabbitmq-tls
+              mountPath: /run/secrets/service
+              readOnly: true
+          resources:
+            requests:
+              memory: 512Mi
+              cpu: 250m
+            limits:
+              memory: 1Gi
+              cpu: '1'
+          startupProbe:
+            exec:
+              command:
+                - /usr/local/bin/rabbitmq-tls-healthcheck
+            failureThreshold: 60
+            periodSeconds: 5
+            timeoutSeconds: 8
+          livenessProbe:
+            exec:
+              command:
+                - rabbitmq-diagnostics
+                - -q
+                - ping
+            periodSeconds: 15
+            timeoutSeconds: 8
+            failureThreshold: 6
+          readinessProbe:
+            exec:
+              command:
+                - /usr/local/bin/rabbitmq-tls-healthcheck
+            periodSeconds: 5
+            timeoutSeconds: 8
+            failureThreshold: 6
+      volumes:
+        - name: rabbitmq-credentials
+          secret:
+            secretName: zglosto-rabbitmq-credentials
+            optional: false
+            defaultMode: 0440
+            items:
+              - key: RABBITMQ_USER
+                path: rabbitmq-user
+              - key: RABBITMQ_PASSWORD
+                path: rabbitmq-password
+        - name: rabbitmq-tls-source
+          secret:
+            secretName: zglosto-rabbitmq-tls
+            optional: false
+            defaultMode: 0440
+            items:
+              - key: ca.crt
+                path: ca.crt
+              - key: tls.crt
+                path: rabbitmq-server.crt
+              - key: tls.key
+                path: rabbitmq-server.key
+        - name: rabbitmq-tls
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Mi
+  volumeClaimTemplates:
+    - metadata:
+        name: rabbitmq-data
+        labels:
+          app: rabbitmq
+          app.kubernetes.io/component: broker-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi

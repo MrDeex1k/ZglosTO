@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "phase": "11.13",
+  "status": "implemented",
+  "execution": "local-only",
+  "hostedCiRequired": false,
+  "staticGates": [
+    "full-project-check",
+    "54-module-compose-matrix",
+    "negative-production-policy-tests",
+    "source-build-contract",
+    "image-contract"
+  ],
+  "runtimeProfiles": {
+    "default": {
+      "objectStorage": "local",
+      "redis": "disabled",
+      "observability": "disabled",
+      "llm": "disabled"
+    },
+    "fullLocal": {
+      "objectStorage": "local",
+      "redis": "local",
+      "observability": "local",
+      "llm": "local"
+    },
+    "external": {
+      "objectStorage": "external",
+      "redis": "external",
+      "observability": "external",
+      "llm": "external"
+    }
+  },
+  "runtimeGates": [
+    "verified-candidate-images",
+    "compose-config",
+    "mandatory-pre-deploy-backup",
+    "forward-only-migrations",
+    "health-wait",
+    "public-smoke",
+    "host-restart-recovery",
+    "manual-restore-drill"
+  ],
+  "restoreDrillRequires": "PRODUCTION_GATE_RESTORE=1",
+  "productionCertificationPhase": 12
+}
