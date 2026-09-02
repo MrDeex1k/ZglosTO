@@ -31,8 +31,8 @@ Dokument obejmuje:
 | Usluga              | Obecny katalog       | Obecny runtime                   | Odpowiedzialnosc               |
 | ------------------- | -------------------- | -------------------------------- | ------------------------------ |
 | `frontend`          | `frontend/`          | TanStack Start SPA + React       | UI i wywolania API             |
-| `backend`           | `backend/`           | Node 26.7.0 + NestJS             | API incydentow, admina i sluzb |
-| `authorization`     | `authorization/`     | Node 26.7.0 + Hono + Better Auth | auth, sesje i role             |
+| `backend`           | `backend/`           | Node 26.8.1 + NestJS             | API incydentow, admina i sluzb |
+| `authorization`     | `authorization/`     | Node 26.8.1 + Hono + Better Auth | auth, sesje i role             |
 | `llm_gateway`       | `llm_gateway/`       | Node 26 + Hono + TypeScript      | granica klasyfikacji LLM       |
 | Docker Model Runner | poza kodem aplikacji | llama.cpp + Gemma 3 1B QAT       | opcjonalny runtime modelu      |
 | `database`          | `database/`          | PostgreSQL                       | dane domenowe i auth           |

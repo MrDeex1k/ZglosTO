@@ -23,7 +23,7 @@ następnych krokach wydzielić routy, loadery, guardy i warstwę danych.
 
 ## Wynik kontroli
 
-- **Node:** wymaganie TanStack Start to Node `>=22.12.0`; projekt używa Node `26.5.0`.
+- **Node:** wymaganie TanStack Start to Node `>=22.12.0`; projekt używa Node `26.8.1`.
 - **React:** pakiet wspiera React 18 i 19; projekt używa React `19.2.8`.
 - **Vite:** pakiet wymaga Vite `>=7`; projekt używa Vite `8.1.5`.
 - **TypeScript:** aplikacja pozostaje w pełni typowana i korzysta z TypeScript `7.0.2`.

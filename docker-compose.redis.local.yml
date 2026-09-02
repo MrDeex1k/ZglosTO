@@ -1,6 +1,6 @@
 services:
   redis:
-    image: ${REDIS_IMAGE:-redis:8.10.0-alpine3.23}
+    image: ${REDIS_IMAGE:-redis:8.10.1-alpine3.23}
     command:
       [
         'redis-server',

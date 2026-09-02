@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "phase": "10.9",
   "status": "implemented",
-  "image": "redis:8.10.0-alpine3.23",
+  "image": "redis:8.10.1-alpine3.23",
   "modes": {
     "disabled": {
       "compose": ["docker-compose.yml"],

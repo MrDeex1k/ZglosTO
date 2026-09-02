@@ -24,7 +24,7 @@ class MobileAuthenticationError extends Error {
 }
 
 interface SessionContextValue {
-  getCookie: () => string;
+  getCookie: () => Promise<string>;
   handleForbidden: () => Promise<void>;
   handleUnauthorized: () => Promise<void>;
   refreshSession: () => Promise<MobileSessionState>;
@@ -254,7 +254,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
   return (
     <SessionContext
       value={{
-        getCookie: () => client?.getCookie() ?? '',
+        getCookie: () => client?.getCookie() ?? Promise.resolve(''),
         handleForbidden,
         handleUnauthorized,
         refreshSession,

@@ -14,7 +14,7 @@ database/
 │   ├── 02-create-auth.sql       # Tworzenie tabel autoryzacji (Better Auth)
 │   ├── 03-create-dbtables.sql  # Tworzenie tabel aplikacji (incydenty, użytkownicy rozszerzeni)
 │   ├── 04-setup-backup.sql     # Tworzenie backupu bazy danych
-├── migrations/           # Wersjonowane migracje 001-013 kontraktów bazy
+├── migrations/           # Wersjonowane migracje 001-014 kontraktów bazy
 └── README_DATABASE.md             # Ten plik
 ```
 

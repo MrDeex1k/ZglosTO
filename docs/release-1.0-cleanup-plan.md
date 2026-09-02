@@ -11,7 +11,7 @@ Nie należy usuwać pliku wyłącznie dlatego, że zgłasza go narzędzie do ana
 statycznej. Skrypty uruchamiane z shella, Dockerfile lub Compose nie tworzą importów,
 które Knip potrafi automatycznie wykryć.
 
-## Aktualny checkpoint — 2026-08-25
+## Historyczny checkpoint — 2026-08-25
 
 WEB, Mobile, usługi backendowe, pakiety współdzielone i profile wdrożeniowe tworzą jeden
 kandydat źródłowy `1.0.0`. Mobile ma zamknięte Fazy 0–7 i status
@@ -125,39 +125,27 @@ SHA, forki i odwołania do commitów.
 4. Usunąć pola publikacyjne (`files`, `main`) tylko z pakietów, które na pewno nie
    będą pakowane ani używane w runtime obrazu.
 
-## Etap 5 — zależności i bezpieczeństwo
+## Aktualizacja Etapu 5 — zależności i bezpieczeństwo, 2026-09-02
 
-1. Konflikt metadanych peer NestJS 12 alpha został jawnie ograniczony do dokładnie
-   przetestowanej macierzy `12.0.0-alpha.5` przez `peerDependencyRules.allowedVersions`.
-   Wyjątek nie dopuszcza innych wersji i musi zostać usunięty wraz ze stabilnym NestJS 12.
-2. Preferowana naprawa:
-   - przejść na spójną, wspieraną linię NestJS, która dostarcza
-     `multer >=2.2.0` i `js-yaml >=4.3.0`;
-   - albo zaczekać na zgodne wydanie NestJS 12, jeżeli alpha jest świadomym
-     wymaganiem produktu.
-3. Dla `brace-expansion` najpierw podnieść nadrzędny łańcuch
-   OpenTelemetry → GCP detector → gaxios/rimraf/glob. Nie wymuszać globalnie
-   `brace-expansion@5`, ponieważ `minimatch@9` oczekuje linii 2.x.
-4. Dodano dokładne, parent-scoped overrides dla `multer@2.2.0` pod
-   `@nestjs/platform-express` oraz `js-yaml@4.3.1` pod `@nestjs/swagger` i `xmlbuilder2`.
-   Wersje usuwają znane podatności DoS bez globalnej zmiany innych linii zależności;
-   pozostają objęte pełnymi testami i audytem wydaniowym.
-5. Release gate: surowy `pnpm audit --prod` oraz `pnpm audit:release`. Ten drugi dopuszcza
-   wyłącznie dokładne, wygasające wyjątki z kontrolami kompensującymi; każde inne
-   high/moderate blokuje wydanie. `pnpm peers check` musi być czysty lub świadomie
-   udokumentowany.
+1. Wykonane 2026-09-02: cały backend przeszedł na stabilną macierz NestJS `12.0.1`, a
+   prerelease'owy wyjątek `peerDependencyRules.allowedVersions` został usunięty.
+2. Stabilna linia NestJS dostarcza bezpieczne wersje tranzytywne; parent-scoped overrides
+   `multer` i `js-yaml` używane przez alpha zostały usunięte i nie należy ich przywracać.
+3. Łańcuch OpenTelemetry został podniesiony bez globalnego wymuszania niezgodnej wersji
+   `brace-expansion`.
+4. Release gate `pnpm audit:release` wymaga pustej listy advisory produkcyjnych. Nie istnieją
+   aktywne, wygasające wyjątki; `pnpm peers check` również musi pozostać czysty.
 
-## Etap 6 — obrazy Docker
+## Aktualizacja Etapu 6 — obrazy Docker, 2026-09-02
 
-1. Redis został podniesiony z `8.8.0-alpine3.23` do
-   `8.10.0-alpine3.23`.
+1. Redis został podniesiony do `8.10.1-alpine3.23`.
 2. Tempo zostało podniesione z `2.10.8` do `3.0.3`; przed wydaniem wymaga
    testu startu i odczytu istniejących danych.
 3. Pozostałe sprawdzone obrazy są aktualne w przypiętych liniach:
-   Node 26.7.0, Alpine 3.24.1, Nginx 1.31.3, PostgreSQL 18.6,
-   PgBouncer 1.25.2-p0, RabbitMQ 4.3.5, RustFS 1.0.0-rc.2,
-   OpenTelemetry Collector 0.159.0, Prometheus 3.14.0, Loki 3.7.6,
-   Alertmanager 0.34.0 i Grafana 13.2.0.
+   Node 26.8.1, Alpine 3.24.1, Nginx 1.31.4, PostgreSQL 18.6,
+   PgBouncer 1.25.2-p0, RabbitMQ 4.3.5, RustFS 1.0.0-rc.5,
+   OpenTelemetry Collector 0.159.0, Prometheus 3.14.0, Loki 3.7.7,
+   Alertmanager 0.34.0 i Grafana 13.2.1.
 4. Po zmianie zbudować wszystkie obrazy, uruchomić target size contract oraz
    smoke/integration. Trivy i generowanie SBOM zostały usunięte z zakresu wydania decyzją
    właściciela z 2026-08-26. Lokalny audyt targetów rozmiaru

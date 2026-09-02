@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS account (
 	user_id text NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
 	account_id text NOT NULL,
 	provider_id text NOT NULL,
+	issuer text,
 	access_token text,
 	refresh_token text,
 	id_token text,

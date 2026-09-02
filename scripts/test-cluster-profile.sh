@@ -5,9 +5,9 @@ PROFILE=${1:-}
 TAG=${IMAGE_TAG:-phase9-baseline}
 KEEP_CLUSTER=${KEEP_CLUSTER:-0}
 KIND_VERSION=${KIND_VERSION:-v0.31.0}
-KIND_NODE_IMAGE=${KIND_NODE_IMAGE:-kindest/node:v1.35.0@sha256:452d707d4862f52530247495d180205e029056831160e22870e37e3f6c1ac31f}
+KIND_NODE_IMAGE=${KIND_NODE_IMAGE:-kindest/node:v1.35.8@sha256:07b2536e30b803ed61d1677a79df6115f798ce64c80f9e22f6ed45afd09323c0}
 K3D_VERSION=${K3D_VERSION:-v5.9.0}
-K3S_IMAGE=${K3S_IMAGE:-rancher/k3s:v1.36.3-k3s1}
+K3S_IMAGE=${K3S_IMAGE:-rancher/k3s:v1.36.4-k3s1}
 CERT_MANAGER_VERSION=${CERT_MANAGER_VERSION:-v1.21.0}
 RELOADER_CHART_VERSION=${RELOADER_CHART_VERSION:-2.2.14}
 KEDA_CHART_VERSION=${KEDA_CHART_VERSION:-2.20.0}
@@ -55,7 +55,7 @@ images=(
     "zglosto/llm-gateway:$TAG"
     "zglosto/frontend:$TAG"
     "zglosto/nginx:$TAG"
-    "rustfs/rustfs:1.0.0-rc.2"
+    "rustfs/rustfs:1.0.0-rc.5"
 )
 
 if [ "$PROFILE" = "kubernetes" ]; then

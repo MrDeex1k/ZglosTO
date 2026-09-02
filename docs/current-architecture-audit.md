@@ -104,16 +104,16 @@ runbook Compose, handoff do K3s i maszynowy kontrakt zamknięcia. Faza 11 jest z
 
 | Usługa              | Katalog           | Runtime / obraz                            | Port                | Rola                                                  |
 | ------------------- | ----------------- | ------------------------------------------ | ------------------- | ----------------------------------------------------- |
-| `frontend`          | `frontend/`       | Node 26.7.0 build + Nginx 1.31.3           | `8080` w kontenerze | SPA React dla mieszkańca, służb i admina              |
-| `backend`           | `backend/`        | Node 26.7.0 + NestJS 12 alpha + Express 5  | `3000`              | API incydentów, statystyk i administracji             |
-| `authorization`     | `authorization/`  | Node 26.7.0 + Hono 4 + Better Auth         | `9956` mTLS         | logowanie, rejestracja, sesja, role z `uzytkownicy`   |
-| `llm_gateway`       | `llm_gateway/`    | Node 26.7.0 + Hono 4 + TypeScript          | `8130`              | stabilna granica backendu do wymiennego runtime'u LLM |
+| `frontend`          | `frontend/`       | Node 26.8.1 build + Nginx 1.31.4           | `8080` w kontenerze | SPA React dla mieszkańca, służb i admina              |
+| `backend`           | `backend/`        | Node 26.8.1 + NestJS 12 stable + Express 5 | `3000`              | API incydentów, statystyk i administracji             |
+| `authorization`     | `authorization/`  | Node 26.8.1 + Hono 4 + Better Auth         | `9956` mTLS         | logowanie, rejestracja, sesja, role z `uzytkownicy`   |
+| `llm_gateway`       | `llm_gateway/`    | Node 26.8.1 + Hono 4 + TypeScript          | `8130`              | stabilna granica backendu do wymiennego runtime'u LLM |
 | Docker Model Runner | poza repozytorium | llama.cpp + Gemma 3 1B QAT                 | API hosta DMR       | opcjonalna inferencja za gatewayem                    |
 | `database`          | `database/`       | PostgreSQL 18.6 + `pg_cron` + `pgbackrest` | `${POSTGRES_PORT}`  | dane domenowe i tabele Better Auth                    |
 | `pgbouncer`         | obraz zewnętrzny  | PgBouncer 1.25.2                           | `6432`              | transaction pooling dla backendu i authorization      |
-| `rustfs`            | obraz zewnętrzny  | RustFS 1.0.0-rc.2                          | `9000` wewnętrznie  | domyślny lokalny provider Object Storage zgodny z S3  |
-| `redis`             | obraz zewnętrzny  | Redis 8.10.0                               | `6379` wewnętrznie  | opcjonalny cache i współdzielony rate limiting        |
-| `nginx`             | `nginx/`          | Nginx 1.31.3                               | `1235`              | reverse proxy dla frontendu, auth, backendu i LLM     |
+| `rustfs`            | obraz zewnętrzny  | RustFS 1.0.0-rc.5                          | `9000` wewnętrznie  | domyślny lokalny provider Object Storage zgodny z S3  |
+| `redis`             | obraz zewnętrzny  | Redis 8.10.1                               | `6379` wewnętrznie  | opcjonalny cache i współdzielony rate limiting        |
+| `nginx`             | `nginx/`          | Nginx 1.31.4                               | `1235`              | reverse proxy dla frontendu, auth, backendu i LLM     |
 
 ### Sieci i uruchomienie lokalne
 
@@ -188,13 +188,13 @@ modernizacji. W development Vite udostępnia te same prefiksy i proxy do lokalny
 ### Stack
 
 - React `19.2.8`
-- Vite `8.2.1`
+- Vite `8.2.2`
 - TypeScript `7.0.2` (natywny kompilator Go udostepniany jako `tsc`)
 - Tailwind `4.3.3`
 - shadcn/ui `base-nova` na Base UI
 - Better Auth client
 
-Jedynym package managerem JavaScript/TypeScript jest PNPM `11.22.0`, z jednym `pnpm-lock.yaml` w katalogu głównym i workspace obejmującym `frontend`, `backend`, `authorization`, `llm_gateway` oraz `packages/*`. Wspólny toolchain używa Oxlint `1.78.0`, Oxfmt `0.63.0` oraz skryptów root `pnpm lint`, `pnpm format`, `pnpm format:check`, `pnpm typecheck`, `pnpm build` i `pnpm test`. Oxlint działa obecnie bez trybu type-aware; pełny typecheck wykonuje osobno TypeScript 7. `oxlint-tsgolint` nie jest zainstalowany. Bezpośrednie zależności są przypięte dokładnie, PNPM odrzuca publikacje młodsze niż 24 godziny, a operacje na zależnościach JavaScript są chronione przez lokalny Socket Firewall (`sfw`) i skrypty `pnpm deps:*`.
+Jedynym package managerem JavaScript/TypeScript jest PNPM `11.25.0`, z jednym `pnpm-lock.yaml` w katalogu głównym i workspace obejmującym `frontend`, `backend`, `authorization`, `llm_gateway`, `Mobile` oraz `packages/*`. Wspólny toolchain używa Oxlint `1.80.0`, Oxfmt `0.65.0` oraz skryptów root `pnpm lint`, `pnpm format`, `pnpm format:check`, `pnpm typecheck`, `pnpm build` i `pnpm test`. Oxlint działa obecnie bez trybu type-aware; pełny typecheck wykonuje osobno TypeScript 7. `oxlint-tsgolint` nie jest zainstalowany. Bezpośrednie zależności są przypięte dokładnie, PNPM odrzuca publikacje młodsze niż 24 godziny, a operacje na zależnościach JavaScript są chronione przez lokalny Socket Firewall (`sfw`) i skrypty `pnpm deps:*`.
 
 Migracja lokalnych wrapperów z Radix UI do shadcn/ui `base-nova` na Base UI została
 zakończona w [Fazie 8A](frontend-ui-migration.md). Radix nie występuje już w zależnościach
@@ -268,7 +268,7 @@ Mapowanie statusu biznesowego oraz polskich etykiet UI znajduje się w
 
 - Better Auth `1.6.27`
 - Hono `4.13.2` z `@hono/node-server` `2.1.0`
-- Node 26.7.0; TypeScript jest kompilowany przez `pnpm build` do JavaScript w `dist`
+- Node 26.8.1; TypeScript jest kompilowany przez `pnpm build` do JavaScript w `dist`
 - PostgreSQL przez `pg`
 
 Authorization nie ma już zależności od Express, `cors`, `@types/express` ani `@types/cors`.
@@ -315,8 +315,8 @@ Serwis działa na `PORT` z `.env`.
 
 ### Stack
 
-- NestJS 12 alpha z `@nestjs/platform-express` i Express 5 jako adapterem HTTP
-- Node 26.7.0 jako runtime startowy
+- NestJS 12.0.1 z `@nestjs/platform-express` i Express 5 jako adapterem HTTP
+- Node 26.8.1 jako runtime startowy
 - TypeScript 7/TSGO, Zod/Standard Schema i OpenAPI
 - `pg` przez PgBouncer/TLS, provider-neutralny S3 i RabbitMQ/AMQPS
 
@@ -649,7 +649,7 @@ tras backendu Express ma typowany manifest, kontrolę deklaracji źródłowych i
 integracyjny przez Nginx. Migracja backendu do NestJS może rozpocząć się od kroku 2 zgodnie z
 [planem Fazy 6](release.md#faza-6-backend-na-nestjs--node-26--typescript), przy zachowaniu
 [zamrożonego kontraktu HTTP](phase-6-backend-http-contract.md). W kroku 2 wdrożono równoległy
-szkielet NestJS `12.0.0-alpha.5` z `@nestjs/platform-express`, TypeScript 7/TSGO, ESM,
+backend NestJS `12.0.1` z `@nestjs/platform-express`, TypeScript 7/TSGO, ESM,
 Vitest, natywnym Zod/Standard Schema, OpenAPI i shutdown hooks. Bramka DI, HTTP, walidacji,
 OpenAPI, build ESM oraz kontrolowanego `SIGTERM` przeszła; fallback do NestJS 11 nie został
 uruchomiony. W kroku 3 utworzono wszystkie 11 docelowych modułów, jawny acykliczny graf
@@ -693,6 +693,6 @@ zależności, TLS/mTLS/AMQPS, przeciążenie kolejki, restart workera, retry, DL
 W kroku 15 usunięto ręczny bootstrap Express, routery, middleware, zależności legacy i
 tymczasowy override rollbacku. Express pozostaje wyłącznie wewnętrznym adapterem
 `@nestjs/platform-express`. Faza 6 jest zakończona po 15 krokach. Bramka wydania stabilnego
-NestJS 12 została przeniesiona po Fazach 7-12 jako ostatnia bramka publicznego wydania:
-[Faza 13](release.md#faza-13-ostateczna-bramka-publicznego-wydania--stabilne-nestjs-12).
+NestJS 12 została przeniesiona po Fazach 7-12 jako bramka wspólnego baseline'u źródłowego:
+[Faza 13](release.md#faza-13-bramka-wspólnego-baselineu-źródłowego--stabilne-nestjs-12).
 Późniejsza Faza 14 obejmuje już rozwój asynchronicznej kontroli routingu przez LLM.

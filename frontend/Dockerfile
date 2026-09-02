@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.12
 
-ARG NODE_IMAGE=node:26.7.0-alpine3.24
-ARG NGINX_IMAGE=nginx:1.31.3-alpine3.24-slim
+ARG NODE_IMAGE=node:26.8.1-alpine3.24
+ARG NGINX_IMAGE=nginx:1.31.4-alpine3.24-slim
 
 FROM ${NODE_IMAGE} AS build
 
@@ -13,7 +13,7 @@ ENV WHITE_LABEL_CONFIG=/workspace/config/white-label/city.yaml
 
 WORKDIR /workspace
 
-RUN npm install --global pnpm@11.22.0
+RUN npm install --global pnpm@11.25.0
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY frontend/package.json frontend/package.json

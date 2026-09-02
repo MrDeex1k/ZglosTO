@@ -45,19 +45,12 @@ i instaluje lokalną binarkę SFW; kolejne operacje na zależnościach wykonujem
 SFW i 24-godzinna kwarantanna pełnią różne funkcje: SFW ocenia ryzyko pakietu, natomiast
 PNPM egzekwuje minimalny wiek publikacji. Instalacja musi przejść obie kontrole.
 
-## Wyjątki audytu wydaniowego
+## Audyt wydaniowy
 
-Surowy `pnpm audit --prod` pozostaje źródłem danych i może kończyć się kodem błędu.
-Wydanie stosuje dodatkową bramkę `pnpm audit:release`, która nie ignoruje globalnie
-poziomu `high`: odczytuje pełny JSON audytu i dopuszcza wyłącznie identyfikatory, wersję,
-pakiet, ścieżkę oraz datę zapisane w
-`deploy/release-dependency-risk-acceptance.json`. Nowe advisory, zmiana wersji lub ścieżki
-albo upływ terminu zawsze zatrzymują wydanie.
-
-Jedynym bieżącym wyjątkiem jest build-time `image-size@1.2.1` z grafu Mobile/Metro,
-opisany wraz z kontrolami kompensującymi w
-[akceptacji ryzyka](security-risk-acceptance-image-size.md). Wyjątek obowiązuje do
-2026-09-25 i nie obejmuje żadnego runtime serwerowego.
+Surowy `pnpm audit --prod` pozostaje źródłem danych. Bramka `pnpm audit:release` odczytuje
+pełny JSON audytu i blokuje każde advisory produkcyjne niezależnie od poziomu. Po aktualizacji
+Expo/Metro z 2026-09-02 wcześniejszy wyjątek dla `image-size@1.2.1` nie jest już potrzebny;
+jego dokument pozostaje wyłącznie historycznym zapisem decyzji dla kandydata 1.0.0.
 
 Python, UV i osobny zestaw zależności `llm_service` zostały usunięte w Fazie 7 po przejściu
 na Docker Model Runner. Obecnie wszystkie zależności aplikacyjne repozytorium podlegają jednej
@@ -65,4 +58,4 @@ polityce PNPM + SFW.
 
 ## Obsługa wydań wycofanych
 
-Pakiet spełniający próg wieku nadal nie jest wybierany, jeśli rejestr oznacza go jako deprecated lub uszkodzony. Podczas wcześniejszej aktualizacji, gdy obowiązywał próg 48 godzin, PNPM 11.12.0 i 11.13.0 były oznaczone jako uszkodzone, a poprawka 11.13.1 nie spełniała jeszcze ówczesnej kwarantanny. Po przejściu na próg 24 godzin i pojawieniu się kolejnych poprawek manager zaktualizowano najpierw do niewycofanego `11.15.1`, a obecnie do `11.22.0`, opublikowanego 2026-08-15 i starszego niż wymagane 24 godziny.
+Pakiet spełniający próg wieku nadal nie jest wybierany, jeśli rejestr oznacza go jako deprecated lub uszkodzony. Podczas wcześniejszej aktualizacji, gdy obowiązywał próg 48 godzin, PNPM 11.12.0 i 11.13.0 były oznaczone jako uszkodzone, a poprawka 11.13.1 nie spełniała jeszcze ówczesnej kwarantanny. Po przejściu na próg 24 godzin manager aktualizowano wyłącznie do niewycofanych wydań; obecnie jest to `11.25.0`.

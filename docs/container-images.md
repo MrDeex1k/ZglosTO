@@ -2,28 +2,31 @@
 
 ## Aktualny baseline
 
-Od 2026-08-18 projekt używa następujących przypiętych obrazów:
+Od 2026-09-02 projekt używa następujących przypiętych obrazów:
 
-| Obszar                                          | Obraz                                                             |
-| ----------------------------------------------- | ----------------------------------------------------------------- |
-| build Node.js                                   | `node:26.7.0-alpine3.24`                                          |
-| minimalny runtime usług Node                    | `alpine:3.24.1` + binarny Node 26.7.0                             |
-| publiczny Nginx i runtime statycznego frontendu | `nginx:1.31.3-alpine3.24-slim`                                    |
-| opcjonalny model DMR                            | `ai/gemma3-qat:1B-Q4_K_M`                                         |
-| baza własnego obrazu database                   | `postgres:18.6-alpine3.24`                                        |
-| własny obraz poolera                            | `pgbouncer/Dockerfile` bazujący na `edoburu/pgbouncer:v1.25.2-p0` |
-| trwały broker bez panelu management             | `rabbitmq:4.3.5-alpine`                                           |
-| lokalny Object Storage zgodny z S3              | `rustfs/rustfs:1.0.0-rc.2`                                        |
-| OpenTelemetry Collector                         | `otel/opentelemetry-collector-contrib:0.159.0`                    |
-| Prometheus                                      | `prom/prometheus:v3.14.0`                                         |
-| Loki                                            | `grafana/loki:3.7.6`                                              |
-| Tempo                                           | `grafana/tempo:3.0.3`                                             |
-| Alertmanager                                    | `prom/alertmanager:v0.34.0`                                       |
-| Grafana                                         | `grafana/grafana:13.2.0`                                          |
+| Obszar                                          | Obraz                                                                                          |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| build Node.js                                   | `node:26.8.1-alpine3.24`                                                                       |
+| minimalny runtime usług Node                    | `alpine:3.24.1` + binarny Node 26.8.1                                                          |
+| publiczny Nginx i runtime statycznego frontendu | `nginx:1.31.4-alpine3.24-slim`                                                                 |
+| opcjonalny model DMR                            | `ai/gemma3-qat:1B-Q4_K_M`                                                                      |
+| baza własnego obrazu database                   | `postgres:18.6-alpine3.24`                                                                     |
+| własny obraz poolera                            | `pgbouncer/Dockerfile` bazujący na `edoburu/pgbouncer:v1.25.2-p0`                              |
+| trwały broker bez panelu management             | `rabbitmq:4.3.5-alpine`                                                                        |
+| opcjonalny lokalny Redis                        | `redis:8.10.1-alpine3.23`                                                                      |
+| lokalny Object Storage zgodny z S3              | `rustfs/rustfs:1.0.0-rc.5`                                                                     |
+| OpenTelemetry Collector                         | `otel/opentelemetry-collector-contrib:0.159.0`                                                 |
+| Prometheus                                      | `prom/prometheus:v3.14.0`                                                                      |
+| Loki                                            | `grafana/loki:3.7.7`                                                                           |
+| Tempo                                           | `grafana/tempo:3.0.3`                                                                          |
+| Alertmanager                                    | `prom/alertmanager:v0.34.0`                                                                    |
+| Grafana                                         | `grafana/grafana:13.2.1`                                                                       |
+| węzeł testowego klastra Kind                    | `kindest/node:v1.35.8@sha256:07b2536e30b803ed61d1677a79df6115f798ce64c80f9e22f6ed45afd09323c0` |
+| serwer testowego klastra K3s                    | `rancher/k3s:v1.36.4-k3s1`                                                                     |
 
 Wersje są przypięte jawnie, aby kolejne buildy nie zmieniały runtime'u wyłącznie przez przesunięcie ruchomego tagu bazowego.
 
-RustFS `1.0.0-rc.2` jest przypiętym obrazem wieloarchitekturowym. Działa jako użytkownik
+RustFS `1.0.0-rc.5` jest przypiętym obrazem wieloarchitekturowym. Działa jako użytkownik
 `10001`, zapisuje do wolumenu `/data`, nie publikuje portów `9000/9001` na hoście i jest
 sprawdzany przez `/health/ready`. Produkcyjny klaster oraz PVC pozostają zakresem Fazy 9.
 
@@ -50,14 +53,14 @@ Model DMR ma zweryfikowany digest
 uruchamiany wyłącznie przez opcjonalny `docker-compose.llm.yml`. Nie jest obrazem
 aplikacyjnym budowanym przez `build-images.sh`.
 
-Node 26 nie dostarcza Corepack w obrazie bazowym. Buildery instalują więc jawnie `pnpm@11.22.0` przez dołączone npm, po czym wszystkie operacje workspace, instalacji i deploy nadal wykonuje PNPM. Wersja spełnia bieżącą 24-godzinną kwarantannę i nie jest oznaczona w rejestrze jako wycofana.
+Node 26 nie dostarcza Corepack w obrazie bazowym. Buildery instalują więc jawnie `pnpm@11.25.0` przez dołączone npm, po czym wszystkie operacje workspace, instalacji i deploy nadal wykonuje PNPM. Wersja spełnia bieżącą 24-godzinną kwarantannę i nie jest oznaczona w rejestrze jako wycofana.
 
 Backend HTTP i `media_worker` są budowane z tego samego, niezmiennego artefaktu
 `backend/Dockerfile`, ale Compose uruchamia je jako dwa niezależne procesy i kontenery z
 różnymi komendami, ENV, healthcheckami oraz limitami zasobów. Worker nie dziedziczy runtime'u
 procesu backendu i nie otwiera portu `3000`; współdzielenie obrazu ogranicza wyłącznie
 duplikowanie zależności i kodu infrastrukturalnego. Pipeline workera używa dokładnie
-przypiętego `sharp@0.35.3`; natywne binaria libvips są instalowane przez PNPM dla platformy
+przypiętego `sharp@0.35.4`; natywne binaria libvips są instalowane przez PNPM dla platformy
 obrazu podczas builda, a test obrazu wykonuje rzeczywiste kodowanie WebP.
 
 ## PostgreSQL 18

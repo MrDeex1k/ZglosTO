@@ -16,15 +16,14 @@ mediów i zapisuje zwalidowane WebP w Object Storage. Backend korzysta wyłączn
 provider-neutralnego `llm_gateway`; po Fazie 7 adapter wywołuje opcjonalny Docker Model
 Runner, a domyślnie zwraca kontrolowany fallback. OpenAPI i pełna bramka parytetu przeszły
 przed przełączeniem, a ręczny runtime Express został usunięty. Faza 6 jest zakończona po
-15 krokach. Bramka publicznego wydania zależna od stabilnego NestJS 12 została przeniesiona
-do [Fazy 13](release.md#faza-13-ostateczna-bramka-publicznego-wydania--stabilne-nestjs-12)
-jako ostatniej bramki publicznego wydania.
+15 krokach. Bramka publicznego wydania zależna od stabilnego NestJS 12 została wykonana
+2026-09-02 w [Fazie 13](release.md#faza-13-bramka-wspólnego-baselineu-źródłowego--stabilne-nestjs-12).
 
-Na 2026-07-20 stabilną linią jest NestJS `11.1.28`, a tag `next` wskazuje
-`12.0.0-alpha.5`. NestJS 12 nie ma jeszcze bieżącego wydania beta ani RC. Docelową linią
-projektu jest NestJS 12, ale prerelease nie jest traktowany jak stabilny kontrakt frameworka.
+Od 2026-09-02 backend używa oficjalnej stabilnej linii NestJS `12.0.1`. Historyczna bramka
+z 2026-07-20 była wykonana na `12.0.0-alpha.5`; poniższa macierz prerelease pozostaje zapisem
+tamtego etapu, a nie bieżącym stanem zależności.
 
-Obowiązują następujące zasady:
+Podczas migracji obowiązywały następujące zasady:
 
 - podczas Fazy 6 można użyć NestJS 12 prerelease, ponieważ aplikacja nie jest wdrażana
   produkcyjnie;
@@ -41,8 +40,7 @@ Obowiązują następujące zasady:
 
 ## Zmiany NestJS 12 istotne dla projektu
 
-Plan uwzględnia kierunek opisany w roboczych materiałach NestJS 12, ale nie traktuje go jako
-zamkniętego API aż do stabilnego wydania:
+Stabilne wydanie potwierdziło następujące zmiany istotne dla projektu:
 
 - natywne ESM w pakietach core;
 - Vitest i OxLint w nowych projektach ESM;
@@ -53,10 +51,11 @@ zamkniętego API aż do stabilnego wydania:
 - bogatsze błędy HTTP, w tym stabilny `errorCode`, oraz logowanie strukturalne;
 - globalne hooki dla transportów microservices, przydatne dla RabbitMQ.
 
-Źródłami do ponownej weryfikacji przed krokiem 2 i przed końcowym przejściem na stabilne 12 są
-[roboczy opis wydania NestJS 12](https://github.com/nestjs/nest/pull/16391),
-[robocza migracja dokumentacji](https://github.com/nestjs/docs.nestjs.com/pull/3441) i
-[oficjalna dokumentacja NestJS](https://docs.nestjs.com/).
+Źródłem wiążącym po migracji jest [oficjalna dokumentacja NestJS](https://docs.nestjs.com/).
+Względem alpha usunięto wyjątki peer dependency oraz wymuszenia `multer` i `js-yaml`, a
+bootstrap korzysta z finalnych opcji `routeConflictPolicy` i `routeResolutionStrategy`.
+Zachowano adapter Express, ESM/NodeNext, natywny Standard Schema i dotychczasową politykę
+graceful shutdown; nie było potrzeby wprowadzania adapterów zgodności.
 
 ## Kroki realizacji
 
@@ -397,6 +396,11 @@ must-revalidate` oraz puste `304` dla exact, weak, list i wildcard `If-None-Matc
     elementu; oba nadal wskazują te same współdzielone kontrakty Zod. Należy ponownie
     zweryfikować to zachowanie przy aktualizacji prerelease i usunąć obejście, jeśli stabilne
     API zacznie walidować tablicę jako całość.
+
+    Ponowna weryfikacja na stabilnym `12.0.1` potwierdziła, że interceptor nadal aplikuje
+    przekazany schemat osobno do każdego elementu tablicy. Rozdzielenie schematu OpenAPI całej
+    tablicy od schematu serializacji elementu pozostaje więc wymaganym użyciem finalnego API,
+    a nie prerelease'owym adapterem zgodności.
 
 14. **Wdrożone 2026-07-21 — kontrolowany cutover.** Aktywny `backend` w Compose i domyślne
     polecenie obrazu uruchamiają NestJS na niezmienionym porcie `3000`; Nginx nadal kieruje

@@ -2,7 +2,7 @@ import type { MobileFetch } from './client';
 
 interface AuthenticatedFetchOptions {
   fetcher: MobileFetch;
-  getCookie: () => string;
+  getCookie: () => Promise<string>;
   onForbidden: () => Promise<void> | void;
   onUnauthorized: () => Promise<void> | void;
 }
@@ -15,7 +15,7 @@ export function createAuthenticatedFetch({
 }: AuthenticatedFetchOptions): MobileFetch {
   return async (input, init = {}) => {
     const headers = new Headers(init.headers);
-    const cookie = getCookie();
+    const cookie = await getCookie();
     if (cookie !== '') headers.set('Cookie', cookie);
 
     const response = await fetcher(input, {

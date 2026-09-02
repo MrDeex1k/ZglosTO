@@ -21,7 +21,7 @@ Nie zmieniono kontraktów domenowych ani podziału odpowiedzialności usług.
 - topologicznego builda zależności workspace;
 - `pnpm deploy --prod` oraz usunięcia lockfile, deklaracji TypeScript i source map z
   artefaktu runtime;
-- minimalnego runtime `alpine:3.24.1` z binarnym Node 26.7.0, CA i bibliotekami C++,
+- minimalnego runtime `alpine:3.24.1` z binarnym Node 26.8.1, CA i bibliotekami C++,
   bez npm, PNPM i toolchainu;
 - użytkownika `node:node` o UID/GID `1000`;
 - `STOPSIGNAL` oraz wbudowanego `HEALTHCHECK`;

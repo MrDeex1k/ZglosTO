@@ -175,9 +175,9 @@ const localCompose = compose(strings(composeProfiles.local, 'compose.local'), co
 for (const image of [
   'otel/opentelemetry-collector-contrib:0.159.0',
   'prom/prometheus:v3.14.0',
-  'grafana/loki:3.7.6',
+  'grafana/loki:3.7.7',
   'grafana/tempo:3.0.3',
-  'grafana/grafana:13.2.0',
+  'grafana/grafana:13.2.1',
   'prom/alertmanager:v0.34.0',
 ]) {
   if (!localCompose.includes(`image: ${image}`)) fail(`local mode lacks pinned ${image}`);

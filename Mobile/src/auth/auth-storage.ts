@@ -11,7 +11,9 @@ const MAX_AUTH_STORAGE_CHUNKS = 16;
 
 export const authSecureStorage = {
   getItem: (key: string): string | null => SecureStore.getItem(key),
+  getItemAsync: (key: string): Promise<string | null> => SecureStore.getItemAsync(key),
   setItem: (key: string, value: string): void => SecureStore.setItem(key, value),
+  setItemAsync: (key: string, value: string): Promise<void> => SecureStore.setItemAsync(key, value),
 };
 
 async function deleteStoredValue(key: string): Promise<void> {

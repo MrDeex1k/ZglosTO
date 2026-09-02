@@ -1,6 +1,6 @@
 services:
   rustfs:
-    image: ${RUSTFS_IMAGE:-rustfs/rustfs:1.0.0-rc.2}
+    image: ${RUSTFS_IMAGE:-rustfs/rustfs:1.0.0-rc.5}
     pull_policy: missing
     restart: always
     init: true

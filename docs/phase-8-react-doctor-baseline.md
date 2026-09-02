@@ -11,7 +11,7 @@ Skan obejmuje cały katalog `frontend`, a nie tylko pliki zmienione względem Gi
 i zewnętrzny score React Doctor zostały wyłączone. Źródłem porównania jest liczba i rodzaj
 diagnostyk, wynik TypeScript/OxLint oraz rozmiar produkcyjnego buildu.
 
-## Wersje narzędzi
+## Wersje narzędzi historycznego skanu
 
 | Narzędzie             | Wersja    |
 | --------------------- | --------- |
@@ -24,9 +24,19 @@ diagnostyk, wynik TypeScript/OxLint oraz rozmiar produkcyjnego buildu.
 | Vite                  | `8.1.5`   |
 | React Compiler plugin | `1.0.0`   |
 
-## Polecenia odtwarzające
+Od 2026-09-02 kontrakt bieżącego workspace wymaga Node.js `26.8.1` i PNPM `11.25.0`.
+Nie zmienia to środowiska ani wyniku historycznego skanu z 2026-07-23.
+
+## Polecenia historycznego skanu
+
+Dokładne odtworzenie wyniku z 2026-07-23 wymaga drzewa roboczego opisanego wyżej oraz
+Node.js `26.5.0` i PNPM `11.22.0`. Uruchomienie tych poleceń na bieżącym kodzie albo nowszym
+toolchainie jest nowym pomiarem porównawczym, a nie reprodukcją historycznego baseline'u.
 
 ```bash
+node --version # v26.5.0
+pnpm --version # 11.22.0
+
 cd frontend
 npx -y react-doctor@0.9.1 . --verbose --no-telemetry
 
