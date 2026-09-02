@@ -15,8 +15,8 @@ diagnostyk, wynik TypeScript/OxLint oraz rozmiar produkcyjnego buildu.
 
 | Narzędzie             | Wersja    |
 | --------------------- | --------- |
-| Node.js               | `26.5.0`  |
-| PNPM                  | `11.22.0` |
+| Node.js               | `26.8.1`  |
+| PNPM                  | `11.25.0` |
 | TypeScript            | `7.0.2`   |
 | OxLint                | `1.75.0`  |
 | React Doctor          | `0.9.1`   |

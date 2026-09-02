@@ -16,6 +16,11 @@ export async function createNestApplication(mode: NestApplicationMode): Promise<
     new ExpressAdapter(),
     {
       logger: false,
+      routeConflictPolicy: {
+        duplicate: 'error',
+        shadow: 'error',
+      },
+      routeResolutionStrategy: 'specificity',
     },
   );
   application.useBodyParser('json', { limit: API_JSON_REQUEST_MAX_BYTES });

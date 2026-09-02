@@ -207,7 +207,7 @@ migrację kodu aplikacyjnego i testowego JavaScript do TypeScript, zakaz `any` w
 pierwszej strony oraz jawny `null` albo unię dyskryminowaną zamiast `undefined` w kontraktach
 i domenie.
 
-1. **Wdrozone przed Faza 1:** PNPM `11.22.0` jest jedynym package managerem JavaScript/TypeScript; zaleznosci bezposrednie sa przypiete dokladnie, aktualizacje maja 24-godzinna kwarantanne publikacji, a operacje na pakietach JavaScript chroni Socket Firewall (`sfw`).
+1. **Wdrozone przed Faza 1, zaktualizowane 2026-09-02:** PNPM `11.25.0` jest jedynym package managerem JavaScript/TypeScript; zaleznosci bezposrednie sa przypiete dokladnie, aktualizacje maja 24-godzinna kwarantanne publikacji, a operacje na pakietach JavaScript chroni Socket Firewall (`sfw`).
 2. **Wdrozone przed Faza 1:** workspace obejmuje `frontend`, `backend`, `authorization` i `packages/*`, a repozytorium ma jeden glowny `pnpm-lock.yaml`.
 3. **Wdrożone 2026-07-17:** wspólny pakiet `packages/contracts` zawiera:
 
@@ -1392,17 +1392,30 @@ certyfikacji i utrzymania.
 
 ## Faza 13: Ostateczna bramka certyfikacji produkcyjnej — stabilne NestJS 12
 
-Ta faza jest wykonywana po udostępnieniu stabilnego NestJS 12 i po wymaganych dowodach
-wdrożeniowych. Nie blokuje publikacji repozytorium źródłowego `1.0.0`, ale jej niepowodzenie
-blokuje deklarowanie wspólnego, certyfikowanego baseline'u produkcyjnego. Zastępuje dawny
-krok 16 Fazy 6. Faza 14 jest późniejszym rozwojem produktu.
+Status: **wdrożona 2026-09-02**. Backend i `media_worker` przeszły z alpha na spójną,
+oficjalną macierz NestJS `12.0.1`. Usunięto prerelease'owe wyjątki peer dependency i
+parent-scoped overrides NestJS, a bootstrap egzekwuje błąd dla duplikatów i shadowingu tras
+oraz rozwiązuje je według specyficzności. Testy zachowują 20 operacji OpenAPI, kontrakty
+Standard Schema, strukturalne `errorCode` i kontrolowany graceful shutdown.
+
+Aktualizacja objęła również pozostałe zależności workspace, Node `26.8.1`, PNPM `11.25.0`
+oraz bieżące obrazy Node, Nginx, Redis, RustFS, Loki, Grafana, Kind i K3s. Aktualizacja RustFS
+została wykonana bez osobnego testu zachowania istniejących danych, zgodnie z decyzją
+właściciela; pozostałe bramki statyczne i runtime pozostają wymagane. Certyfikacja konkretnego
+hosta i jego danych nadal należy do Fazy 12.
+
+Dziewięć poprawek Expo SDK 57 opublikowanych 2026-09-01 między `16:18Z` i `18:08Z` nie
+spełniało jeszcze 24-godzinnej kwarantanny podczas zamknięcia tej migracji. Pozostają
+odłożone do kolejnego zwykłego przebiegu `pnpm deps:update`; nie utworzono dla nich wyjątku.
+
+Poniższa lista stanowi utrzymywany kontrakt bramki i została wykonana podczas tej migracji.
 
 1. Rozpocząć bramkę dopiero po zakończeniu implementacji, optymalizacji infrastruktury,
    testów obciążeniowych i bezpieczeństwa transportu z wcześniejszych faz.
 2. Potwierdzić dostępność stabilnego NestJS 12 i wybrać spójną macierz dokładnie przypiętych
    wersji `@nestjs/common`, `@nestjs/core`, `@nestjs/platform-express`, `@nestjs/testing`,
    `@nestjs/swagger` oraz zgodnych zależności peer. Pakiety muszą być dostępne w npm przez co
-   najmniej 48 godzin.
+   najmniej 24 godziny.
 3. Przejrzeć oficjalny changelog i przewodnik migracji od używanego prerelease do stabilnego
    wydania. Udokumentować każdą zmianę wpływającą na Node 26, TypeScript 7/TSGO, ESM,
    dekoratory, metadata, Express 5, Standard Schema, OpenAPI i lifecycle.

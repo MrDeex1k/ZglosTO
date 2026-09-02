@@ -435,7 +435,7 @@ function validateModes(
       fail('local RustFS API must remain private on the internal Docker network');
     }
     if (
-      rustfs.image !== 'rustfs/rustfs:1.0.0-rc.2' ||
+      rustfs.image !== 'rustfs/rustfs:1.0.0-rc.5' ||
       backendEnvironment.S3_ENDPOINT !== 'http://rustfs:9000' ||
       workerEnvironment.S3_ENDPOINT !== 'http://rustfs:9000' ||
       rustfsEnvironment.RUSTFS_ACCESS_KEY_FILE !== '/run/secrets/s3/access-key-id' ||

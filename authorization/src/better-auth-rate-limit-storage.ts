@@ -1,7 +1,7 @@
 import { addCounter, recordHistogram } from '@zglosto/observability';
 import { RateLimitKeyHasher } from '@zglosto/rate-limiting';
 import type { TransientStore } from '@zglosto/transient-store';
-import type { BetterAuthRateLimitOptions, RateLimit } from 'better-auth';
+import type { BetterAuthRateLimitOptions } from 'better-auth';
 
 export type BetterAuthRateLimitStorage = NonNullable<BetterAuthRateLimitOptions['customStorage']>;
 
@@ -29,11 +29,6 @@ export function createBetterAuthRateLimitStorage(
   keyHasher: RateLimitKeyHasher,
 ): BetterAuthRateLimitStorage {
   return {
-    get: async (_key: string): Promise<RateLimit | null> => null,
-    set: async (_key: string, _value: RateLimit): Promise<void> => {
-      // Better Auth 1.6 uses atomic consume when it is present. These methods satisfy
-      // the backwards-compatible interface and must not be selected by this adapter.
-    },
     consume: async (key, rule) => {
       const startedAt = performance.now();
       try {

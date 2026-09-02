@@ -337,7 +337,7 @@ Kubernetes/K3s.
    rozmiar i jawny `X-Cache-Status`.
 9. **Wdrożone 2026-07-25:** dodano wzajemnie wyłączne profile `disabled`, `local` i
    `external` dla Compose, Kubernetes i K3s. `local` uruchamia
-   `redis:8.10.0-alpine3.23` bez publicznego portu i trwałości, z ACL, limitem pamięci,
+   `redis:8.10.1-alpine3.23` bez publicznego portu i trwałości, z ACL, limitem pamięci,
    `allkeys-lru`, read-only root filesystem oraz healthcheckami. `external` nie tworzy
    workloadu i wymaga zweryfikowanego `rediss://` oraz CA. Sekrety są montowane jako pliki,
    NetworkPolicy dopuszcza tylko Authorization/backend, a maszynowy kontrakt i

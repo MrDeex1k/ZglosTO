@@ -127,9 +127,8 @@ SHA, forki i odwołania do commitów.
 
 ## Etap 5 — zależności i bezpieczeństwo
 
-1. Konflikt metadanych peer NestJS 12 alpha został jawnie ograniczony do dokładnie
-   przetestowanej macierzy `12.0.0-alpha.5` przez `peerDependencyRules.allowedVersions`.
-   Wyjątek nie dopuszcza innych wersji i musi zostać usunięty wraz ze stabilnym NestJS 12.
+1. Wykonane 2026-09-02: cały backend przeszedł na stabilną macierz NestJS `12.0.1`, a
+   prerelease'owy wyjątek `peerDependencyRules.allowedVersions` został usunięty.
 2. Preferowana naprawa:
    - przejść na spójną, wspieraną linię NestJS, która dostarcza
      `multer >=2.2.0` i `js-yaml >=4.3.0`;
@@ -149,15 +148,14 @@ SHA, forki i odwołania do commitów.
 
 ## Etap 6 — obrazy Docker
 
-1. Redis został podniesiony z `8.8.0-alpine3.23` do
-   `8.10.0-alpine3.23`.
+1. Redis został podniesiony do `8.10.1-alpine3.23`.
 2. Tempo zostało podniesione z `2.10.8` do `3.0.3`; przed wydaniem wymaga
    testu startu i odczytu istniejących danych.
 3. Pozostałe sprawdzone obrazy są aktualne w przypiętych liniach:
-   Node 26.7.0, Alpine 3.24.1, Nginx 1.31.3, PostgreSQL 18.6,
-   PgBouncer 1.25.2-p0, RabbitMQ 4.3.5, RustFS 1.0.0-rc.2,
-   OpenTelemetry Collector 0.159.0, Prometheus 3.14.0, Loki 3.7.6,
-   Alertmanager 0.34.0 i Grafana 13.2.0.
+   Node 26.8.1, Alpine 3.24.1, Nginx 1.31.4, PostgreSQL 18.6,
+   PgBouncer 1.25.2-p0, RabbitMQ 4.3.5, RustFS 1.0.0-rc.5,
+   OpenTelemetry Collector 0.159.0, Prometheus 3.14.0, Loki 3.7.7,
+   Alertmanager 0.34.0 i Grafana 13.2.1.
 4. Po zmianie zbudować wszystkie obrazy, uruchomić target size contract oraz
    smoke/integration. Trivy i generowanie SBOM zostały usunięte z zakresu wydania decyzją
    właściciela z 2026-08-26. Lokalny audyt targetów rozmiaru

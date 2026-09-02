@@ -47,7 +47,7 @@ do developmentu nie staje się produkcyjny samą zmianą `NODE_ENV`.
 | 10   | zakończona | Redis, lokalny i rozproszony rate limiting oraz cache publicznej listy      |
 | 11   | zakończona | lokalny build źródłowy i utwardzony produkcyjny profil Compose              |
 | 12   | per klient | certyfikacja jego Compose/K3s, DNS, SLO, restore i load testy               |
-| 13   | planowana  | stabilne NestJS 12 i ostateczna bramka certyfikacji produkcyjnej            |
+| 13   | zakończona | stabilne NestJS 12 i ostateczna bramka certyfikacji produkcyjnej            |
 | 14   | po wydaniu | asynchroniczna kontrola właściwej służby przez LLM                          |
 
 ## Znaczenie poszczególnych faz
@@ -148,10 +148,10 @@ potwierdza podczas własnego wdrożenia.
 
 ### Faza 13 — bramka certyfikowanego baseline'u produkcyjnego
 
-Cały backend i `media_worker` przechodzą na oficjalne stabilne NestJS 12. Usuwane są obejścia
-prerelease, ponownie generowane OpenAPI i wykonywana pełna regresja. Nie blokuje to
-publikacji źródeł `1.0.0`, ale blokuje deklarowanie wspólnego, stabilnego baseline'u
-produkcyjnego opartego na NestJS 12.
+Zakończona 2026-09-02. Cały backend i `media_worker` używają oficjalnego NestJS `12.0.1`.
+Usunięto obejścia prerelease, włączono wykrywanie konfliktów i shadowingu tras oraz wykonano
+regresję zależności, kontraktów, buildów i runtime'u. Stabilny baseline produkcyjny pozostaje
+uzależniony od certyfikacji konkretnej instancji klienta opisanej w Fazie 12.
 
 ### Faza 14 — rozwój po stabilnym NestJS 12
 

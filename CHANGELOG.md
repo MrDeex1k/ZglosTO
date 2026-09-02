@@ -3,6 +3,22 @@
 Wszystkie istotne zmiany projektu są dokumentowane w tym pliku. Od wydania `1.0.0`
 historia zmian jest budowana na podstawie komunikatów zgodnych z Conventional Commits.
 
+## [1.1.0] - 2026-09-02
+
+### Zmieniono
+
+- zastąpiono NestJS 12 alpha oficjalną macierzą `12.0.1`, usunięto wyjątki prerelease i
+  włączono finalną politykę konfliktów oraz specyficzności tras;
+- zaktualizowano zależności całego workspace, w tym Better Auth, TanStack, Expo SDK 57,
+  OpenTelemetry, Hono, Zod, Vitest, Sharp, narzędzia jakościowe, Node `26.8.1` i PNPM
+  `11.25.0`;
+- dostosowano Mobile do asynchronicznego storage i `getCookie()` z Better Auth 1.7 oraz
+  dodano migrację pola `account.issuer` wymaganego przez nowy schemat;
+- zaktualizowano obrazy Node, Nginx, Redis, RustFS, Loki, Grafana, Kind i K3s; RustFS nie
+  otrzymuje osobnego testu zachowania istniejących danych zgodnie z decyzją właściciela;
+- usunięto nieaktualną akceptację ryzyka `image-size`; audyt wydaniowy wymaga teraz braku
+  advisory produkcyjnych.
+
 ## [1.0.0] - 2026-08-26
 
 Pierwszy kompletny baseline źródłowy ZgłosTO, przygotowany jako początek nowej historii

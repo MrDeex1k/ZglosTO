@@ -1,7 +1,7 @@
 # Akceptacja ryzyka `image-size` dla kandydata 1.0.0
 
-Status: **zaakceptowane warunkowo do 2026-09-25**  
-Właściciel decyzji: właściciel repozytorium  
+Status: **zamknięte 2026-09-02 po aktualizacji Expo/Metro**
+Właściciel decyzji: właściciel repozytorium
 Zakres: wyłącznie lokalny pipeline build/export aplikacji `Mobile`
 
 ## Ustalenie
@@ -44,3 +44,6 @@ niezweryfikowanego forka.
 Wyjątek należy usunąć, gdy lockfile nie zawiera podatnej wersji lub gdy wspierany graf
 Expo/Metro dostarczy poprawkę. Wtedy `pnpm audit:release` celowo zakończy się błędem
 „accepted advisory is no longer present”, aby wymusić usunięcie nieaktualnej akceptacji.
+
+Kryterium zostało spełnione 2026-09-02: `pnpm audit --prod` nie zgłasza żadnych podatności,
+plik akceptacji maszynowej usunięto, a `pnpm audit:release` wymaga odtąd pustej listy advisory.

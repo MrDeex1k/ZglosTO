@@ -63,7 +63,7 @@ zostać wstrzymane.
 
 ## Środowisko developerskie
 
-Repozytorium wymaga Node.js `>=26.5.0` i PNPM `11.22.0`. Zależności JavaScript są
+Repozytorium wymaga Node.js `>=26.8.1` i PNPM `11.25.0`. Zależności JavaScript są
 instalowane przez Socket Firewall i podlegają 24-godzinnej kwarantannie publikacji.
 
 ```bash

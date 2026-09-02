@@ -11,7 +11,7 @@ describe('authenticated mobile fetch', () => {
     });
     const authenticatedFetch = createAuthenticatedFetch({
       fetcher,
-      getCookie: () => 'better-auth.session_token=secret',
+      getCookie: async () => 'better-auth.session_token=secret',
       onForbidden: vi.fn(),
       onUnauthorized: vi.fn(),
     });
@@ -28,7 +28,7 @@ describe('authenticated mobile fetch', () => {
     const onUnauthorized = vi.fn(async () => undefined);
     const authenticatedFetch = createAuthenticatedFetch({
       fetcher: async () => new Response(null, { status: 401 }),
-      getCookie: () => '',
+      getCookie: async () => '',
       onForbidden: vi.fn(),
       onUnauthorized,
     });
@@ -43,7 +43,7 @@ describe('authenticated mobile fetch', () => {
     const onUnauthorized = vi.fn();
     const authenticatedFetch = createAuthenticatedFetch({
       fetcher: async () => new Response(null, { status: 403 }),
-      getCookie: () => '',
+      getCookie: async () => '',
       onForbidden,
       onUnauthorized,
     });

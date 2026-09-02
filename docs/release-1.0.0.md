@@ -110,9 +110,8 @@ potwierdzenia i `force-with-lease` dla zdalnej gałęzi `main`.
 - profile `external` wymagają rzeczywistych usług S3/R2, Redis, OTLP lub LLM;
 - certyfikacja konkretnego hosta produkcyjnego wymaga jego sekretów, DNS, TLS, backupu i
   testu odtworzenia;
-- backend przypina i testuje `@nestjs/*` `12.0.0-alpha.5`; wyjątek peer dependency jest
-  ograniczony wyłącznie do tej wersji prerelease i powinien zostać ponownie oceniony przy
-  przyszłej aktualizacji, już poza feature freeze `1.0.0`.
+- backend przypina i testuje oficjalne stabilne `@nestjs/*` `12.0.1`; prerelease'owy wyjątek
+  peer dependency został usunięty 2026-09-02.
 
 Pełny wykaz zmian znajduje się w głównym [CHANGELOG](../CHANGELOG.md), a procedury
 operacyjne w [runbooku Docker Compose](production-compose-runbook.md).

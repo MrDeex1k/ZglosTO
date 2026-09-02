@@ -33,7 +33,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: rustfs
-          image: rustfs/rustfs:1.0.0-rc.2
+          image: rustfs/rustfs:1.0.0-rc.5
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false

@@ -127,7 +127,7 @@ przez `null` albo wariant unii dyskryminowanej.
    - dodano ścisłą walidację `S3_*`, bezpieczne klucze względne i readiness bucketu;
    - obiekty pozostają prywatne, a checksum SHA-256 jest zapisywany w metadanych.
 5. **Wdrożone 2026-07-18 — RustFS jako lokalny provider.**
-   - przypięto `rustfs/rustfs:1.0.0-rc.2`, prywatną sieć, trwały wolumen i healthcheck;
+   - przypięto `rustfs/rustfs:1.0.0-rc.5`, prywatną sieć, trwały wolumen i healthcheck;
    - backend inicjalizuje bucket tylko przy `S3_AUTO_CREATE_BUCKET=true`;
    - kod aplikacyjny nie otrzymuje `RUSTFS_*` ani portów RustFS na hoście;
    - izolowana integracja wykonuje rzeczywiste `put/get/head/delete` przez ten sam adapter;

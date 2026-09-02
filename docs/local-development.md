@@ -9,8 +9,8 @@ oraz najczęstsze problemy.
 
 Do uruchomienia pełnego WEB/API przez Docker Compose potrzebujesz:
 
-- Node.js w wersji <code>>=26.5</code>;
-- PNPM <code>11.22.0</code>;
+- Node.js w wersji <code>>=26.8.1</code>;
+- PNPM <code>11.25.0</code>;
 - Docker Engine;
 - <code>openssl</code> i <code>curl</code>.
 

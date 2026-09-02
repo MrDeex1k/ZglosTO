@@ -23,7 +23,7 @@ dopiero na wyraźne polecenie właściciela projektu.
 | iPad Simulator           | mini, 11 i 13 cali dla obu runtime'ów           | gotowy                                 |
 | fizyczny iPhone          | iPhone 15 Pro dostępny do weryfikacji           | test po bootstrapie                    |
 | fizyczny iPad            | brak                                            | potrzebny przed zewnętrzną betą        |
-| Node.js                  | 26.5.0, zgodny z bieżącym monorepo              | instalacja SDK 57 i narzędzia działają |
+| Node.js                  | 26.8.1, zgodny z bieżącym monorepo              | instalacja SDK 57 i narzędzia działają |
 | PNPM/NPX                 | dostępne                                        | gotowy                                 |
 | Watchman                 | dostępny                                        | gotowy                                 |
 | CocoaPods                | 1.17.0                                          | gotowy                                 |

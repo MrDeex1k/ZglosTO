@@ -29,10 +29,10 @@ wchodzi do planu odchudzania obrazów wydania.
 
 | Artefakt        | Dockerfile / źródło          | Obraz bazowy                             | Kontekst builda |
 | --------------- | ---------------------------- | ---------------------------------------- | --------------- |
-| `authorization` | `authorization/Dockerfile`   | `node:26.7.0-alpine3.24`                 | katalog główny  |
-| `backend`       | `backend/Dockerfile`         | `node:26.7.0-alpine3.24`                 | katalog główny  |
-| `media_worker`  | wspólny `backend/Dockerfile` | `node:26.7.0-alpine3.24`                 | katalog główny  |
-| `llm_gateway`   | `llm_gateway/Dockerfile`     | `node:26.7.0-alpine3.24`                 | katalog główny  |
+| `authorization` | `authorization/Dockerfile`   | `node:26.8.1-alpine3.24`                 | katalog główny  |
+| `backend`       | `backend/Dockerfile`         | `node:26.8.1-alpine3.24`                 | katalog główny  |
+| `media_worker`  | wspólny `backend/Dockerfile` | `node:26.8.1-alpine3.24`                 | katalog główny  |
+| `llm_gateway`   | `llm_gateway/Dockerfile`     | `node:26.8.1-alpine3.24`                 | katalog główny  |
 | `frontend`      | `frontend/Dockerfile`        | builder Node + `nginx:1.31.3-alpine3.24` | katalog główny  |
 | `database`      | `database/Dockerfile`        | `postgres:18.6-alpine3.24`               | katalog główny  |
 | `pgbouncer`     | `pgbouncer/Dockerfile`       | `edoburu/pgbouncer:v1.25.2-p0`           | katalog główny  |
@@ -136,7 +136,7 @@ buildy z kontekstem głównym; obowiązuje wyłącznie główny `.dockerignore`.
 
 ## Build i supply chain
 
-Buildery instalują przypięty `pnpm@11.22.0` i korzystają z cache-friendly kopiowania
+Buildery instalują przypięty `pnpm@11.25.0` i korzystają z cache-friendly kopiowania
 manifestów, ale:
 
 - nie używają `pnpm fetch` ani BuildKit cache mounts;

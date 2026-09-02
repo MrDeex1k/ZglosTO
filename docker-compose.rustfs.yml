@@ -1,6 +1,6 @@
 services:
   rustfs:
-    image: rustfs/rustfs:1.0.0-rc.2
+    image: rustfs/rustfs:1.0.0-rc.5
     restart: unless-stopped
     environment:
       # Provider-specific names remain inside this local infrastructure override.
