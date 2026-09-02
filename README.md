@@ -28,13 +28,16 @@
 **WEB + Mobile**
 
 <p align="center">
+  <img src="https://img.shields.io/badge/TanStack%20Start-%23000000.svg?style=for-the-badge&amp;logo=tanstack&amp;logoColor=%23ECE8D1" alt="TanStack Start" height="28">
   <img src="https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&amp;logo=react&amp;logoColor=%2361DAFB" alt="React" height="28">
+  <img src="https://img.shields.io/badge/vite-%23646CFF.svg?style=for-the-badge&amp;logo=vite&amp;logoColor=white" alt="Vite" height="28">
+  <img src="https://img.shields.io/badge/TanStack%20Router-%23000000.svg?style=for-the-badge&amp;logo=tanstack&amp;logoColor=%23ECE8D1" alt="TanStack Router" height="28">
   <img src="https://img.shields.io/badge/react_native-%2320232a.svg?style=for-the-badge&amp;logo=react&amp;logoColor=%2361DAFB" alt="React Native" height="28">
   <img src="https://img.shields.io/badge/expo-%231C1E24.svg?style=for-the-badge&amp;logo=expo&amp;logoColor=%23D04A37" alt="Expo" height="28">
-  <img src="https://img.shields.io/badge/vite-%23646CFF.svg?style=for-the-badge&amp;logo=vite&amp;logoColor=white" alt="Vite" height="28">
   <img src="https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&amp;logo=tailwind-css&amp;logoColor=white" alt="TailwindCSS" height="28">
   <img src="https://img.shields.io/badge/shadcnui-%23000000.svg?style=for-the-badge&amp;logo=shadcnui&amp;logoColor=white" alt="shadcn/ui" height="28">
-  <img src="https://img.shields.io/badge/React%20Query-%23FF4154.svg?style=for-the-badge&amp;logo=react%20query&amp;logoColor=white" alt="React Query" height="28">
+  <img src="https://img.shields.io/badge/TanStack%20Query-%23000000.svg?style=for-the-badge&amp;logo=tanstack&amp;logoColor=%23ECE8D1" alt="TanStack Query" height="28">
+  <img src="https://img.shields.io/badge/i18next-%2326A69A.svg?style=for-the-badge&amp;logo=i18next&amp;logoColor=white" alt="i18next" height="28">
 </p>
 
 **Kontrakty + API**
@@ -45,33 +48,41 @@
   <img src="https://img.shields.io/badge/node.js-%236DA55F.svg?style=for-the-badge&amp;logo=node.js&amp;logoColor=white" alt="Node.js" height="28">
   <img src="https://img.shields.io/badge/nestjs-%23E0234E.svg?style=for-the-badge&amp;logo=nestjs&amp;logoColor=white" alt="NestJS" height="28">
   <img src="https://img.shields.io/badge/hono-%23E36002.svg?style=for-the-badge&amp;logo=hono&amp;logoColor=white" alt="Hono" height="28">
+  <img src="https://img.shields.io/badge/-Swagger-%23Clojure?style=for-the-badge&amp;logo=swagger&amp;logoColor=white" alt="Swagger / OpenAPI" height="28">
 </p>
 
 **Dane + infrastruktura + jakość**
 
 <p align="center">
   <img src="https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&amp;logo=postgresql&amp;logoColor=white" alt="Postgres" height="28">
-  <img src="https://img.shields.io/badge/Rabbitmq-%23FF6600.svg?style=for-the-badge&amp;logo=rabbitmq&amp;logoColor=white" alt="RabbitMQ" height="28">
-  <img src="https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&amp;logo=docker&amp;logoColor=white" alt="Docker" height="28">
+  <img src="https://img.shields.io/badge/RustFS-0196D0?style=for-the-badge&amp;logo=rustfs&amp;logoColor=white" alt="RustFS" height="28">
+  <img src="https://img.shields.io/badge/Amazon%20S3-FF9900?style=for-the-badge&amp;logo=amazons3&amp;logoColor=white" alt="Amazon S3 / S3-compatible storage" height="28">
   <img src="https://img.shields.io/badge/nginx-%23009639.svg?style=for-the-badge&amp;logo=nginx&amp;logoColor=white" alt="Nginx" height="28">
+  <img src="https://img.shields.io/badge/Rabbitmq-%23FF6600.svg?style=for-the-badge&amp;logo=rabbitmq&amp;logoColor=white" alt="RabbitMQ" height="28">
+  <img src="https://img.shields.io/badge/redis-%23DC382D.svg?style=for-the-badge&logo=redis&logoColor=white" alt="Redis" height="28">
+  <img src="https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&amp;logo=docker&amp;logoColor=white" alt="Docker" height="28">
   <img src="https://img.shields.io/badge/kubernetes-%23326ce5.svg?style=for-the-badge&amp;logo=kubernetes&amp;logoColor=white" alt="Kubernetes" height="28">
+  <img src="https://img.shields.io/badge/K3s-%23FFC61C.svg?style=for-the-badge&amp;logo=k3s&amp;logoColor=black" alt="K3s" height="28">
   <img src="https://img.shields.io/badge/pnpm-%234a4a4a.svg?style=for-the-badge&amp;logo=pnpm&amp;logoColor=f69220" alt="PNPM" height="28">
   <img src="https://img.shields.io/badge/turborepo-%23EF4444.svg?style=for-the-badge&amp;logo=turborepo&amp;logoColor=white" alt="Turborepo" height="28">
   <img src="https://img.shields.io/badge/Vitest-%23252529.svg?style=for-the-badge&amp;logo=vitest&amp;logoColor=FCC72B" alt="Vitest" height="28">
   <img src="https://img.shields.io/badge/oxc-%233451b2.svg?style=for-the-badge&amp;logo=oxc&amp;logoColor=white&amp;logoSize=auto" alt="Oxc" height="28">
+  <img src="https://img.shields.io/badge/OpenTelemetry-FFFFFF?&amp;style=for-the-badge&amp;logo=opentelemetry&amp;logoColor=black" alt="OpenTelemetry" height="28">
+  <img src="https://img.shields.io/badge/Prometheus-E6522C?style=for-the-badge&amp;logo=Prometheus&amp;logoColor=white" alt="Prometheus" height="28">
+  <img src="https://img.shields.io/badge/grafana-%23F46800.svg?style=for-the-badge&amp;logo=grafana&amp;logoColor=white" alt="Grafana" height="28">
 </p>
 
 ### Technologie i odpowiedzialność
 
 | Warstwa          | Technologie                                                                                                            | Odpowiedzialność                                                       |
 | ---------------- | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| **WEB**          | React, Vite, TanStack Router/Start, TanStack Query, Base UI, shadcn/ui, Tailwind CSS                                   | Publiczny feed, formularze, panele mieszkańca, służby i administratora |
-| **Mobile**       | Expo, React Native, Expo Router, NativeWind, TanStack Query, SecureStore, NetInfo                                      | iOS/Android z bezpieczną sesją                                         |
+| **WEB**          | React, TanStack Start/Router/Query, Vite, Base UI, shadcn/ui, Tailwind CSS                                   | Publiczny feed, formularze, panele mieszkańca, służby i administratora |
+| **Mobile**       | React Native, Expo, Expo Router, NativeWind, TanStack Query, SecureStore, NetInfo                                      | iOS/Android z bezpieczną sesją                                         |
 | **Kontrakty**    | TypeScript, Zod, <code>@zglosto/contracts</code>, <code>@zglosto/i18n</code>, <code>@zglosto/white-label-config</code> | Wspólne typy i walidacja konfiguracji                                  |
 | **API i auth**   | Node.js, NestJS, Hono, Better Auth                                                                                     | API domenowe, sesje, role, rate limiting i integracje                  |
 | **Dane i media** | PostgreSQL, PgBouncer, RabbitMQ, Sharp, S3-compatible storage                                                          | Dane domenowe, kolejki, backup, zdjęcia i przetwarzanie obrazów        |
 | **Uruchomienie** | Docker Compose, Nginx, Kubernetes/K3s, Docker Model Runner                                                             | Lokalne demo, profile wdrożeniowe i opcjonalne AI                      |
-| **Jakość**       | PNPM, Turborepo, Vitest, Oxc, React Doctor                                                                             | Monorepo, testy, format, linting i kontrola jakości                    |
+| **Jakość**       | PNPM, Turborepo, Vitest, Oxc, React Doctor, Expo Doctor                                                                             | Monorepo, testy, format, linting i kontrola jakości                    |
 
 > **Status projektu:** **Source Ready / Client-Built / Not Store-Published**. Repozytorium
 > dostarcza działający kod WEB, Mobile i usług backendowych. Każda instancja klienta
