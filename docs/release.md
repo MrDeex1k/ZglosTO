@@ -1189,7 +1189,7 @@ Kroki wykonawcze:
    cache’u.
 9. **Wdrożone 2026-07-25:** dostarczono `local` i `external` dla Compose, Kubernetes i
    K3s wraz z plikowymi sekretami, ACL, NetworkPolicy, healthcheckami lokalnego Redis oraz
-   automatycznym testem parytetu `pnpm check:redis`. Lokalny Redis 8.10.0 przechowuje
+   automatycznym testem parytetu `pnpm check:redis`. Lokalny Redis 8.10.1 przechowuje
    wyłącznie odtwarzalne dane w pamięci; profil zewnętrzny wymaga `rediss://` i
    zweryfikowanego CA.
 10. **Wdrożone i zweryfikowane 2026-07-25:** Authorization i backend raportują awarię
@@ -1390,28 +1390,33 @@ Rozbudowany Kubernetes pozostaje zamrożony i nie blokuje Fazy 12 ani pierwszego
 Wraca do planu dopiero wtedy, gdy rzeczywista skala wdrożeń uzasadni osobny koszt
 certyfikacji i utrzymania.
 
-## Faza 13: Ostateczna bramka certyfikacji produkcyjnej — stabilne NestJS 12
+## Faza 13: Bramka wspólnego baseline'u źródłowego — stabilne NestJS 12
 
-Status: **wdrożona 2026-09-02**. Backend i `media_worker` przeszły z alpha na spójną,
-oficjalną macierz NestJS `12.0.1`. Usunięto prerelease'owe wyjątki peer dependency i
-parent-scoped overrides NestJS, a bootstrap egzekwuje błąd dla duplikatów i shadowingu tras
-oraz rozwiązuje je według specyficzności. Testy zachowują 20 operacji OpenAPI, kontrakty
-Standard Schema, strukturalne `errorCode` i kontrolowany graceful shutdown.
+Status: **migracja wdrożona i wspólny baseline źródłowy zweryfikowany 2026-09-02**.
+Certyfikacja produkcyjna hosta klienta pozostaje statusem per klient w Fazie 12. Backend i
+`media_worker` przeszły z alpha na spójną, oficjalną macierz NestJS `12.0.1`. Usunięto
+prerelease'owe wyjątki peer dependency i parent-scoped overrides NestJS, a bootstrap
+egzekwuje błąd dla duplikatów i shadowingu tras oraz rozwiązuje je według specyficzności.
+Testy zachowują 20 operacji OpenAPI, kontrakty Standard Schema, strukturalne `errorCode` i
+kontrolowany graceful shutdown.
 
 Aktualizacja objęła również pozostałe zależności workspace, Node `26.8.1`, PNPM `11.25.0`
 oraz bieżące obrazy Node, Nginx, Redis, RustFS, Loki, Grafana, Kind i K3s. Aktualizacja RustFS
 została wykonana bez osobnego testu zachowania istniejących danych, zgodnie z decyzją
-właściciela; pozostałe bramki statyczne i runtime pozostają wymagane. Certyfikacja konkretnego
-hosta i jego danych nadal należy do Fazy 12.
+właściciela. Wspólne bramki statyczne, obrazy i izolowany runtime przeszły. Load test,
+rollout/rollback, retencja i RPO/RTO na docelowym hoście należą do certyfikacji Fazy 12.
 
 Dziewięć poprawek Expo SDK 57 opublikowanych 2026-09-01 między `16:18Z` i `18:08Z` nie
 spełniało jeszcze 24-godzinnej kwarantanny podczas zamknięcia tej migracji. Pozostają
 odłożone do kolejnego zwykłego przebiegu `pnpm deps:update`; nie utworzono dla nich wyjątku.
 
 Poniższa lista stanowi utrzymywany kontrakt bramki i została wykonana podczas tej migracji.
+Punkty wymagające docelowego hosta są realizowane osobno dla każdego klienta w Fazie 12 i nie
+są dowodem wspólnego baseline'u źródłowego.
 
-1. Rozpocząć bramkę dopiero po zakończeniu implementacji, optymalizacji infrastruktury,
-   testów obciążeniowych i bezpieczeństwa transportu z wcześniejszych faz.
+1. Rozpocząć migrację wspólnego baseline'u dopiero po zakończeniu implementacji i
+   bezpieczeństwa transportu z wcześniejszych faz. Testy obciążeniowe i strojenie
+   infrastruktury konkretnego hosta pozostają niezależną bramką Fazy 12.
 2. Potwierdzić dostępność stabilnego NestJS 12 i wybrać spójną macierz dokładnie przypiętych
    wersji `@nestjs/common`, `@nestjs/core`, `@nestjs/platform-express`, `@nestjs/testing`,
    `@nestjs/swagger` oraz zgodnych zależności peer. Pakiety muszą być dostępne w npm przez co
@@ -1430,12 +1435,26 @@ Poniższa lista stanowi utrzymywany kontrakt bramki i została wykonana podczas 
 7. Uruchomić pełną bramkę jakości: peer dependencies bez ostrzeżeń, audyt zależności,
    `pnpm check`, testy kontraktowe i backendu, produkcyjne buildy wszystkich obrazów oraz pełny
    izolowany test integracyjny przez Nginx.
-8. Powtórzyć krytyczne scenariusze wydaniowe: graceful shutdown, RabbitMQ retry/DLQ/outbox,
-   przetwarzanie zdjęć, fallback LLM, backup/restore, TLS/mTLS/AMQPS, testy obciążeniowe oraz
-   rollout/rollback na docelowym profilu infrastruktury.
-9. Zaktualizować dokumentację wersji, architektury i eksploatacji. Wspólny certyfikowany
-   baseline produkcyjny wolno zadeklarować dopiero po przejściu całej bramki bez prerelease
-   NestJS, przejściowych obejść i nierozwiązanych błędów krytycznych.
+8. Powtórzyć wspólne krytyczne scenariusze wydaniowe: graceful shutdown, RabbitMQ
+   retry/DLQ/outbox, przetwarzanie zdjęć, fallback LLM, backup/restore i TLS/mTLS/AMQPS.
+   Testy obciążeniowe oraz rollout/rollback na docelowym profilu wykonuje klient w Fazie 12.
+9. Zaktualizować dokumentację wersji, architektury i eksploatacji. Wspólny baseline źródłowy
+   wolno zadeklarować dopiero po przejściu całej bramki bez prerelease NestJS, przejściowych
+   obejść i nierozwiązanych błędów krytycznych.
+
+### Dowody weryfikacji wspólnego baseline'u z 2026-09-02
+
+- instalacja z przypiętego lockfile, polityki źródeł, peer dependencies i oba audyty
+  zależności przeszły; audyt produkcyjny zwrócił zero advisory;
+- typecheck, testy i build wszystkich workspace'ów przeszły, w tym eksport Mobile dla
+  Androida i iOS oraz osobny typecheck i build `frontend-zglosto` z TypeScript `7.0.2`;
+- zbudowano osiem obrazów produkcyjnych i potwierdzono ich limity rozmiaru;
+- pełna izolowana integracja Compose potwierdziła migracje, 20 operacji OpenAPI, routing,
+  TLS/mTLS/AMQPS, S3, RabbitMQ retry/DLQ/outbox, fallback LLM, backup/restore i graceful
+  shutdown;
+- test awarii i odzyskania Redis przeszedł;
+- zgodnie z decyzją właściciela nie wykonano osobnego testu zachowania danych przy zmianie
+  wersji RustFS. Nie wykonano też certyfikacji hosta klienta, która pozostaje w Fazie 12.
 
 ## Faza 14: Asynchroniczna kontrola właściwej służby przez LLM
 

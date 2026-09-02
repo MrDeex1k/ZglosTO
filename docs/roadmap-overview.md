@@ -1,6 +1,6 @@
 # Roadmapa projektu ZgłosTO — przegląd faz
 
-## Stan na 2026-08-25
+## Historyczny stan na 2026-08-25
 
 Fazy 0-10 są zakończone. Faza 10 zamknęła typowany kontrakt,
 zawsze aktywny lokalny rate limiting Authorization i publicznego zapisu zgłoszenia oraz
@@ -47,8 +47,15 @@ do developmentu nie staje się produkcyjny samą zmianą `NODE_ENV`.
 | 10   | zakończona | Redis, lokalny i rozproszony rate limiting oraz cache publicznej listy      |
 | 11   | zakończona | lokalny build źródłowy i utwardzony produkcyjny profil Compose              |
 | 12   | per klient | certyfikacja jego Compose/K3s, DNS, SLO, restore i load testy               |
-| 13   | zakończona | stabilne NestJS 12 i ostateczna bramka certyfikacji produkcyjnej            |
+| 13   | planowana  | stabilne NestJS 12 i ostateczna bramka certyfikacji produkcyjnej            |
 | 14   | po wydaniu | asynchroniczna kontrola właściwej służby przez LLM                          |
+
+## Aktualizacja z 2026-09-02
+
+Lokalny profil używa obecnie Redis `8.10.1`. Faza 13 została zakończona dla wspólnego kodu
+źródłowego po migracji na oficjalny NestJS `12.0.1` oraz regresji zależności, kontraktów,
+buildów i izolowanego runtime'u. Nie oznacza to certyfikacji produkcyjnej konkretnego hosta;
+ta nadal jest wykonywana osobno dla każdego klienta w Fazie 12.
 
 ## Znaczenie poszczególnych faz
 
@@ -146,12 +153,13 @@ operatora. Uzgodniono host Ubuntu `amd64`, profil `minimal` z lokalnym LLM oraz
 `recommended` z lokalnym Redis. Lokalny pomiar CPU/RAM daje wymagania wstępne, które klient
 potwierdza podczas własnego wdrożenia.
 
-### Faza 13 — bramka certyfikowanego baseline'u produkcyjnego
+### Faza 13 — bramka wspólnego baseline'u źródłowego
 
-Zakończona 2026-09-02. Cały backend i `media_worker` używają oficjalnego NestJS `12.0.1`.
-Usunięto obejścia prerelease, włączono wykrywanie konfliktów i shadowingu tras oraz wykonano
-regresję zależności, kontraktów, buildów i runtime'u. Stabilny baseline produkcyjny pozostaje
-uzależniony od certyfikacji konkretnej instancji klienta opisanej w Fazie 12.
+Zakończona 2026-09-02 dla wspólnego kodu źródłowego. Cały backend i `media_worker` używają
+oficjalnego NestJS `12.0.1`. Usunięto obejścia prerelease, włączono wykrywanie konfliktów i
+shadowingu tras oraz wykonano regresję zależności, kontraktów, buildów i runtime'u.
+Certyfikacja produkcyjna konkretnej instancji klienta nie jest częścią tego statusu i nadal
+odbywa się osobno w Fazie 12.
 
 ### Faza 14 — rozwój po stabilnym NestJS 12
 

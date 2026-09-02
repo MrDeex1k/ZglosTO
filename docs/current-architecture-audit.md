@@ -112,7 +112,7 @@ runbook Compose, handoff do K3s i maszynowy kontrakt zamknięcia. Faza 11 jest z
 | `database`          | `database/`       | PostgreSQL 18.6 + `pg_cron` + `pgbackrest` | `${POSTGRES_PORT}`  | dane domenowe i tabele Better Auth                    |
 | `pgbouncer`         | obraz zewnętrzny  | PgBouncer 1.25.2                           | `6432`              | transaction pooling dla backendu i authorization      |
 | `rustfs`            | obraz zewnętrzny  | RustFS 1.0.0-rc.5                          | `9000` wewnętrznie  | domyślny lokalny provider Object Storage zgodny z S3  |
-| `redis`             | obraz zewnętrzny  | Redis 8.10.0                               | `6379` wewnętrznie  | opcjonalny cache i współdzielony rate limiting        |
+| `redis`             | obraz zewnętrzny  | Redis 8.10.1                               | `6379` wewnętrznie  | opcjonalny cache i współdzielony rate limiting        |
 | `nginx`             | `nginx/`          | Nginx 1.31.4                               | `1235`              | reverse proxy dla frontendu, auth, backendu i LLM     |
 
 ### Sieci i uruchomienie lokalne
@@ -693,6 +693,6 @@ zależności, TLS/mTLS/AMQPS, przeciążenie kolejki, restart workera, retry, DL
 W kroku 15 usunięto ręczny bootstrap Express, routery, middleware, zależności legacy i
 tymczasowy override rollbacku. Express pozostaje wyłącznie wewnętrznym adapterem
 `@nestjs/platform-express`. Faza 6 jest zakończona po 15 krokach. Bramka wydania stabilnego
-NestJS 12 została przeniesiona po Fazach 7-12 jako ostatnia bramka publicznego wydania:
-[Faza 13](release.md#faza-13-ostateczna-bramka-publicznego-wydania--stabilne-nestjs-12).
+NestJS 12 została przeniesiona po Fazach 7-12 jako bramka wspólnego baseline'u źródłowego:
+[Faza 13](release.md#faza-13-bramka-wspólnego-baselineu-źródłowego--stabilne-nestjs-12).
 Późniejsza Faza 14 obejmuje już rozwój asynchronicznej kontroli routingu przez LLM.

@@ -1,14 +1,18 @@
-# Akceptacja ryzyka `image-size` dla kandydata 1.0.0
+# Historyczna akceptacja ryzyka `image-size` dla kandydata 1.0.0
 
 Status: **zamknięte 2026-09-02 po aktualizacji Expo/Metro**
 Właściciel decyzji: właściciel repozytorium
 Zakres: wyłącznie lokalny pipeline build/export aplikacji `Mobile`
 
+> Ten dokument jest zamkniętym zapisem historycznym. Opisane niżej advisory, kontrole
+> kompensujące i data wygaśnięcia nie są aktywną polityką wydaniową i nie mogą być podstawą
+> ponownego wprowadzenia wyjątku. Bieżąca bramka wymaga pustej listy advisory produkcyjnych.
+
 ## Ustalenie
 
-Aktualny lockfile zawiera `image-size@1.2.1`, a nie `2.0.2`. Pakiet jest zależnością
+Lockfile kandydata 1.0.0 zawierał `image-size@1.2.1`, a nie `2.0.2`. Pakiet był zależnością
 przechodnią `Metro 0.84.4`, osiągalną wyłącznie przez graf Expo/React Native zaczynający
-się w workspace `Mobile`. `pnpm audit --prod` zgłasza dwa problemy `high`:
+się w workspace `Mobile`. `pnpm audit --prod` zgłaszał dwa problemy `high`:
 
 - [GHSA-w3rx-r6r6-pgpr](https://github.com/advisories/GHSA-w3rx-r6r6-pgpr) — nieskończona
   pętla parsera ICNS;
@@ -24,7 +28,7 @@ Według GitHub Advisory Database na 2026-08-26 obie podatności obejmują wersje
 i nie mają opublikowanej wersji naprawionej. Nie stosujemy fikcyjnego override ani
 niezweryfikowanego forka.
 
-## Kontrole kompensujące
+## Historyczne kontrole kompensujące
 
 1. `node scripts/check-mobile-build-assets.ts` sprawdza wszystkie publikowane assety Mobile
    przed Metro. Dopuszcza PNG, JPEG, WebP, GIF i SVG, a blokuje rozszerzenia oraz sygnatury
@@ -33,11 +37,11 @@ niezweryfikowanego forka.
    przeglądem. Projekt nie uruchamia obecnie centralnego CI dla niezaufanych forków.
 3. Docelowy kontrakt obrazów wymusza brak pakietu `image-size` w produkcyjnych obrazach
    Authorization, backendu/media workera i `llm_gateway`.
-4. `pnpm audit:release` akceptuje tylko oba powyższe GHSA, dokładnie dla
+4. Ówczesny `pnpm audit:release` akceptował tylko oba powyższe GHSA, dokładnie dla
    `image-size@1.2.1`, jeśli każda ścieżka zaczyna się w `Mobile` i kończy w
-   `metro>image-size`. Każde inne advisory pozostaje błędem.
-5. Wyjątek wygasa automatycznie 2026-09-25. Wcześniejszy przegląd jest obowiązkowy po
-   aktualizacji Expo, React Native lub Metro albo po publikacji obsługiwanej poprawki.
+   `metro>image-size`. Każde inne advisory pozostawało błędem.
+5. Wyjątek miał wygasnąć automatycznie 2026-09-25, lecz został zamknięty wcześniej po
+   aktualizacji Expo/Metro 2026-09-02.
 
 ## Kryterium zamknięcia
 

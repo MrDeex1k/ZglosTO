@@ -11,18 +11,21 @@ Skan obejmuje cały katalog `frontend`, a nie tylko pliki zmienione względem Gi
 i zewnętrzny score React Doctor zostały wyłączone. Źródłem porównania jest liczba i rodzaj
 diagnostyk, wynik TypeScript/OxLint oraz rozmiar produkcyjnego buildu.
 
-## Wersje narzędzi
+## Wersje narzędzi historycznego skanu
 
 | Narzędzie             | Wersja    |
 | --------------------- | --------- |
-| Node.js               | `26.8.1`  |
-| PNPM                  | `11.25.0` |
+| Node.js               | `26.5.0`  |
+| PNPM                  | `11.22.0` |
 | TypeScript            | `7.0.2`   |
 | OxLint                | `1.75.0`  |
 | React Doctor          | `0.9.1`   |
 | React / React DOM     | `19.2.8`  |
 | Vite                  | `8.1.5`   |
 | React Compiler plugin | `1.0.0`   |
+
+Od 2026-09-02 kontrakt bieżącego workspace wymaga Node.js `26.8.1` i PNPM `11.25.0`.
+Nie zmienia to środowiska ani wyniku historycznego skanu z 2026-07-23.
 
 ## Polecenia odtwarzające
 

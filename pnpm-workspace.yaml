@@ -6,6 +6,9 @@ packages:
   - 'Mobile'
   - 'packages/*'
 injectWorkspacePackages: true
+# Nie dodawać syncInjectedDepsAfterScripts: w tym grafie PNPM 11.25 zastępował poprawny link
+# llm_gateway -> observability nieistniejącym celem virtual store. Buildy Docker wykonują
+# wymuszoną instalację po zbudowaniu zależności i przed pnpm deploy, a lokalnie używamy symlinków.
 resolvePeersFromWorkspaceRoot: false
 minimumReleaseAge: 1440
 minimumReleaseAgeStrict: true

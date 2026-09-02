@@ -17,7 +17,7 @@ provider-neutralnego `llm_gateway`; po Fazie 7 adapter wywołuje opcjonalny Dock
 Runner, a domyślnie zwraca kontrolowany fallback. OpenAPI i pełna bramka parytetu przeszły
 przed przełączeniem, a ręczny runtime Express został usunięty. Faza 6 jest zakończona po
 15 krokach. Bramka publicznego wydania zależna od stabilnego NestJS 12 została wykonana
-2026-09-02 w [Fazie 13](release.md#faza-13-ostateczna-bramka-certyfikacji-produkcyjnej--stabilne-nestjs-12).
+2026-09-02 w [Fazie 13](release.md#faza-13-bramka-wspólnego-baselineu-źródłowego--stabilne-nestjs-12).
 
 Od 2026-09-02 backend używa oficjalnej stabilnej linii NestJS `12.0.1`. Historyczna bramka
 z 2026-07-20 była wykonana na `12.0.0-alpha.5`; poniższa macierz prerelease pozostaje zapisem

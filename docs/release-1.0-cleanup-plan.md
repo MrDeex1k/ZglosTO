@@ -11,7 +11,7 @@ Nie należy usuwać pliku wyłącznie dlatego, że zgłasza go narzędzie do ana
 statycznej. Skrypty uruchamiane z shella, Dockerfile lub Compose nie tworzą importów,
 które Knip potrafi automatycznie wykryć.
 
-## Aktualny checkpoint — 2026-08-25
+## Historyczny checkpoint — 2026-08-25
 
 WEB, Mobile, usługi backendowe, pakiety współdzielone i profile wdrożeniowe tworzą jeden
 kandydat źródłowy `1.0.0`. Mobile ma zamknięte Fazy 0–7 i status
@@ -125,28 +125,18 @@ SHA, forki i odwołania do commitów.
 4. Usunąć pola publikacyjne (`files`, `main`) tylko z pakietów, które na pewno nie
    będą pakowane ani używane w runtime obrazu.
 
-## Etap 5 — zależności i bezpieczeństwo
+## Aktualizacja Etapu 5 — zależności i bezpieczeństwo, 2026-09-02
 
 1. Wykonane 2026-09-02: cały backend przeszedł na stabilną macierz NestJS `12.0.1`, a
    prerelease'owy wyjątek `peerDependencyRules.allowedVersions` został usunięty.
-2. Preferowana naprawa:
-   - przejść na spójną, wspieraną linię NestJS, która dostarcza
-     `multer >=2.2.0` i `js-yaml >=4.3.0`;
-   - albo zaczekać na zgodne wydanie NestJS 12, jeżeli alpha jest świadomym
-     wymaganiem produktu.
-3. Dla `brace-expansion` najpierw podnieść nadrzędny łańcuch
-   OpenTelemetry → GCP detector → gaxios/rimraf/glob. Nie wymuszać globalnie
-   `brace-expansion@5`, ponieważ `minimatch@9` oczekuje linii 2.x.
-4. Dodano dokładne, parent-scoped overrides dla `multer@2.2.0` pod
-   `@nestjs/platform-express` oraz `js-yaml@4.3.1` pod `@nestjs/swagger` i `xmlbuilder2`.
-   Wersje usuwają znane podatności DoS bez globalnej zmiany innych linii zależności;
-   pozostają objęte pełnymi testami i audytem wydaniowym.
-5. Release gate: surowy `pnpm audit --prod` oraz `pnpm audit:release`. Ten drugi dopuszcza
-   wyłącznie dokładne, wygasające wyjątki z kontrolami kompensującymi; każde inne
-   high/moderate blokuje wydanie. `pnpm peers check` musi być czysty lub świadomie
-   udokumentowany.
+2. Stabilna linia NestJS dostarcza bezpieczne wersje tranzytywne; parent-scoped overrides
+   `multer` i `js-yaml` używane przez alpha zostały usunięte i nie należy ich przywracać.
+3. Łańcuch OpenTelemetry został podniesiony bez globalnego wymuszania niezgodnej wersji
+   `brace-expansion`.
+4. Release gate `pnpm audit:release` wymaga pustej listy advisory produkcyjnych. Nie istnieją
+   aktywne, wygasające wyjątki; `pnpm peers check` również musi pozostać czysty.
 
-## Etap 6 — obrazy Docker
+## Aktualizacja Etapu 6 — obrazy Docker, 2026-09-02
 
 1. Redis został podniesiony do `8.10.1-alpine3.23`.
 2. Tempo zostało podniesione z `2.10.8` do `3.0.3`; przed wydaniem wymaga

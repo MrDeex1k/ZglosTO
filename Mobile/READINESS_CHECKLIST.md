@@ -9,7 +9,7 @@ uruchamiane wyłącznie na iPhone Simulator i Android Emulator. iPad oraz urząd
 fizyczne pozostają w docelowej macierzy przedwydaniowej, ale wolno je uruchomić
 dopiero na wyraźne polecenie właściciela projektu.
 
-## 1. Aktualny stan stanowiska
+## 1. Stan stanowiska z audytu bazowego — 2026-08-19
 
 | Obszar                   | Wynik audytu                                    | Ocena                                  |
 | ------------------------ | ----------------------------------------------- | -------------------------------------- |
@@ -23,7 +23,7 @@ dopiero na wyraźne polecenie właściciela projektu.
 | iPad Simulator           | mini, 11 i 13 cali dla obu runtime'ów           | gotowy                                 |
 | fizyczny iPhone          | iPhone 15 Pro dostępny do weryfikacji           | test po bootstrapie                    |
 | fizyczny iPad            | brak                                            | potrzebny przed zewnętrzną betą        |
-| Node.js                  | 26.8.1, zgodny z bieżącym monorepo              | instalacja SDK 57 i narzędzia działają |
+| Node.js                  | 26.5.0, zgodny z ówczesnym monorepo             | instalacja SDK 57 i narzędzia działają |
 | PNPM/NPX                 | dostępne                                        | gotowy                                 |
 | Watchman                 | dostępny                                        | gotowy                                 |
 | CocoaPods                | 1.17.0                                          | gotowy                                 |
@@ -33,9 +33,10 @@ dopiero na wyraźne polecenie właściciela projektu.
 | EAS CLI                  | niewymagane                                     | buildy są lokalne                      |
 
 Expo SDK 57 jest stabilnym punktem odniesienia projektu. Aplikacja celowo podnosi
-minimum platform do iOS/iPadOS 17.0 oraz Android API 31. Node 26.5 przeszedł
-instalację zależności, typecheck i narzędzia projektu; lokalne buildy są końcowym
-smoke testem runtime.
+minimum platform do iOS/iPadOS 17.0 oraz Android API 31. Node 26.5 przeszedł historyczny
+audyt bazowy. Od 2026-09-02 repozytorium wymaga Node.js `26.8.1`; obrazy i pełna integracja
+zostały na nim zweryfikowane, a lokalne stanowisko należy zaktualizować przed kolejnym
+testem Mobile.
 
 ## 2. Decyzje, które muszą zapaść przed bootstrapem
 
