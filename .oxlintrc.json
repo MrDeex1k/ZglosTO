@@ -19,5 +19,11 @@
     "jsx-a11y/anchor-has-content": "warn",
     "jsx-a11y/label-has-associated-control": "warn"
   },
-  "ignorePatterns": ["**/dist/**", "**/routeTree.gen.ts", ".pnpm-store/**"]
+  "ignorePatterns": [
+    "**/dist/**",
+    "**/routeTree.gen.ts",
+    ".pnpm-store/**",
+    "docs-site/.astro/**",
+    "docs-site/.nimbus/**"
+  ]
 }

@@ -149,7 +149,8 @@ są dostępne.
 - [x] potwierdzić Expo SDK 57 jako stabilny baseline w dniu bootstrapu;
 - [x] utworzyć minimalny projekt Expo Router w `Mobile` bez funkcji domenowych;
 - [x] dodać `Mobile` do jednego PNPM workspace i zachować jeden lockfile;
-- [x] sprawdzić Node 26.5 z instalacją, Metro i lokalnymi buildami;
+- [x] historycznie: sprawdzić Node 26.5 z instalacją, Metro i lokalnymi buildami;
+- [ ] powtórzyć instalację, Metro i lokalne buildy Mobile na wymaganym Node `26.8.1`;
 - [ ] jeśli Expo lub zależność wymaga LTS, rozstrzygnąć wersję Node dla całego
       workspace zamiast ukrywać drugi runtime w skryptach;
 - [x] potwierdzić import `@zglosto/contracts` oraz `@zglosto/i18n` przez Metro w obu

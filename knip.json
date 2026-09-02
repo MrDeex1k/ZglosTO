@@ -1,5 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignore": ["docs-site/.astro/**"],
   "ignoreBinaries": ["kubectl"],
   "ignoreUnresolved": ["./scripts/generate-dev-certificates.sh"],
   "workspaces": {
