@@ -585,17 +585,18 @@ async function run(): Promise<void> {
   ];
   const fallbackIncidents: CreatedIncident[] = [];
   for (const [description, reason] of fallbackCases) {
+    const selectedServiceKey = reason === 'invalid_response' ? 'other' : 'roads';
     // Keep persistence assertions isolated and deterministic.
     // oxlint-disable-next-line no-await-in-loop
     const result = await createIncident({
       description,
       email: residentEmail,
-      serviceKey: 'roads',
+      serviceKey: selectedServiceKey,
       jar: residentJar,
     });
     assert.deepEqual(result.classification, {
       classification: 'unknown',
-      serviceKey: 'other',
+      serviceKey: selectedServiceKey,
       modelAvailable: false,
       source: 'fallback',
       reason,
@@ -640,7 +641,7 @@ async function run(): Promise<void> {
   await request('/api/sluzby/incydenty', { jar: residentJar, expected: 403 });
   const serviceResponse = await request('/api/sluzby/incydenty', { jar: serviceJar });
   const serviceIncidents = parseIncidentList(serviceResponse.payload);
-  assert.equal(serviceIncidents.length, 2);
+  assert.equal(serviceIncidents.length, 4);
 
   console.log('[integration] status codes, service isolation and photos');
   const incidentId = anonymous.incydent.id_zgloszenia;
@@ -692,7 +693,7 @@ async function run(): Promise<void> {
   });
   assert.equal(parseUpdatedStatus(resolved.payload).status, 'resolved');
 
-  const fallbackIncident = fallbackIncidents[0];
+  const fallbackIncident = fallbackIncidents[2];
   assert.ok(fallbackIncident);
   await request(`/api/sluzby/incydenty/${fallbackIncident.id_zgloszenia}/status`, {
     method: 'PATCH',

@@ -62,16 +62,22 @@ export class DatabaseService extends DatabaseReadinessProbe implements Transacti
       },
     };
 
+    let releaseError: Error | false = false;
     try {
       await poolClient.query('BEGIN');
       const result = await operation(transactionClient);
       await poolClient.query('COMMIT');
       return result;
     } catch (error: unknown) {
-      await poolClient.query('ROLLBACK');
+      try {
+        await poolClient.query('ROLLBACK');
+      } catch (rollbackError) {
+        releaseError =
+          rollbackError instanceof Error ? rollbackError : new Error('Rollback failed');
+      }
       throw error;
     } finally {
-      poolClient.release();
+      poolClient.release(releaseError);
     }
   }
 
@@ -97,6 +103,12 @@ export class DatabaseService extends DatabaseReadinessProbe implements Transacti
           minVersion: 'TLSv1.3',
           rejectUnauthorized: true,
         },
+      });
+      this.poolInstance.on('error', () => {
+        addCounter('zglosto_database_operations', 1, {
+          operation: 'IDLE_CONNECTION',
+          result: 'error',
+        });
       });
     }
     return this.poolInstance;

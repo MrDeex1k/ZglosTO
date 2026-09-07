@@ -203,6 +203,17 @@ export const env = Object.freeze({
   nodeEnv: process.env.NODE_ENV?.trim() || 'development',
   databaseUrl: validDatabaseUrl('DATABASE_URL', required('DATABASE_URL')),
   databaseTlsCaPath: required('DATABASE_TLS_CA_PATH'),
+  databasePool: {
+    connectionTimeoutMillis: positiveInteger(
+      'DATABASE_CONNECTION_TIMEOUT_MS',
+      process.env.DATABASE_CONNECTION_TIMEOUT_MS?.trim() || '5000',
+    ),
+    idleTimeoutMillis: positiveInteger(
+      'DATABASE_IDLE_TIMEOUT_MS',
+      process.env.DATABASE_IDLE_TIMEOUT_MS?.trim() || '30000',
+    ),
+    max: positiveInteger('DATABASE_POOL_MAX', process.env.DATABASE_POOL_MAX?.trim() || '10'),
+  },
   betterAuthSecret,
   betterAuthUrl: validUrl('BETTER_AUTH_URL', required('BETTER_AUTH_URL')),
   clientAddress: clientAddressEnvironment(),

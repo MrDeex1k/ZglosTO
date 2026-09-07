@@ -193,12 +193,16 @@ for (const profileName of ['kubernetes', 'k3s']) {
   validateApplicationDatabaseIsolation(external);
 
   const database = resource(external, 'StatefulSet', 'database');
-  if (
-    !database.includes('name: pgbackrest-scheduler') ||
-    !database.includes('key: PGBACKREST_BACKUP_INTERVAL_SECONDS') ||
-    !database.includes('backup_type=full')
-  ) {
-    fail(`${profileName} does not schedule differential and weekly full pgBackRest backups`);
+  if (database.includes('name: pgbackrest-scheduler')) {
+    fail(`${profileName} must use the image's pg_cron schedule without a second scheduler`);
+  }
+  const backupConfig = resource(external, 'ConfigMap', 'pgbackrest-config');
+  for (const setting of ['repo1-retention-full=4', 'repo1-retention-diff=14']) {
+    if (!backupConfig.includes(setting)) fail(`${profileName} lacks ${setting}`);
+  }
+  const schedule = readFileSync('database/init-scripts/04-setup-backup.sql', 'utf8');
+  for (const timing of ['0 2 * * 0', '0 3 * * *']) {
+    if (!schedule.includes(timing)) fail(`pg_cron lacks backup schedule ${timing}`);
   }
 
   const rabbitmq = resource(external, 'StatefulSet', 'rabbitmq');

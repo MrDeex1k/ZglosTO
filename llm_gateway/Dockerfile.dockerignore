@@ -13,6 +13,8 @@
 !packages/contracts/**
 !packages/observability/
 !packages/observability/**
+!packages/workload-auth/
+!packages/workload-auth/**
 
 !scripts/
 !scripts/container-load-secrets.sh

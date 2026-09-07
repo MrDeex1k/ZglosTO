@@ -22,7 +22,6 @@ test('normalizes a model classification', () => {
         reason: null,
       },
       'roads',
-      'manual_review',
     ),
   ).toEqual({
     classification: 'emergency',
@@ -33,9 +32,9 @@ test('normalizes a model classification', () => {
   });
 });
 
-test('routes an invalid model response through the fallback service', () => {
-  expect(normalizeLlmResponse({ response: 'perhaps' }, 'roads', 'manual_review')).toEqual(
-    fallbackClassification('invalid_response', 'manual_review'),
+test('keeps the selected service for an invalid model response', () => {
+  expect(normalizeLlmResponse({ response: 'perhaps' }, 'roads')).toEqual(
+    fallbackClassification('invalid_response', 'roads'),
   );
 });
 
@@ -51,12 +50,11 @@ test('rejects an unknown response without a supported fallback reason', () => {
         reason: null,
       },
       'roads',
-      'manual_review',
     ),
-  ).toEqual(fallbackClassification('invalid_response', 'manual_review'));
+  ).toEqual(fallbackClassification('invalid_response', 'roads'));
 });
 
-test('does not allow the model response to override configured fallback routing', () => {
+test('does not allow the model response to override the selected service', () => {
   expect(
     normalizeLlmResponse(
       {
@@ -68,9 +66,8 @@ test('does not allow the model response to override configured fallback routing'
         reason: 'disabled',
       },
       'roads',
-      'manual_review',
     ),
-  ).toEqual(fallbackClassification('disabled', 'manual_review'));
+  ).toEqual(fallbackClassification('disabled', 'roads'));
 });
 
 test('sends classification input through the QUERY contract', async () => {
@@ -92,7 +89,6 @@ test('sends classification input through the QUERY contract', async () => {
   const result = await classifyIncident('description', 'roads', {
     fetchImpl,
     gatewayUrl: 'https://llm-gateway:8130',
-    fallbackServiceKey: 'manual_review',
     timeoutMs: 100,
   });
 
@@ -127,9 +123,35 @@ test('returns timeout fallback without throwing', async () => {
   const result = await classifyIncident('description', 'roads', {
     fetchImpl,
     gatewayUrl: 'https://llm-gateway:8130',
-    fallbackServiceKey: 'manual_review',
     timeoutMs: 5,
   });
 
-  expect(result).toEqual(fallbackClassification('timeout', 'manual_review'));
+  expect(result).toEqual(fallbackClassification('timeout', 'roads'));
+});
+
+test('a transport ignoring cancellation cannot hold up incident acceptance', async () => {
+  const result = await classifyIncident('description', 'roads', {
+    fetchImpl: () => new Promise(() => {}),
+    gatewayUrl: 'https://llm-gateway:8130',
+    timeoutMs: 5,
+  });
+  expect(result).toEqual(fallbackClassification('timeout', 'roads'));
+});
+
+test('a stalled response body respects the same deadline', async () => {
+  const result = await classifyIncident('description', 'roads', {
+    fetchImpl: async () => new Response(new ReadableStream()),
+    gatewayUrl: 'https://llm-gateway:8130',
+    timeoutMs: 5,
+  });
+  expect(result).toEqual(fallbackClassification('timeout', 'roads'));
+});
+
+test('malformed JSON falls back without changing the selected service', async () => {
+  const result = await classifyIncident('description', 'roads', {
+    fetchImpl: async () => new Response('{'),
+    gatewayUrl: 'https://llm-gateway:8130',
+    timeoutMs: 100,
+  });
+  expect(result).toEqual(fallbackClassification('invalid_response', 'roads'));
 });

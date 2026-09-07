@@ -1,3 +1,5 @@
+> Aktualne profile produkcyjne, migracja ingressu i procedura K3s HA: [infrastructure-profiles.md](../docs/infrastructure-profiles.md).
+
 # ZglosTO — bieżący deployment testowy Kubernetes
 
 Ten plik zawiera pełne, krok po kroku instrukcje uruchomienia aplikacji ZglosTO na Kubernetes (lokalnie i w prostym środowisku testowym). Jeśli chcesz wykonać szybkie lokalne uruchomienie bez Kubernetesa, zobacz główny `README.md` (sekcja Docker Compose).
@@ -17,7 +19,7 @@ Ten plik zawiera pełne, krok po kroku instrukcje uruchomienia aplikacji ZglosTO
 k8s/
 ├── base/              # Wspólne zasoby, ConfigMaps, PVC, workloady i polityki
 ├── overlays/
-│   ├── kubernetes/    # ingress-nginx, standard, zewnętrzny Metrics Server
+│   ├── kubernetes/    # Traefik, standard, zewnętrzny Metrics Server
 │   ├── kubernetes-rustfs/ # Kubernetes z lokalnym RustFS
 │   ├── kubernetes-observability-{external,local}/
 │   ├── kubernetes-redis-{external,local}/
@@ -40,7 +42,7 @@ k8s/
 - `kubectl` z Kustomize v5 zainstalowany i skonfigurowany
 - `docker` lub `podman` (obrazy będą budowane lokalnie)
 - Lokalny klaster Kubernetes: preferowane `minikube` lub `kind` dla testów
-- dla overlayu Kubernetes: ingress-nginx, klasa storage `standard` i Metrics Server
+- dla overlayu Kubernetes: Traefik, klasa storage `standard` i Metrics Server
 - dla overlayu K3s: niewyłączone pakietowe Traefik, `local-path` i Metrics Server
 - dla obu profili: cert-manager, Stakater Reloader, CNI egzekwujące NetworkPolicy,
   KEDA `>=2.20.0` oraz KEDA HTTP Add-on `0.15.0` w namespace `keda`
@@ -142,9 +144,11 @@ Wdrożone zostały **Pod Security Standards** - nowoczesny mechanizm bezpieczeń
 
 #### 2. Ingress Load Balancing
 
-- **Controller:** NGINX Ingress Controller
-- **Algorytm:** `least_conn` - ruch kierowany do najmniej obciążonych podów
-- **Timeout'y:** Skonfigurowane dla stabilności połączeń
+- **Controller:** Traefik (klasa Ingress `traefik` w profilach Kubernetes i K3s).
+- **Routing:** Traefik → Service `ClusterIP` `nginx:1235` → usługi aplikacji.
+- **NGINX:** odpowiada za routing wewnątrz aplikacji; nie jest kontrolerem Ingress.
+- **Timeouty:** `proxy_connect_timeout 2s` i `proxy_read_timeout 7s` dotyczą lokalizacji
+  `/llm/health` w NGINX. Nie są adnotacjami Ingress.
 
 #### 3. Network Policies
 

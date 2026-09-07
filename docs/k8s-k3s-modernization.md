@@ -242,7 +242,7 @@ Roznice, ktore trzeba jawnie opisac:
 Manifesty powinny być możliwie wspólne. Preferowanym punktem startowym jest Kustomize ze
 wspólną bazą oraz overlayami K8s i K3s; wybór zostanie zatwierdzony w pierwszym kroku Fazy 9.
 Overlay K3s używa pakietowego Traefika, `local-path` i Metrics Server; KEDA oraz cert-manager
-są jawnymi dodatkami zewnętrznymi. Ogólny overlay Kubernetes wybiera ingress-nginx i klasę
+są jawnymi dodatkami zewnętrznymi. Ogólny overlay Kubernetes wybiera Traefik i klasę
 `standard`. Compose ma osobny produkcyjny override, ale korzysta z tych samych obrazów,
 zmiennych, endpointów health i kontraktów bezpieczeństwa.
 

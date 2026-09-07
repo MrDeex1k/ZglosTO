@@ -18,6 +18,13 @@ spec:
         app: nginx
     spec:
       serviceAccountName: nginx
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: nginx
       enableServiceLinks: false
       terminationGracePeriodSeconds: 30
       securityContext:

@@ -10,6 +10,8 @@ fi
 backup_directory=$1
 shift
 compose=(docker compose "$@")
+source "$(dirname "${BASH_SOURCE[0]}")/lib/compose-maintenance.sh"
+umask 077
 
 if [ -e "$backup_directory" ] && [ -n "$(find "$backup_directory" -mindepth 1 -maxdepth 1 -print -quit)" ]; then
   printf 'Backup directory must be empty: %s\n' "$backup_directory" >&2
@@ -17,22 +19,23 @@ if [ -e "$backup_directory" ] && [ -n "$(find "$backup_directory" -mindepth 1 -m
 fi
 mkdir -p "$backup_directory"
 
-nginx_was_running=0
-if [ -n "$("${compose[@]}" ps --status running --quiet nginx)" ]; then
-  nginx_was_running=1
-  "${compose[@]}" stop nginx >/dev/null
-fi
-
-resume_application() {
-  if [ "$nginx_was_running" = '1' ]; then
-    "${compose[@]}" up --detach --wait nginx >/dev/null
-  fi
+finish_backup() {
+  local result=$?
+  trap - EXIT
+  resume_application || result=1
+  exit "$result"
 }
-trap resume_application EXIT INT TERM
+trap finish_backup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+# Auth can claim anonymous incidents; the backend publishes jobs; the worker
+# updates image references and deletes originals. All writers must be quiescent.
+stop_for_maintenance nginx authorization backend media_worker
 
 printf '[backup] Auditing Object Storage references\n'
 set +e
-"${compose[@]}" exec -T backend node dist/operations/object-storage-audit-cli.js \
+"${compose[@]}" run --rm --no-deps -T backend node dist/operations/object-storage-audit-cli.js \
   > "$backup_directory/object-storage-audit.json"
 audit_status=$?
 set -e
@@ -47,7 +50,7 @@ printf '[backup] Creating PostgreSQL logical backup through the direct connectio
   > "$backup_directory/database.dump"
 
 printf '[backup] Creating provider-neutral Object Storage archive\n'
-"${compose[@]}" exec -T backend node dist/operations/object-storage-archive-cli.js backup \
+"${compose[@]}" run --rm --no-deps -T backend node dist/operations/object-storage-archive-cli.js backup \
   > "$backup_directory/object-storage.ndjson.gz"
 
 created_at=$(date -u '+%Y-%m-%dT%H:%M:%SZ')

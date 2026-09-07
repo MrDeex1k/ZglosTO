@@ -33,9 +33,18 @@ Wariant NoRustFS z zewnętrznym bucketem:
   --file docker-compose.no-rustfs.yml
 ```
 
-Skrypt zatrzymuje publiczny Nginx na czas snapshotu, czeka na zakończenie jego bieżących
-połączeń, audytuje bucket, wykonuje `pg_dump --format=custom` bez PgBouncera i archiwizuje
-obiekty. Następnie uruchamia Nginx również wtedy, gdy backup się nie powiedzie.
+Skrypt zatrzymuje kolejno Nginx, Authorization, backend i wszystkie repliki workera mediów.
+Daje każdej usłudze 120 sekund na zakończenie pracy; SIGKILL przerywa backup przed dumpem.
+Auth także zapisuje dane (przypisanie anonimowych zgłoszeń), a worker aktualizuje referencje
+i usuwa oryginały. Izolowane kontenery `run --rm --no-deps` wykonują audyt i eksport S3,
+bez uruchamiania serwera API. PgBouncer i baza pozostają dostępne dla narzędzi backupu.
+Skrypt następnie wznawia wyłącznie wcześniej działające usługi przez `compose start`,
+zachowując istniejące repliki i uruchamiając Nginx jako ostatni. Wznawia je również po błędzie
+backupu. Zewnętrzni klienci z bezpośrednim dostępem do DB/S3 muszą w tym czasie wstrzymać zapisy.
+
+Cały eksport nadal jest oknem utrzymaniowym. Skrócenie tego okna wymaga oddzielnego
+mechanizmu spójnego snapshotu bazy i wersjonowanych obiektów; samo pozostawienie workera
+aktywnego nie jest bezpieczną optymalizacją.
 
 Katalog backupu zawiera:
 
@@ -62,9 +71,13 @@ Restore jest operacją utrzymaniową i zastępuje bieżący stan PostgreSQL stan
 ./scripts/restore-compose.sh backups/manual
 ```
 
-Skrypt przed zmianą danych sprawdza format oraz SHA-256. Następnie zatrzymuje Nginx, backend,
-authorization i PgBouncer, odtwarza bazę przez bezpośredni URL, przywraca każdy obiekt przez
-aktywny adapter S3, uruchamia usługi i wykonuje końcowy audyt.
+Skrypt przed zmianą danych sprawdza format oraz SHA-256. Następnie zatrzymuje Nginx,
+Authorization, backend, wszystkie repliki workera mediów i PgBouncer. Odtwarza bazę przez
+bezpośredni URL i przywraca obiekty przez adapter S3. Włącza PgBouncer na potrzeby izolowanego
+audytu; dopiero po poprawnym audycie wznawia aplikację, z Nginx jako ostatnim.
+Błąd odtworzenia lub audytu pozostawia procesy zapisujące i Nginx zatrzymane. Należy naprawić
+przyczynę, dokończyć odtworzenie i audyt przed ręcznym wznowieniem usług. Przy ponowieniu po
+błędzie pierwotnie działające usługi są już zatrzymane, więc trzeba uruchomić je jawnie.
 
 Restore obiektów jest idempotentny i nadpisuje klucze obecne w archiwum, ale celowo nie usuwa
 dodatkowych kluczy. Dzięki temu uszkodzone archiwum nie może skasować działającego bucketu.

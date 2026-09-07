@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 
 import { createApiClient } from '@/api/client';
 import { createPublicConfigCache, type KeyValueStorage } from '@/storage/public-config-cache';
@@ -20,6 +20,85 @@ function memoryStorage(): KeyValueStorage {
 }
 
 describe('public White-Label loading', () => {
+  afterEach(() => vi.useRealTimers());
+
+  test.each([false, true])(
+    'keeps the deadline active while reading JSON (cached: %s)',
+    async (hasCache) => {
+      vi.useFakeTimers();
+      const cache = createPublicConfigCache(memoryStorage());
+      if (hasCache)
+        await cache.write({
+          etag: '"old"',
+          response: publicConfigFixture,
+          savedAt: '2026-08-19T19:00:00.000Z',
+        });
+      const write = vi.spyOn(cache, 'write');
+      const client = createApiClient({
+        origin: 'https://city.example',
+        timeoutMs: 50,
+        fetcher: async (_input, init) =>
+          new Response(
+            new ReadableStream({
+              start(controller) {
+                init?.signal?.addEventListener(
+                  'abort',
+                  () => controller.error(new DOMException('Aborted', 'AbortError')),
+                  { once: true },
+                );
+              },
+            }),
+            { headers: { etag: '"new"' } },
+          ),
+      });
+      const request = loadPublicConfig({ cache, client });
+      const assertion = hasCache
+        ? expect(request).resolves.toMatchObject({ source: 'cache', isStale: true })
+        : expect(request).rejects.toMatchObject({ kind: 'timeout' });
+      await vi.advanceTimersByTimeAsync(51);
+      await assertion;
+      expect(write).not.toHaveBeenCalled();
+    },
+  );
+
+  test('caller cancellation after headers is not hidden by cache or followed by a cache write', async () => {
+    const cache = createPublicConfigCache(memoryStorage());
+    await cache.write({
+      etag: '"old"',
+      response: publicConfigFixture,
+      savedAt: '2026-08-19T19:00:00.000Z',
+    });
+    const write = vi.spyOn(cache, 'write');
+    const caller = new AbortController();
+    const reading = Promise.withResolvers<void>();
+    const client = createApiClient({
+      origin: 'https://city.example',
+      fetcher: async (_input, init) =>
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              init?.signal?.addEventListener(
+                'abort',
+                () => controller.error(new DOMException('Aborted', 'AbortError')),
+                { once: true },
+              );
+            },
+            pull() {
+              reading.resolve();
+            },
+          }),
+          { headers: { etag: '"new"' } },
+        ),
+    });
+    const assertion = expect(
+      loadPublicConfig({ cache, client, signal: caller.signal }),
+    ).rejects.toMatchObject({ kind: 'aborted' });
+    await reading.promise;
+    caller.abort();
+    await assertion;
+    expect(write).not.toHaveBeenCalled();
+  });
+
   test('stores a validated 200 response and reuses it after 304', async () => {
     const cache = createPublicConfigCache(memoryStorage());
     const responses = [

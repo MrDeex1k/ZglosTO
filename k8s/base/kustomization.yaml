@@ -6,7 +6,6 @@ namespace: zglosto
 resources:
   - namespace.yaml
   - serviceaccounts.yaml
-  - config/database-init-scripts.yaml
   - config/nginx-config.yaml
   - config/pgbackrest-config.yaml
   - pki/internal-certificates.yaml

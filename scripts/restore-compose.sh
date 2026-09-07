@@ -10,6 +10,8 @@ fi
 backup_directory=$1
 shift
 compose=(docker compose "$@")
+source "$(dirname "${BASH_SOURCE[0]}")/lib/compose-maintenance.sh"
+umask 077
 
 for required_file in database.dump object-storage.ndjson.gz metadata.txt object-storage-audit.json SHA256SUMS; do
   if [ ! -f "$backup_directory/$required_file" ]; then
@@ -31,22 +33,21 @@ else
   (cd "$backup_directory" && shasum -a 256 --check SHA256SUMS)
 fi
 
-services_to_resume=()
-for service in nginx authorization backend pgbouncer; do
-  if [ -n "$("${compose[@]}" ps --status running --quiet "$service")" ]; then
-    services_to_resume+=("$service")
+temporary_pgbouncer=false
+restore_failed() {
+  local result=$?
+  if [ "$temporary_pgbouncer" = true ]; then
+    "${compose[@]}" stop pgbouncer >/dev/null || printf '[restore] Could not stop temporary PgBouncer\n' >&2
   fi
-done
-if [ "${#services_to_resume[@]}" -gt 0 ]; then
-  "${compose[@]}" stop "${services_to_resume[@]}" >/dev/null
-fi
-
-resume_application() {
-  if [ "${#services_to_resume[@]}" -gt 0 ]; then
-    "${compose[@]}" up --detach --wait "${services_to_resume[@]}" >/dev/null
+  if [ "$result" -ne 0 ]; then
+    printf '[restore] Failed; application writers remain stopped. Complete restore and audit before restarting services.\n' >&2
   fi
+  return "$result"
 }
-trap resume_application EXIT INT TERM
+trap restore_failed EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+stop_for_maintenance nginx authorization backend media_worker pgbouncer
 
 printf '[restore] Restoring PostgreSQL through the direct connection\n'
 "${compose[@]}" exec -T database sh -c \
@@ -58,12 +59,20 @@ printf '[restore] Restoring Object Storage through the active S3-compatible prov
   node dist/operations/object-storage-archive-cli.js restore \
   < "$backup_directory/object-storage.ndjson.gz"
 
-resume_application
-services_to_resume=()
-trap - EXIT INT TERM
-
 printf '[restore] Verifying database/Object Storage consistency\n'
-"${compose[@]}" exec -T backend node dist/operations/object-storage-audit-cli.js \
+# The isolated audit needs PgBouncer, but no application writer may start yet.
+if [ "${#services_to_resume[@]}" -eq 0 ] || [[ " ${services_to_resume[*]} " != *' pgbouncer '* ]]; then
+  temporary_pgbouncer=true
+fi
+"${compose[@]}" start --wait --wait-timeout 120 pgbouncer >/dev/null
+"${compose[@]}" run --rm --no-deps -T backend node dist/operations/object-storage-audit-cli.js \
   > "$backup_directory/post-restore-object-storage-audit.json"
+
+if [ "$temporary_pgbouncer" = true ]; then
+  "${compose[@]}" stop pgbouncer >/dev/null
+  temporary_pgbouncer=false
+fi
+resume_application
+trap - EXIT INT TERM
 
 printf '[restore] Completed successfully\n'

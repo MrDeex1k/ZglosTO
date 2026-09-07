@@ -1,3 +1,4 @@
+import { checkDockerWorkspaces } from './check-docker-workspaces.ts';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
@@ -36,6 +37,8 @@ type LiveImage = {
   files: string[];
   forbiddenRuntimePackages: string[];
 };
+
+checkDockerWorkspaces();
 
 const contractPath = 'deploy/image-production-contract.json';
 const baselinePath = 'deploy/image-audit-baseline.json';

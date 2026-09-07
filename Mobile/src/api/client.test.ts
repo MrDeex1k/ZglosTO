@@ -108,3 +108,81 @@ describe('API client', () => {
     } satisfies Partial<ApiError>);
   });
 });
+
+describe('response body cancellation', () => {
+  test.each(['json', 'image'] as const)(
+    'keeps the deadline active while reading %s',
+    async (kind) => {
+      vi.useFakeTimers();
+      try {
+        const client = createApiClient({
+          origin: 'https://city.example',
+          timeoutMs: 100,
+          fetcher: async (_input, init) =>
+            new Response(
+              new ReadableStream({
+                start(controller) {
+                  init?.signal?.addEventListener(
+                    'abort',
+                    () => controller.error(new DOMException('Aborted', 'AbortError')),
+                    { once: true },
+                  );
+                },
+              }),
+            ),
+        });
+        const request =
+          kind === 'json'
+            ? client.requestJson('/api/value', { parser: (value) => value })
+            : client.readResponse('/api/image', {}, (response) => response.arrayBuffer());
+        const assertion = expect(request).rejects.toMatchObject({ kind: 'timeout' });
+        await vi.advanceTimersByTimeAsync(100);
+        await assertion;
+        expect(vi.getTimerCount()).toBe(0);
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  test('propagates cancellation after headers arrive and cleans up its listener', async () => {
+    const controller = new AbortController();
+    const removeListener = vi.spyOn(controller.signal, 'removeEventListener');
+    const started = Promise.withResolvers<void>();
+    const client = createApiClient({
+      origin: 'https://city.example',
+      fetcher: async (_input, init) =>
+        new Response(
+          new ReadableStream({
+            start(stream) {
+              init?.signal?.addEventListener(
+                'abort',
+                () => stream.error(new DOMException('Aborted', 'AbortError')),
+                { once: true },
+              );
+              started.resolve();
+            },
+          }),
+        ),
+    });
+    const request = client.requestJson('/api/value', {
+      signal: controller.signal,
+      parser: (value) => value,
+    });
+    const assertion = expect(request).rejects.toMatchObject({ kind: 'aborted' });
+    await started.promise;
+    await Promise.resolve();
+    controller.abort();
+    await assertion;
+    expect(removeListener).toHaveBeenCalledWith('abort', expect.any(Function));
+  });
+
+  test('does not start a request that is already cancelled', async () => {
+    const fetcher = vi.fn();
+    const client = createApiClient({ origin: 'https://city.example', fetcher });
+    await expect(client.raw('/api/value', { signal: AbortSignal.abort() })).rejects.toMatchObject({
+      kind: 'aborted',
+    });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+});

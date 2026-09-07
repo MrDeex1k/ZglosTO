@@ -67,6 +67,13 @@ export const plPLTranslation = {
     errorTitle: 'Ups...',
   },
   incidents: {
+    submission: {
+      acceptedTitle: 'Zgłoszenie przyjęte',
+      acceptedMessage: 'Zgłoszenie zostało przyjęte w systemie. Służba obsługująca: {{service}}.',
+      emergencyTitle: 'Zgłoszenie przyjęte — zadzwoń na 112',
+      emergencyMessage:
+        'Zgłoszenie zostało przyjęte w systemie. Służba obsługująca: {{service}}. Opis wskazuje na możliwe zagrożenie. Zadzwoń pod numer 112 po pomoc. Zapis zgłoszenia w aplikacji nie oznacza wezwania służb ratunkowych.',
+    },
     resolved: 'Rozwiązane',
     reportedAt: 'Data zgłoszenia: {{date}}',
     resolvedAt: 'Data rozwiązania: {{date}}',
@@ -512,6 +519,14 @@ export const enTranslation = {
     errorTitle: 'Oops...',
   },
   incidents: {
+    submission: {
+      acceptedTitle: 'Report received',
+      acceptedMessage:
+        'Your report has been received by the system. Responsible service: {{service}}.',
+      emergencyTitle: 'Report received — call 112',
+      emergencyMessage:
+        'Your report has been received by the system. Responsible service: {{service}}. The description indicates a possible emergency. Call 112 for help. Submitting a report in the app does not dispatch emergency services.',
+    },
     resolved: 'Resolved',
     reportedAt: 'Reported: {{date}}',
     resolvedAt: 'Resolved: {{date}}',

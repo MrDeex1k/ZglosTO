@@ -34,7 +34,6 @@ import { claimVerifiedAnonymousIncidents } from '../../../lib/reporter-identity.
 import { DatabaseService } from '../database/database.service.ts';
 import { IncidentClassifier } from '../llm-gateway/incident-classifier.ts';
 import { IncidentMediaService } from '../media/incident-media.service.ts';
-import { WhiteLabelConfigService } from '../white-label/white-label-config.service.ts';
 import {
   IncidentDomainPort,
   type CreateIncidentCommand,
@@ -60,7 +59,6 @@ export class PostgresIncidentAdapter extends IncidentDomainPort {
     private readonly database: DatabaseService,
     private readonly media: IncidentMediaService,
     private readonly classifier: IncidentClassifier,
-    private readonly whiteLabel: WhiteLabelConfigService,
     private readonly serviceCatalog: ServiceCatalogSynchronizer,
   ) {
     super();
@@ -76,7 +74,6 @@ export class PostgresIncidentAdapter extends IncidentDomainPort {
     const classification = await this.classifier.classify(
       command.description,
       command.requestedServiceKey,
-      this.whiteLabel.serviceCatalog.fallbackServiceKey,
     );
     const result = await this.database.query(
       `INSERT INTO incydenty (

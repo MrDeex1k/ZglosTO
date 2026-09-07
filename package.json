@@ -9,7 +9,7 @@
     "build:production": "./scripts/production-build.sh build",
     "check": "pnpm check:source && pnpm check:dead-code && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm test:white-label-builds && pnpm build",
     "certs:dev": "./scripts/generate-dev-certificates.sh",
-    "check:source": "./scripts/check-typescript-source.sh && ./scripts/check-single-city-architecture.sh && node scripts/check-public-repository.ts && node scripts/check-mobile-build-assets.ts && node scripts/sync-k8s-white-label.ts --check && node scripts/check-deployment-baseline.ts && node scripts/check-image-contract.ts && node scripts/check-production-source-build.ts && node scripts/check-cluster-configuration.ts && node scripts/check-cluster-stateful-services.ts && node scripts/check-cluster-workloads-security.ts && node scripts/check-observability-profiles.ts && node scripts/check-cluster-autoscaling.ts && node scripts/check-redis-profiles.ts && node scripts/check-redis-resilience.ts && node scripts/check-production-compose.ts .env.production.example --images-env deploy/compose/images.env.example --matrix && node scripts/test-production-compose-policy.ts && node scripts/check-phase-12.ts && ./scripts/check-frontend-boundary.sh && ./scripts/test-frontend-boundary-policy.sh && ./scripts/check-frontend-design-system.sh && ./scripts/test-frontend-design-system-policy.sh",
+    "check:source": "./scripts/check-typescript-source.sh && ./scripts/check-single-city-architecture.sh && node scripts/check-public-repository.ts && node scripts/check-mobile-build-assets.ts && node scripts/sync-k8s-white-label.ts --check && node scripts/check-deployment-baseline.ts && node scripts/check-image-contract.ts && node --test scripts/test-infrastructure.ts && node scripts/check-production-source-build.ts && node scripts/check-cluster-configuration.ts && node scripts/check-cluster-stateful-services.ts && node scripts/check-cluster-workloads-security.ts && node scripts/check-observability-profiles.ts && node scripts/check-cluster-autoscaling.ts && node scripts/check-redis-profiles.ts && node scripts/check-redis-resilience.ts && node scripts/check-production-compose.ts .env.production.example --images-env deploy/compose/images.env.example --matrix && node scripts/test-production-compose-policy.ts && node scripts/check-phase-12.ts && ./scripts/check-frontend-boundary.sh && ./scripts/test-frontend-boundary-policy.sh && ./scripts/check-frontend-design-system.sh && ./scripts/test-frontend-design-system-policy.sh",
     "check:cluster-config": "node scripts/check-cluster-configuration.ts",
     "check:cluster-stateful": "node scripts/check-cluster-stateful-services.ts",
     "check:cluster-workloads-security": "node scripts/check-cluster-workloads-security.ts",
@@ -80,7 +80,10 @@
     "phase12:resources:minimal": "./scripts/phase12-resource-profile.sh minimal",
     "phase12:resources:observability": "./scripts/phase12-resource-profile.sh observability",
     "phase12:resources:recommended": "./scripts/phase12-resource-profile.sh recommended",
-    "phase12:production": "./scripts/phase12-certify.sh production-runtime"
+    "phase12:production": "./scripts/phase12-certify.sh production-runtime",
+    "test:auth-provisioning": "node scripts/test-auth-provisioning.ts",
+    "test:infrastructure": "node --test scripts/test-infrastructure.ts",
+    "check:cluster-production": "node scripts/check-cluster-production.ts"
   },
   "devDependencies": {
     "@commitlint/cli": "21.2.2",

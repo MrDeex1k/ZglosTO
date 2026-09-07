@@ -2,6 +2,7 @@ import type { IncidentImageRef } from '@zglosto/contracts';
 import { queryOptions } from '@tanstack/react-query';
 
 import type { ApiClient } from '@/api/client';
+import { assertRequestActive } from '@/api/errors';
 import { loadPrivateImage } from '@/api/private-image';
 import { storePrivateImage } from '@/storage/private-image-cache';
 
@@ -23,6 +24,7 @@ export function privateImageQueryOptions({
     gcTime: 30 * 60 * 1000,
     queryFn: async ({ signal }) => {
       const payload = await loadPrivateImage({ client, image, signal });
+      assertRequestActive(signal);
       return storePrivateImage({
         bytes: payload.bytes,
         checksumSha256,

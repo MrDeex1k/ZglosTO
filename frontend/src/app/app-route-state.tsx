@@ -2,7 +2,7 @@
 import type { IncidentStatusCode, UserRole } from '@zglosto/contracts';
 import { isUserRole } from '@zglosto/contracts';
 import { useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useRouter } from '@tanstack/react-router';
+import { useNavigate, useRouter, useRouterState } from '@tanstack/react-router';
 import { Loader2 } from 'lucide-react';
 import {
   createContext,
@@ -65,6 +65,9 @@ interface AppRouteState {
 const AppRouteStateContext = createContext<AppRouteState | null>(null);
 
 export function AppRouteStateProvider({ children }: Readonly<{ children: ReactNode }>) {
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname.replace(/\/+$/, '') || '/',
+  });
   const navigate = useNavigate();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -89,7 +92,7 @@ export function AppRouteStateProvider({ children }: Readonly<{ children: ReactNo
     serviceIncidents,
     isLoadingIncidents,
     incidentsError,
-  } = useIncidentData({ isLoggedIn, userEmail, userRole, canLoadAdminData });
+  } = useIncidentData({ pathname, isLoggedIn, userEmail, userRole, canLoadAdminData });
   const serviceIncidentMutation = useServiceIncidentMutation(userEmail);
 
   const navigateToLogin = () => {
@@ -152,13 +155,6 @@ export function AppRouteStateProvider({ children }: Readonly<{ children: ReactNo
       resolvedImageFile,
     });
   };
-  const resolvedIncidents = incidents
-    .filter((incident) => incident.status === 'resolved')
-    .sort(
-      (first, second) =>
-        new Date(second.resolvedAt ?? second.createdAt).getTime() -
-        new Date(first.resolvedAt ?? first.createdAt).getTime(),
-    );
   const showAllVisibleIncidents = () => setVisibleIncidents(15);
   const showMoreServiceIncidents = () => setVisibleServiceIncidents((count) => count + 10);
   const value: AppRouteState = {
@@ -168,7 +164,7 @@ export function AppRouteStateProvider({ children }: Readonly<{ children: ReactNo
     userEmail,
     isEmailVerified: sessionUser?.emailVerified === true,
     serviceKey: sessionUser?.serviceKey ?? null,
-    incidents: resolvedIncidents,
+    incidents,
     residentIncidents,
     allIncidents,
     serviceIncidents,

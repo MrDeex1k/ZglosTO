@@ -4,10 +4,10 @@
   "profiles": {
     "kubernetes": {
       "overlay": "k8s/overlays/kubernetes",
-      "ingressController": "ingress-nginx",
-      "ingressClassName": "nginx",
-      "ingressNamespace": "ingress-nginx",
-      "ingressPodNameLabel": "ingress-nginx",
+      "ingressController": "traefik-helm",
+      "ingressClassName": "traefik",
+      "ingressNamespace": "traefik",
+      "ingressPodNameLabel": "traefik",
       "storageClassName": "standard",
       "metricsServer": "required",
       "eventAutoscaler": "keda-required",
@@ -30,14 +30,24 @@
       "variants": {
         "singleNode": {
           "serverNodes": 1,
-          "hostFailureResilience": false
+          "hostFailureResilience": false,
+          "overlay": "k8s/overlays/k3s-single-node",
+          "eventAutoscaler": "disabled",
+          "applicationReplicas": 1,
+          "llmRuntime": "disabled"
         },
         "ha": {
           "minimumServerNodes": 3,
           "embeddedEtcd": true,
           "fixedRegistrationAddress": true,
           "replicatedOrExternalWorkloadStorage": true,
-          "hostFailureResilience": true
+          "hostFailureResilience": true,
+          "overlay": "k8s/overlays/k3s-ha",
+          "storageClassName": "zglosto-ha",
+          "storageProvisioner": "driver.longhorn.io",
+          "storageReplicas": 3,
+          "applicationFailover": "restart-on-surviving-node",
+          "preflight": "scripts/check-k3s-ha.sh"
         }
       }
     }

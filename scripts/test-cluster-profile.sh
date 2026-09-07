@@ -12,8 +12,11 @@ CERT_MANAGER_VERSION=${CERT_MANAGER_VERSION:-v1.21.0}
 RELOADER_CHART_VERSION=${RELOADER_CHART_VERSION:-2.2.14}
 KEDA_CHART_VERSION=${KEDA_CHART_VERSION:-2.20.0}
 KEDA_HTTP_CHART_VERSION=${KEDA_HTTP_CHART_VERSION:-0.15.0}
+TRAEFIK_CHART_VERSION=${TRAEFIK_CHART_VERSION:-41.4.0}
 LOCAL_PATH_VERSION=${LOCAL_PATH_VERSION:-v0.0.36}
 CLUSTER_NAME=${CLUSTER_NAME:-zglosto-phase9-$PROFILE}
+INGRESS_TEST_PORT=${INGRESS_TEST_PORT:-18136}
+INGRESS_FORWARD_PID=
 
 case "$PROFILE" in
     kubernetes|k3s) ;;
@@ -31,6 +34,10 @@ for command in docker kubectl helm curl; do
 done
 
 delete_cluster() {
+    if [ -n "$INGRESS_FORWARD_PID" ]; then
+        kill "$INGRESS_FORWARD_PID" >/dev/null 2>&1 || true
+        wait "$INGRESS_FORWARD_PID" >/dev/null 2>&1 || true
+    fi
     if [ "$KEEP_CLUSTER" = "1" ]; then
         echo "Keeping cluster $CLUSTER_NAME"
         return
@@ -86,6 +93,13 @@ else
 fi
 
 echo "Installing pinned deployment controllers..."
+if [ "$PROFILE" = 'kubernetes' ]; then
+    helm upgrade --install traefik oci://ghcr.io/traefik/helm/traefik \
+        --namespace traefik --create-namespace --version "$TRAEFIK_CHART_VERSION" \
+        --values k8s/traefik-values.yaml --set service.type=ClusterIP --wait --timeout 5m
+fi
+kubectl get ingressclass traefik >/dev/null
+
 helm repo add jetstack https://charts.jetstack.io --force-update
 helm repo add stakater https://stakater.github.io/stakater-charts --force-update
 helm repo add kedacore https://kedacore.github.io/charts --force-update
@@ -157,3 +171,12 @@ helm upgrade --install keda-add-ons-http kedacore/keda-add-ons-http \
     --values k8s/keda-http-values.yaml --wait --timeout 5m
 
 ./scripts/smoke-cluster.sh
+
+echo "Checking routing through the actual ingress controller..."
+ingress_namespace=traefik
+if [ "$PROFILE" = 'k3s' ]; then ingress_namespace=kube-system; fi
+kubectl -n "$ingress_namespace" port-forward --address 127.0.0.1 service/traefik \
+    "$INGRESS_TEST_PORT:80" >/dev/null 2>&1 &
+INGRESS_FORWARD_PID=$!
+curl --fail --silent --show-error --retry 20 --retry-connrefused --retry-delay 1 \
+    -H 'Host: zglosto.example.invalid' "http://127.0.0.1:$INGRESS_TEST_PORT/" >/dev/null

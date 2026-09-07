@@ -8,11 +8,13 @@ import {
 } from '@zglosto/contracts';
 import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
+import { bodyLimit } from 'hono/body-limit';
 import type { LocalRateLimiter } from '@zglosto/rate-limiting';
 import type { WhiteLabelConfigReadiness } from '@zglosto/white-label-config';
 
 import { auth, checkAuthDatabase, setTestUserRole } from './auth.ts';
 import { env } from './env.ts';
+import { authorizationOrigins } from './origins.ts';
 import {
   createAuthorizationLocalRateLimitMiddleware,
   type AuthorizationHonoEnvironment,
@@ -26,7 +28,7 @@ interface CreateAuthorizationAppOptions {
   localRateLimiter: LocalRateLimiter;
 }
 
-const allowedOrigins = [env.frontendOrigin, 'http://localhost:5173'];
+const allowedOrigins = authorizationOrigins(env.frontendOrigin, env.nodeEnv);
 
 function normalizeBetterAuthRequest(request: Request, clientAddress: string): Request {
   const contentLength = request.headers.get('content-length');
@@ -90,6 +92,18 @@ export function createAuthorizationApp(
       // Brak możliwości zapisu logu nie może zmienić odpowiedzi HTTP.
     });
   });
+
+  app.use('/api/*', async (context, next) => {
+    await next();
+    context.header('cache-control', 'no-store');
+  });
+  app.use(
+    '/api/auth/*',
+    bodyLimit({
+      maxSize: 64 * 1024,
+      onError: (context) => context.json({ error: 'Request body is too large' }, 413),
+    }),
+  );
 
   app.use(
     '/api/auth/*',
@@ -201,8 +215,8 @@ export function createAuthorizationApp(
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      await logApiRequest('GET', '/api/verify-session', 500, false, `Błąd: ${errorMessage}`);
-      return context.json({ error: 'Internal server error' }, 500);
+      await logApiRequest('GET', '/api/verify-session', 503, false, `Błąd: ${errorMessage}`);
+      return context.json({ error: 'Session verification is temporarily unavailable' }, 503);
     }
   });
 

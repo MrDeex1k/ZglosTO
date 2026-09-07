@@ -3,7 +3,7 @@ import { parsePublicCityConfigResponse, type PublicCityConfigResponse } from '@z
 import type { PublicConfigCache, PublicConfigCacheEntry } from '@/storage/public-config-cache';
 
 import type { ApiClient } from './client';
-import { ApiError } from './errors';
+import { ApiError, assertRequestActive } from './errors';
 
 export interface PublicConfigLoadResult {
   isStale: boolean;
@@ -33,56 +33,64 @@ export async function loadPublicConfig({
   if (cached !== null) headers.set('If-None-Match', cached.etag);
 
   try {
-    const response = await client.raw('/api/config/public', {
-      headers,
-      ...(signal === undefined ? {} : { signal }),
-    });
-    if (response.status === 304) {
-      if (cached === null) {
-        throw new ApiError('API returned 304 without a cached representation.', {
-          kind: 'contract',
-          status: 304,
-        });
-      }
-      return cacheResult(cached, 'not-modified');
-    }
-    if (!response.ok) {
-      throw new ApiError(`Public configuration failed with HTTP ${response.status}.`, {
-        correlationId: response.headers.get('x-correlation-id'),
-        kind: 'http',
-        status: response.status,
-      });
-    }
+    const result = await client.readResponse(
+      '/api/config/public',
+      {
+        headers,
+        ...(signal === undefined ? {} : { signal }),
+      },
+      async (response) => {
+        if (response.status === 304) {
+          if (cached === null) {
+            throw new ApiError('API returned 304 without a cached representation.', {
+              kind: 'contract',
+              status: 304,
+            });
+          }
+          return { cached: cacheResult(cached, 'not-modified') };
+        }
+        if (!response.ok) {
+          throw new ApiError(`Public configuration failed with HTTP ${response.status}.`, {
+            correlationId: response.headers.get('x-correlation-id'),
+            kind: 'http',
+            status: response.status,
+          });
+        }
 
-    let payload: unknown;
-    try {
-      payload = await response.json();
-    } catch (error) {
-      throw new ApiError('Public configuration returned invalid JSON.', {
-        cause: error,
-        kind: 'contract',
-      });
-    }
+        let payload: unknown;
+        try {
+          payload = await response.json();
+        } catch (error) {
+          throw new ApiError('Public configuration returned invalid JSON.', {
+            cause: error,
+            kind: 'contract',
+          });
+        }
 
-    let parsed: PublicCityConfigResponse;
-    try {
-      parsed = parsePublicCityConfigResponse(payload);
-    } catch (error) {
-      throw new ApiError('Public configuration failed contract validation.', {
-        cause: error,
-        kind: 'contract',
-      });
-    }
+        let parsed: PublicCityConfigResponse;
+        try {
+          parsed = parsePublicCityConfigResponse(payload);
+        } catch (error) {
+          throw new ApiError('Public configuration failed contract validation.', {
+            cause: error,
+            kind: 'contract',
+          });
+        }
 
-    const etag = response.headers.get('etag');
-    if (etag === null || etag.trim() === '') {
-      throw new ApiError('Public configuration response is missing ETag.', {
-        kind: 'contract',
-      });
-    }
+        const etag = response.headers.get('etag');
+        if (etag === null || etag.trim() === '') {
+          throw new ApiError('Public configuration response is missing ETag.', {
+            kind: 'contract',
+          });
+        }
 
-    await cache.write({ etag, response: parsed, savedAt: now().toISOString() });
-    return { isStale: false, response: parsed, source: 'remote' };
+        return { entry: { etag, response: parsed, savedAt: now().toISOString() } };
+      },
+    );
+    if (signal) assertRequestActive(signal);
+    if ('cached' in result) return result.cached;
+    await cache.write(result.entry);
+    return { isStale: false, response: result.entry.response, source: 'remote' };
   } catch (error) {
     if (
       cached !== null &&

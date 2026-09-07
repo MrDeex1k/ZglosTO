@@ -1,3 +1,4 @@
+import { incidentSubmissionNotice } from '@zglosto/i18n';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type {
   CurrentCreateIncidentRequest,
@@ -487,16 +488,26 @@ function ReportIncidentSuccess({
   response: CurrentCreateIncidentResponse;
 }) {
   const { t } = useTranslation();
+  const { locale } = useLocale();
+  const runtime = useRuntimeConfig();
+  if (runtime.status !== 'ready') return null;
+  const serviceLabel =
+    runtime.config.services.find((service) => service.key === response.incydent.typ_sluzby)?.label[
+      locale
+    ] ?? response.incydent.typ_sluzby;
+  const notice = incidentSubmissionNotice(
+    response.classification.classification,
+    serviceLabel,
+    locale,
+  );
   return (
     <SafeAreaView className="flex-1 justify-center bg-canvas p-6">
       <View className="mx-auto w-full max-w-xl gap-6">
         <Badge>{t(($) => $.mobile.reportIncident.successBadge)}</Badge>
         <Text accessibilityLiveRegion="polite" accessibilityRole="header" variant="title">
-          {t(($) => $.mobile.reportIncident.successTitle)}
+          {notice.title}
         </Text>
-        <Text className="text-lg leading-7 text-muted">
-          {t(($) => $.mobile.reportIncident.successDescription)}
-        </Text>
+        <Text className="text-lg leading-7 text-muted">{notice.message}</Text>
         <Card className="gap-2">
           <Text variant="caption">{t(($) => $.mobile.reportIncident.reportNumber)}</Text>
           <Text className="font-semibold">{response.incydent.id_zgloszenia}</Text>

@@ -618,10 +618,11 @@ zaktualizowany w dedykowanej fazie wdrożeniowej. Szczegóły są w
 Frontend wysyła zgłoszenie bezpośrednio do backendu i nie odpytuje LLM osobno. Backend
 wywołuje gateway z krańcowym timeoutem, zapisuje `classification`, `modelAvailable`, `source`
 i `reason`, a awarie mapuje na `unknown` bez blokowania zapisu. Gateway normalizuje odpowiedź
-Docker Model Runner albo kontrolowany fallback `disabled`. UI rozróżnia sukces modelu,
-zalecenie kontaktu z 112 oraz zapis do ręcznej weryfikacji.
+Docker Model Runner albo kontrolowany fallback `disabled`. UI potwierdza przyjęcie zgłoszenia
+ze wskazaniem służby. Wynik `emergency` dodaje zalecenie telefonu na 112 i wyjaśnia, że
+zapis w aplikacji nie wzywa służb ratunkowych. `unknown` nie ujawnia technicznej awarii LLM.
 
-Backend pobiera routing fallbacku wyłącznie z `routing.fallbackServiceKey` konfiguracji White Label. Przejściowy model runner zwraca `serviceKey: null`, więc nie zna i nie może nadpisać routingu miasta. Smoke test pokrywa rzeczywisty wariant `disabled`, a kontrolowany zestaw integracyjny dodatkowo `municipal`, `emergency`, `timeout`, `unavailable` i `invalid_response`.
+Backend zachowuje wybraną i zwalidowaną służbę niezależnie od wyniku LLM. `routing.fallbackServiceKey` konfiguracji White Label służy jedynie zgłoszeniom bez wskazanej służby. Przejściowy model runner zwraca `serviceKey: null`, więc nie zna i nie może nadpisać routingu miasta. Smoke test pokrywa rzeczywisty wariant `disabled`, a kontrolowany zestaw integracyjny dodatkowo `municipal`, `emergency`, `timeout`, `unavailable` i `invalid_response`.
 
 ### 10. TLS/mTLS transportu — wdrożone w Compose
 

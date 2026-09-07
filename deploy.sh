@@ -10,6 +10,26 @@ REQUESTED_TAG=${2:-}
 CONFIG_PATH=${3:-config/white-label/zglosto.yaml}
 OBJECT_STORAGE_MODE=${4:-external}
 OBSERVABILITY_MODE=${5:-disabled}
+CLUSTER_PROFILE=${CLUSTER_PROFILE:-kubernetes}
+if [ "$CLUSTER_PROFILE" = 'k3s-single-node' ]; then
+        REDIS_MODE=${REDIS_MODE:-disabled}
+else
+        REDIS_MODE=${REDIS_MODE:-external}
+fi
+REQUESTED_OVERLAY=${KUSTOMIZE_OVERLAY:-}
+DEPLOY_OVERLAY_DIR=
+cleanup_overlay() {
+        if [ -n "$DEPLOY_OVERLAY_DIR" ]; then rm -rf "$DEPLOY_OVERLAY_DIR"; fi
+}
+trap cleanup_overlay EXIT
+case "$CLUSTER_PROFILE" in
+        kubernetes|k3s|k3s-ha|k3s-single-node) ;;
+        *) echo "CLUSTER_PROFILE must be kubernetes, k3s, k3s-ha or k3s-single-node" >&2; exit 1 ;;
+esac
+case "$REDIS_MODE" in
+        disabled|local|external) ;;
+        *) echo "REDIS_MODE must be disabled, local or external" >&2; exit 1 ;;
+esac
 
 if [ "$NAMESPACE" != "zglosto" ]; then
         echo "Faza 9 utrzymuje jeden kanoniczny namespace: zglosto (otrzymano: $NAMESPACE)." >&2
@@ -28,6 +48,43 @@ case "$OBJECT_STORAGE_MODE:$OBSERVABILITY_MODE" in
                 exit 1
                 ;;
 esac
+
+if [ -n "$REQUESTED_OVERLAY" ]; then
+        KUSTOMIZE_OVERLAY=$REQUESTED_OVERLAY
+elif [ "$CLUSTER_PROFILE" = 'k3s-ha' ] || [ "$CLUSTER_PROFILE" = 'k3s-single-node' ]; then
+        expected_redis=external
+        if [ "$CLUSTER_PROFILE" = 'k3s-single-node' ]; then expected_redis=disabled; fi
+        if [ "$OBJECT_STORAGE_MODE:$OBSERVABILITY_MODE:$REDIS_MODE" != "external:disabled:$expected_redis" ]; then
+                echo "$CLUSTER_PROFILE uses external S3 and Redis=$expected_redis; compose additional components in KUSTOMIZE_OVERLAY." >&2
+                exit 1
+        fi
+        KUSTOMIZE_OVERLAY=k8s/overlays/$CLUSTER_PROFILE
+else
+        KUSTOMIZE_OVERLAY=${KUSTOMIZE_OVERLAY/kubernetes/$CLUSTER_PROFILE}
+        if [ "$REDIS_MODE" = 'disabled' ]; then
+                echo "Multiple replicas require Redis. Use k3s-single-node for disabled Redis." >&2
+                exit 1
+        fi
+        # Compose Redis with any existing storage/observability variant.
+        DEPLOY_OVERLAY_DIR=$(mktemp -d k8s/overlays/.deployment.XXXXXX)
+        cat > "$DEPLOY_OVERLAY_DIR/kustomization.yaml" <<YAML
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../$(basename "$KUSTOMIZE_OVERLAY")
+components:
+  - ../../components/redis-$REDIS_MODE
+YAML
+        KUSTOMIZE_OVERLAY=$DEPLOY_OVERLAY_DIR
+fi
+if [ "$CLUSTER_PROFILE" = 'k3s-ha' ]; then
+        node scripts/check-cluster-production.ts "$KUSTOMIZE_OVERLAY" --ha
+else
+        node scripts/check-cluster-production.ts "$KUSTOMIZE_OVERLAY"
+fi
+RENDERED_PROFILE=$(kubectl kustomize "$KUSTOMIZE_OVERLAY")
+AUTOSCALING_ENABLED=0
+if grep -q '^kind: ScaledObject$' <<< "$RENDERED_PROFILE"; then AUTOSCALING_ENABLED=1; fi
 
 pnpm --silent --filter @zglosto/white-label-config build >/dev/null
 CONFIG_METADATA=$(pnpm --silent --filter @zglosto/white-label-config metadata "$CONFIG_PATH" fields)
@@ -77,6 +134,11 @@ for img in database pgbouncer rabbitmq authorization backend llm-gateway fronten
     fi
 done
 
+kubectl get ingressclass traefik >/dev/null
+if [ "$CLUSTER_PROFILE" = 'k3s-ha' ]; then
+        ./scripts/check-k3s-ha.sh
+fi
+
 # Utworzenie namespace
 echo "Tworzenie namespace..."
 kubectl apply -f k8s/base/namespace.yaml || kubectl create namespace "$NAMESPACE"
@@ -95,6 +157,7 @@ if ! kubectl get deployment --all-namespaces \
         echo "Brak kontrolera Stakater Reloader wymaganego do rolloutów po rotacji certyfikatów." >&2
         exit 1
 fi
+if [ "$AUTOSCALING_ENABLED" = 1 ]; then
 for autoscaling_crd in \
         scaledobjects.keda.sh \
         triggerauthentications.keda.sh \
@@ -114,9 +177,17 @@ for autoscaling_service in \
         fi
 done
 
+fi
+
 # Wyłącznie poświadczenia aplikacyjne są provisionowane przed wdrożeniem.
 # Sekrety PKI powstają później z zasobów Certificate zarządzanych przez cert-manager.
-REQUIRED_SECRETS="zglosto-database-credentials zglosto-rabbitmq-credentials zglosto-object-storage-credentials zglosto-better-auth"
+REQUIRED_SECRETS="zglosto-database-credentials zglosto-rabbitmq-credentials zglosto-object-storage-credentials zglosto-better-auth zglosto-llm-auth"
+if [ "$REDIS_MODE" != 'disabled' ]; then
+        REQUIRED_SECRETS="$REQUIRED_SECRETS zglosto-redis-credentials"
+fi
+if [ "$REDIS_MODE" = 'external' ]; then
+        REQUIRED_SECRETS="$REQUIRED_SECRETS zglosto-redis-external-ca"
+fi
 case "$OBSERVABILITY_MODE" in
         external) REQUIRED_SECRETS="$REQUIRED_SECRETS zglosto-otel-external" ;;
         local) REQUIRED_SECRETS="$REQUIRED_SECRETS zglosto-grafana-admin" ;;
@@ -157,6 +228,7 @@ for certificate in \
 done
 check_command "Wewnętrzne certyfikaty TLS/mTLS są gotowe"
 
+if [ "$AUTOSCALING_ENABLED" = 1 ]; then
 echo "Oczekiwanie na gotowość kontrolerów autoskalowania..."
 kubectl wait --for=condition=Ready "interceptorroute/llm-gateway" \
         -n "$NAMESPACE" --timeout=300s
@@ -166,8 +238,10 @@ for scaled_object in media-worker llm-gateway; do
 done
 check_command "KEDA zaakceptowała trasę i autoskalowanie media_worker oraz llm_gateway"
 
+fi
+
 echo "Przypinanie niezmiennych obrazów i wersji konfiguracji..."
-kubectl set image statefulset/database database="docker.io/zglosto/database:$TAG" pgbackrest-scheduler="docker.io/zglosto/database:$TAG" -n "$NAMESPACE"
+kubectl set image statefulset/database database="docker.io/zglosto/database:$TAG" -n "$NAMESPACE"
 kubectl set image deployment/pgbouncer pgbouncer="docker.io/zglosto/pgbouncer:$TAG" -n "$NAMESPACE"
 kubectl set image statefulset/rabbitmq rabbitmq="docker.io/zglosto/rabbitmq:$TAG" -n "$NAMESPACE"
 kubectl set image deployment/authorization authorization="docker.io/zglosto/authorization:$TAG" -n "$NAMESPACE"
@@ -199,7 +273,7 @@ BACKEND_READINESS=$(kubectl exec deployment/backend -n "$NAMESPACE" -- \
 AUTHORIZATION_READINESS=$(kubectl exec deployment/authorization -n "$NAMESPACE" -- \
         node dist/src/healthcheck.js)
 FRONTEND_READINESS=$(kubectl exec deployment/frontend -n "$NAMESPACE" -- \
-        wget -q -O - http://127.0.0.1/health/ready)
+        wget -q -O - http://127.0.0.1:8080/health/ready)
 
 for readiness in "$BACKEND_READINESS" "$AUTHORIZATION_READINESS" "$FRONTEND_READINESS"; do
         case "$readiness" in

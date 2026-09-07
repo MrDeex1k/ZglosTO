@@ -219,8 +219,8 @@ if (k3s.renderCommand !== `kubectl kustomize ${k3sOverlay}`) {
   fail('K3s render command differs from the cluster profile contract');
 }
 if (
-  kubernetesClusterProfile.ingressController !== 'ingress-nginx' ||
-  kubernetesClusterProfile.ingressClassName !== 'nginx' ||
+  kubernetesClusterProfile.ingressController !== 'traefik-helm' ||
+  kubernetesClusterProfile.ingressClassName !== 'traefik' ||
   kubernetesClusterProfile.storageClassName !== 'standard' ||
   kubernetesClusterProfile.metricsServer !== 'required' ||
   kubernetesClusterProfile.eventAutoscaler !== 'keda-required' ||

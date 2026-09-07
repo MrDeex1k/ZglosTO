@@ -21,6 +21,8 @@ overlays=(
     kubernetes-rustfs-observability-external
     kubernetes-rustfs-observability-local
     k3s
+    k3s-single-node
+    k3s-ha
     k3s-rustfs
     k3s-observability-external
     k3s-observability-local
@@ -38,5 +40,5 @@ for overlay in "${overlays[@]}"; do
             -kubernetes-version "$KUBERNETES_SCHEMA_VERSION"
 done
 
-echo "Standard Kubernetes schemas are valid for all 12 overlays."
+echo "Standard Kubernetes schemas are valid for all selected overlays."
 echo "CRD schemas are additionally validated by server-side dry-run in test-cluster-profile.sh."

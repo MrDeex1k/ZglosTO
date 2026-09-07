@@ -16,6 +16,13 @@ spec:
         app: frontend
     spec:
       serviceAccountName: frontend
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: frontend
       enableServiceLinks: false
       terminationGracePeriodSeconds: 30
       securityContext:

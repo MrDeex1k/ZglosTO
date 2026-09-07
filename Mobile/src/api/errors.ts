@@ -39,3 +39,8 @@ export function isRetryableApiError(error: unknown): boolean {
   if (error.kind === 'network' || error.kind === 'timeout') return true;
   return error.kind === 'http' && error.status !== null && error.status >= 500;
 }
+
+// React Native's AbortSignal polyfill does not provide throwIfAborted().
+export function assertRequestActive(signal: AbortSignal): void {
+  if (signal.aborted) throw new ApiError('Request was cancelled.', { kind: 'aborted' });
+}

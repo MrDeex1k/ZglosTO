@@ -5,10 +5,5 @@ metadata:
   namespace: zglosto
   annotations:
     cert-manager.io/cluster-issuer: zglosto-public-issuer
-    nginx.ingress.kubernetes.io/upstream-fail-timeout: '10'
-    nginx.ingress.kubernetes.io/proxy-connect-timeout: '10'
-    nginx.ingress.kubernetes.io/proxy-send-timeout: '30'
-    nginx.ingress.kubernetes.io/proxy-read-timeout: '30'
-    nginx.ingress.kubernetes.io/load-balance: 'least_conn'
 spec:
-  ingressClassName: nginx
+  ingressClassName: traefik

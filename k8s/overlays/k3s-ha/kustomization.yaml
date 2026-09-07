@@ -1,0 +1,32 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../k3s-redis-external
+  - storage-class.yaml
+
+patches:
+  - target:
+      kind: StatefulSet
+      name: database
+    patch: |-
+      - op: replace
+        path: /spec/volumeClaimTemplates/0/spec/storageClassName
+        value: zglosto-ha
+      - op: replace
+        path: /spec/volumeClaimTemplates/1/spec/storageClassName
+        value: zglosto-ha
+  - target:
+      kind: StatefulSet
+      name: rabbitmq
+    patch: |-
+      - op: replace
+        path: /spec/volumeClaimTemplates/0/spec/storageClassName
+        value: zglosto-ha
+  - target:
+      kind: Deployment
+      name: backend|authorization|frontend|nginx|pgbouncer
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/topologySpreadConstraints/0/whenUnsatisfiable
+        value: DoNotSchedule

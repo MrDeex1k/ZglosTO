@@ -18,8 +18,9 @@ Oba mają jawną politykę `persistentVolumeClaimRetentionPolicy` równą `Retai
 StatefulSetu i scale-down. Usunięcie workloadu nie oznacza więc usunięcia danych.
 
 Kontener główny uruchamia istniejący, kontrolowany entrypoint obrazu PostgreSQL, TLS 1.3,
-SCRAM-SHA-256 i pgBackRest. Sidecar `pgbackrest-scheduler` współdzieli ten sam pod i wolumeny:
-wykonuje backup różnicowy co `PGBACKREST_BACKUP_INTERVAL_SECONDS=86400`, a w niedzielę pełny.
+SCRAM-SHA-256 i pgBackRest. Jedynym schedulerem jest pg_cron z obrazu bazy: backup różnicowy codziennie o 03:00,
+a pełny w niedzielę o 02:00. ConfigMap zachowuje retencję czterech pełnych i czternastu
+różnicowych kopii; nie ma dodatkowego sidecara uruchamiającego drugi harmonogram.
 To celowy wybór zamiast CronJobu: lokalny pgBackRest potrzebuje dostępu do PGDATA, a osobny
 pod wymagałby repo-servera albo niebezpiecznego `pods/exec`/współdzielenia RWO. Finalny
 restore drill, retencja operacyjna oraz pomiar RPO/RTO pozostają bramką Fazy 12.
