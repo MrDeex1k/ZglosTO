@@ -215,7 +215,7 @@ export function createAuthorizationApp(
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      await logApiRequest('GET', '/api/verify-session', 500, false, `Błąd: ${errorMessage}`);
+      await logApiRequest('GET', '/api/verify-session', 503, false, `Błąd: ${errorMessage}`);
       return context.json({ error: 'Session verification is temporarily unavailable' }, 503);
     }
   });

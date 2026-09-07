@@ -14,7 +14,7 @@ database/
 │   ├── 02-create-auth.sql       # Tworzenie tabel autoryzacji (Better Auth)
 │   ├── 03-create-dbtables.sql  # Tworzenie tabel aplikacji (incydenty, użytkownicy rozszerzeni)
 │   ├── 04-setup-backup.sql     # Tworzenie backupu bazy danych
-├── migrations/           # Wersjonowane migracje 001-014 kontraktów bazy
+├── migrations/           # Wersjonowane migracje 001-015 kontraktów bazy
 └── README_DATABASE.md             # Ten plik
 ```
 
@@ -377,3 +377,19 @@ Po uruchomieniu świeżej instancji możesz sprawdzić, czy rola istnieje:
 ```bash
 docker compose exec -e PGPASSWORD=admin_zglosto database psql -U zglosto_admin -d postgres -c "SELECT rolname FROM pg_roles WHERE rolname='zglosto_admin';"
 ```
+
+## Atomowe tworzenie uprawnień użytkownika
+
+Migracja `015-atomic-user-provisioning.sql` tworzy domyślną rolę mieszkańca w tej samej
+transakcji co konto Better Auth. Błąd zapisu roli wycofuje też zapis konta. Migracja
+uzupełnia brakujące role, zachowując istniejące uprawnienia i przypisania do służb.
+Nowa baza uruchamia ją przez `init-scripts/05-user-provisioning.sql`.
+
+Na istniejącej bazie zastosuj migrację 015 przez bezpośrednie połączenie PostgreSQL
+**przed uruchomieniem nowej wersji Authorization**, zgodnie z procedurą migracji
+wdrożenia. Sam restart kontenera z istniejącym wolumenem nie uruchamia init-scripts.
+Migracja nie zmienia zasad weryfikacji e-mail.
+
+`pnpm test:auth-provisioning` sprawdza migrację i świeżą instalację na osobnym
+PostgreSQL w Dockerze: bez sieci, opublikowanych portów i trwałego wolumenu. Test
+obejmuje błąd zapisu roli, retry, rollback, idempotencję i zachowanie istniejących ról.

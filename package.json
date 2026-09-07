@@ -81,6 +81,7 @@
     "phase12:resources:observability": "./scripts/phase12-resource-profile.sh observability",
     "phase12:resources:recommended": "./scripts/phase12-resource-profile.sh recommended",
     "phase12:production": "./scripts/phase12-certify.sh production-runtime",
+    "test:auth-provisioning": "node scripts/test-auth-provisioning.ts",
     "test:infrastructure": "node --test scripts/test-infrastructure.ts",
     "check:cluster-production": "node scripts/check-cluster-production.ts"
   },

@@ -57,7 +57,7 @@ export function checkClusterProduction(rendered: string, ha = false): void {
     const storage = resource(rendered, 'StorageClass', 'zglosto-ha');
     if (
       !storage.includes('provisioner: driver.longhorn.io') ||
-      !storage.includes('numberOfReplicas: "3"') ||
+      !/^  numberOfReplicas: (?:"3"|'3')\s*$/mu.test(storage) ||
       !storage.includes('replicaSoftAntiAffinity: disabled') ||
       !storage.includes('reclaimPolicy: Retain')
     ) {

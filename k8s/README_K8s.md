@@ -144,9 +144,11 @@ Wdrożone zostały **Pod Security Standards** - nowoczesny mechanizm bezpieczeń
 
 #### 2. Ingress Load Balancing
 
-- **Controller:** NGINX Ingress Controller
-- **Algorytm:** `least_conn` - ruch kierowany do najmniej obciążonych podów
-- **Timeout'y:** Skonfigurowane dla stabilności połączeń
+- **Controller:** Traefik (klasa Ingress `traefik` w profilach Kubernetes i K3s).
+- **Routing:** Traefik → Service `ClusterIP` `nginx:1235` → usługi aplikacji.
+- **NGINX:** odpowiada za routing wewnątrz aplikacji; nie jest kontrolerem Ingress.
+- **Timeouty:** `proxy_connect_timeout 2s` i `proxy_read_timeout 7s` dotyczą lokalizacji
+  `/llm/health` w NGINX. Nie są adnotacjami Ingress.
 
 #### 3. Network Policies
 

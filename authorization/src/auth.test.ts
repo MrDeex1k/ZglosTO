@@ -65,3 +65,20 @@ test('idle pool errors have a handler', () => {
   const listener = mocks.on.mock.calls.find(([event]) => event === 'error')?.[1];
   expect(typeof listener).toBe('function');
 });
+
+test('the post-commit user hook leaves role provisioning to the database transaction', async () => {
+  const config = mocks.configure.mock.calls[0]![0];
+  const hooks = config.databaseHooks as {
+    user: {
+      create: {
+        after: (user: { id: string; email: string; emailVerified: boolean }) => Promise<void>;
+      };
+    };
+  };
+  await hooks.user.create.after({
+    id: 'user-1',
+    email: 'resident@example.com',
+    emailVerified: false,
+  });
+  expect(mocks.query).not.toHaveBeenCalled();
+});

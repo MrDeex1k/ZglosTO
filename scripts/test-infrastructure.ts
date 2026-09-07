@@ -2,11 +2,14 @@ import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import {
   cpSync,
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
+  realpathSync,
+  symlinkSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
@@ -131,7 +134,7 @@ if (command === 'ps') {
   }
   if (args.some(arg => arg.includes('audit-cli'))) {
     console.log('{}');
-    if (process.env.MOCK_FAIL === 'audit') process.exit(2);
+    if (process.env.MOCK_FAIL === 'audit') process.exit(Number(process.env.MOCK_AUDIT_EXIT ?? 2));
   } else if (args.at(-1) === 'backup') {
     if (process.env.MOCK_FAIL === 'archive') process.exit(1);
     console.log('object archive');
@@ -240,7 +243,7 @@ test('maintenance does not start application services that were already stopped'
 });
 
 test('control-plane backup couples snapshot, token and configuration and rejects token rotation', () => {
-  const directory = mkdtempSync(join(tmpdir(), 'zglosto-k3s-backup-'));
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), 'zglosto-k3s-backup-')));
   try {
     const bin = join(directory, 'bin');
     const data = join(directory, 'data');
@@ -264,6 +267,12 @@ if (process.env.MOCK_ROTATE_TOKEN) fs.writeFileSync(path.join(process.env.K3S_DA
 `,
       { mode: 0o755 },
     );
+    const service = join(directory, 'k3s.service');
+    const serviceEnv = join(directory, 'k3s.service.env');
+    writeFileSync(service, '[Service]\nExecStart=/usr/local/bin/k3s server\n');
+    writeFileSync(serviceEnv, 'K3S_NODE_NAME=test\n');
+    mkdirSync(`${service}.d`);
+    writeFileSync(join(`${service}.d`, 'override.conf'), '[Service]\nLimitNOFILE=1048576\n');
     const run = (name: string, rotate = false) =>
       spawnSync(
         'bash',
@@ -274,6 +283,8 @@ if (process.env.MOCK_ROTATE_TOKEN) fs.writeFileSync(path.join(process.env.K3S_DA
             PATH: `${bin}:${process.env.PATH}`,
             K3S_DATA_DIR: data,
             K3S_CONFIG_DIR: config,
+            K3S_SERVICE_FILE: service,
+            K3S_SERVICE_ENV_FILE: serviceEnv,
             ...(rotate ? { MOCK_ROTATE_TOKEN: '1' } : {}),
           },
           encoding: 'utf8',
@@ -287,15 +298,93 @@ if (process.env.MOCK_ROTATE_TOKEN) fs.writeFileSync(path.join(process.env.K3S_DA
       'server-token',
       'snapshots/snapshot.db',
       'config/config.yaml',
+      'service/k3s.service',
+      'service/k3s.service.env',
+      'service/drop-ins/override.conf',
       'version.txt',
     ]) {
       assert.ok(manifest.includes(file));
     }
+    assert.notEqual(run('complete').status, 0);
+    const outside = join(directory, 'outside');
+    mkdirSync(outside);
+    symlinkSync(outside, join(directory, 'linked'));
+    symlinkSync(join(directory, 'absent'), join(directory, 'dangling'));
+    assert.notEqual(run('linked').status, 0);
+    assert.notEqual(run('dangling').status, 0);
+    writeFileSync(
+      join(bin, 'mkdir'),
+      `#!/usr/bin/env node
+const fs = require('node:fs');
+const cp = require('node:child_process');
+const path = require('node:path');
+const args = process.argv.slice(2);
+const destination = args.at(-1);
+if (destination.endsWith('/raced')) fs.symlinkSync(path.join(path.dirname(destination), 'outside'), destination);
+const result = cp.spawnSync('/bin/mkdir', args, { stdio: 'inherit' });
+process.exit(result.status ?? 1);
+`,
+      { mode: 0o755 },
+    );
+    assert.notEqual(run('raced').status, 0);
+    assert.deepEqual(readdirSync(outside), []);
+    assert.equal(existsSync(join(directory, 'absent')), false);
+    const writable = join(directory, 'writable');
+    mkdirSync(writable);
+    chmodSync(writable, 0o777);
+    mkdirSync(join(writable, 'private'), { mode: 0o700 });
+    assert.notEqual(run('writable/backup').status, 0);
+    assert.notEqual(run('writable/private/backup').status, 0);
+    assert.equal(existsSync(join(writable, 'backup')), false);
+    assert.equal(existsSync(join(writable, 'private/backup')), false);
+    rmSync(join(config, 'config.yaml'));
+    assert.notEqual(run('missing-config').status, 0);
+    assert.equal(existsSync(join(directory, 'missing-config')), false);
+    writeFileSync(join(config, 'config.yaml'), 'cluster-init: true\n');
+    rmSync(serviceEnv);
+    assert.notEqual(run('missing-service-env').status, 0);
+    assert.equal(existsSync(join(directory, 'missing-service-env')), false);
+    writeFileSync(serviceEnv, 'K3S_NODE_NAME=test\n');
     const failed = run('rotated', true);
     assert.notEqual(failed.status, 0);
     assert.match(failed.stderr, /token changed/u);
     assert.equal(existsSync(join(directory, 'rotated/SHA256SUMS')), false);
   } finally {
     rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('Longhorn accepts either YAML string quote style but rejects invalid replica counts', () => {
+  const ha = render('k3s-ha');
+  const replicas = /^  numberOfReplicas: .+$/mu;
+  for (const value of ['"3"', "'3'"])
+    checkClusterProduction(ha.replace(replicas, `  numberOfReplicas: ${value}`), true);
+  for (const value of ['3', '"2"', "'2'", String.fromCharCode(34, 51, 39)]) {
+    assert.throws(
+      () => checkClusterProduction(ha.replace(replicas, `  numberOfReplicas: ${value}`), true),
+      /three Longhorn replicas/u,
+    );
+  }
+});
+
+test('failed restore audits stop temporary PgBouncer and preserve the original failure code', () => {
+  for (const code of [1, 2]) {
+    const fixture = maintenanceFixture();
+    try {
+      const backup = join(fixture.directory, 'backup');
+      const saved = fixture.run('backup-compose.sh', backup);
+      assert.equal(saved.status, 0, saved.stderr);
+      writeFileSync(fixture.state, JSON.stringify(['pgbouncer']));
+      const restored = fixture.run('restore-compose.sh', backup, {
+        MOCK_FAIL: 'audit',
+        MOCK_AUDIT_EXIT: String(code),
+      });
+      assert.equal(restored.status, code, restored.stderr);
+      const stopped = JSON.parse(readFileSync(fixture.state, 'utf8')) as string[];
+      for (const service of ['pgbouncer', 'nginx', 'authorization', 'backend', 'media_worker'])
+        assert.ok(stopped.includes(service));
+    } finally {
+      rmSync(fixture.directory, { recursive: true, force: true });
+    }
   }
 });

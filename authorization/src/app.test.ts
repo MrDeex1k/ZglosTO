@@ -4,6 +4,7 @@ import { afterAll, afterEach, expect, test, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
+  logApiRequest: vi.fn(async () => {}),
   handler: vi.fn(async () => Response.json({ ok: true })),
 }));
 vi.mock('@hono/node-server/conninfo', () => ({
@@ -24,7 +25,7 @@ vi.mock('./env.ts', () => ({
 }));
 vi.mock('./distributed-rate-limit.ts', () => ({ authorizationRedisReadiness: vi.fn() }));
 vi.mock('./logger.ts', () => ({
-  logApiRequest: vi.fn(async () => {}),
+  logApiRequest: mocks.logApiRequest,
   runWithAuthorizationLogContext: (_id: string, next: () => Promise<void>) => next(),
 }));
 import { createAuthorizationApp } from './app.ts';
@@ -49,6 +50,13 @@ test('session database failures return a non-cacheable 503', async () => {
   mocks.getSession.mockRejectedValueOnce(new Error('database detail must remain private'));
   const response = await app.request('/api/verify-session');
   expect(response.status).toBe(503);
+  expect(mocks.logApiRequest).toHaveBeenCalledWith(
+    'GET',
+    '/api/verify-session',
+    503,
+    false,
+    'Błąd: database detail must remain private',
+  );
   expect(response.headers.get('cache-control')).toBe('no-store');
   expect(await response.text()).not.toContain('database detail');
 });

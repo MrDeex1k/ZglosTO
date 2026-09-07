@@ -33,11 +33,16 @@ else
   (cd "$backup_directory" && shasum -a 256 --check SHA256SUMS)
 fi
 
+temporary_pgbouncer=false
 restore_failed() {
   local result=$?
+  if [ "$temporary_pgbouncer" = true ]; then
+    "${compose[@]}" stop pgbouncer >/dev/null || printf '[restore] Could not stop temporary PgBouncer\n' >&2
+  fi
   if [ "$result" -ne 0 ]; then
     printf '[restore] Failed; application writers remain stopped. Complete restore and audit before restarting services.\n' >&2
   fi
+  return "$result"
 }
 trap restore_failed EXIT
 trap 'exit 130' INT
@@ -56,12 +61,16 @@ printf '[restore] Restoring Object Storage through the active S3-compatible prov
 
 printf '[restore] Verifying database/Object Storage consistency\n'
 # The isolated audit needs PgBouncer, but no application writer may start yet.
+if [ "${#services_to_resume[@]}" -eq 0 ] || [[ " ${services_to_resume[*]} " != *' pgbouncer '* ]]; then
+  temporary_pgbouncer=true
+fi
 "${compose[@]}" start --wait --wait-timeout 120 pgbouncer >/dev/null
 "${compose[@]}" run --rm --no-deps -T backend node dist/operations/object-storage-audit-cli.js \
   > "$backup_directory/post-restore-object-storage-audit.json"
 
-if [ "${#services_to_resume[@]}" -eq 0 ] || [[ " ${services_to_resume[*]} " != *' pgbouncer '* ]]; then
+if [ "$temporary_pgbouncer" = true ]; then
   "${compose[@]}" stop pgbouncer >/dev/null
+  temporary_pgbouncer=false
 fi
 resume_application
 trap - EXIT INT TERM

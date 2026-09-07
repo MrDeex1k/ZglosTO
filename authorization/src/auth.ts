@@ -165,22 +165,16 @@ export const auth = betterAuth({
     },
   },
 
-  // Hook automatycznie tworzący wpis w tabeli uzytkownicy po rejestracji
+  // Domyślną rolę tworzy trigger bazy w transakcji zapisu użytkownika.
   databaseHooks: {
     user: {
       create: {
         after: async (user) => {
           try {
-            await dbPool.query(
-              `INSERT INTO uzytkownicy (id_uzytkownika, uprawnienia, service_key)
-               VALUES ($1, 'mieszkaniec', NULL)
-               ON CONFLICT (id_uzytkownika) DO NOTHING`,
-              [user.id],
-            );
             await logAuthOperation(
               'Rejestracja użytkownika',
               true,
-              `Email: ${user.email || 'N/A'}, ID: ${user.id} | Utworzono wpis w tabeli uzytkownicy`,
+              `Email: ${user.email || 'N/A'}, ID: ${user.id}`,
               null,
             );
             if (user.emailVerified) {

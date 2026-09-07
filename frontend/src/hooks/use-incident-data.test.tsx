@@ -12,18 +12,28 @@ vi.mock('../lib/incident-status', () => ({ toIncidentDisplayStatus: (status: str
 import { useIncidentData } from './use-incident-data';
 
 function Probe({ pathname }: { pathname: string }) {
-  useIncidentData({
+  const { isLoadingIncidents } = useIncidentData({
     pathname,
     isLoggedIn: true,
     userEmail: 'resident@example.com',
     userRole: 'mieszkaniec',
     canLoadAdminData: false,
   });
-  return null;
+  return createElement('span', null, String(isLoadingIncidents));
 }
 
 describe('route-scoped incident loading', () => {
-  beforeEach(() => query.mockClear());
+  beforeEach(() => query.mockReset());
+  it.each([
+    ['/dashboard/mieszkaniec', true, false],
+    ['/', true, true],
+    ['/', false, false],
+  ])('reports active public loading on %s (fetching: %s)', (pathname, isLoading, expected) => {
+    query.mockReturnValue({ isPending: true, isLoading });
+    expect(renderToStaticMarkup(createElement(Probe, { pathname }))).toBe(
+      `<span>${expected}</span>`,
+    );
+  });
   it.each([
     ['/login', []],
     ['/register', []],

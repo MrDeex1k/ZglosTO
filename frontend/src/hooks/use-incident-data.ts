@@ -57,7 +57,7 @@ export function useIncidentData({
     residentIncidents: residentQuery.data ?? [],
     allIncidents: canLoadAdminData ? (adminQuery.data ?? []) : [],
     serviceIncidents: serviceQuery.data ?? [],
-    isLoadingIncidents: resolvedQuery.isPending,
+    isLoadingIncidents: pathname === '/' && resolvedQuery.isLoading,
     incidentsError: resolvedQuery.isError
       ? 'Nie udało się załadować zgłoszeń. Spróbuj odświeżyć stronę.'
       : null,

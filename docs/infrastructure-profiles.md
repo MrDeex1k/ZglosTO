@@ -109,9 +109,27 @@ wykonaj na serwerze K3s, z uprawnieniami do katalogu danych:
 sudo ./scripts/backup-k3s-control-plane.sh /mnt/encrypted-offsite/k3s/2026-09-05
 ```
 
-Katalog docelowy musi być nowy. Skrypt zapisuje snapshot etcd, token serwera, konfigurację,
-wersję K3s i sumy SHA-256. Odmawia sukcesu, gdy token zmieni się podczas snapshotu.
-Zmienne `K3S_DATA_DIR` i `K3S_CONFIG_DIR` obsługują instalacje z innymi ścieżkami.
+Katalog docelowy musi być nowy, a jego katalog nadrzędny musi już istnieć. Ścieżka
+nie może zawierać dowiązań symbolicznych ani katalogów należących do innego użytkownika
+(poza rootem) lub zapisywalnych przez grupę/innych. Wyjątkiem jest rootowy katalog
+ze sticky bit, np. `/tmp`, powyżej prywatnego katalogu nadrzędnego. Skrypt tworzy
+katalog docelowy atomowo z uprawnieniami 0700.
+
+Obsługiwany profil wymaga konfiguracji plikowej `config.yaml` w `K3S_CONFIG_DIR`
+(domyślnie `/etc/rancher/k3s`) oraz plików jednostki systemd i jej środowiska.
+Kopiowany jest cały katalog konfiguracji, w tym `config.yaml.d`, jednostka
+`K3S_SERVICE_FILE` (domyślnie `/etc/systemd/system/k3s.service`), plik
+`K3S_SERVICE_ENV_FILE` (domyślnie `/etc/systemd/system/k3s.service.env`) oraz istniejący
+katalog drop-inów `K3S_SERVICE_DROPIN_DIR` (domyślnie `<K3S_SERVICE_FILE>.d`).
+Brak wymaganych plików przerywa pracę przed rozpoczęciem kopii.
+Instalacje konfigurowane wyłącznie przez CLI/środowisko wymagają przygotowania tego
+profilu. Dodatkowe pliki wskazane w jednostce lub konfiguracji (np. zewnętrzne
+`EnvironmentFile`, niestandardowy `--config`, certyfikaty) operator musi dołączyć do
+katalogu konfiguracji; skrypt nie wykrywa takich zależności automatycznie.
+
+Skrypt zapisuje snapshot etcd, token serwera, konfigurację, jednostkę systemd, wersję
+K3s i sumy SHA-256. Odmawia sukcesu, gdy token zmieni się podczas snapshotu.
+Zmienna `K3S_DATA_DIR` obsługuje instalacje z inną ścieżką danych.
 Skrypt nie sprawdza, czy mount rzeczywiście znajduje się poza hostem: operator musi
 zapewnić szyfrowany nośnik zewnętrzny, kontrolę dostępu i retencję katalogów backupu.
 Brak `SHA256SUMS` albo niezerowy kod wyjścia oznacza niekompletną kopię.
