@@ -77,3 +77,5 @@ export function formatDateTime(
 export function formatNumber(value: number, locale: SupportedLocale): string {
   return new Intl.NumberFormat(locale).format(value);
 }
+
+export { incidentSubmissionNotice } from './incident-submission.js';

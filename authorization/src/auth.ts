@@ -3,21 +3,30 @@ import { expo } from '@better-auth/expo';
 import { betterAuth } from 'better-auth';
 import { customSession } from 'better-auth/plugins';
 import { Pool } from 'pg';
-import { createAuthMiddleware } from 'better-auth/api';
+import { APIError, createAuthMiddleware } from 'better-auth/api';
 import { isRecord, type AuthorizationUserFields, type UserRole } from '@zglosto/contracts';
 import { logAuthOperation } from './logger.ts';
 import { env } from './env.ts';
+import { authorizationOrigins } from './origins.ts';
 import { storeVerificationMessage } from './test-email-outbox.ts';
 import { betterAuthRateLimitOptions } from './distributed-rate-limit.ts';
 
 // Pool do zapytań do bazy danych
 const dbPool = new Pool({
   connectionString: env.databaseUrl,
+  ...env.databasePool,
   ssl: {
     ca: readFileSync(env.databaseTlsCaPath, 'utf8'),
     minVersion: 'TLSv1.3',
     rejectUnauthorized: true,
   },
+});
+
+// Idle connections can fail independently of a request (e.g. a PgBouncer restart).
+dbPool.on('error', () => {
+  void logAuthOperation('Database idle connection failure', false, null, 'connection_error').catch(
+    () => {},
+  );
 });
 
 type AuthorizationRoleRow = AuthorizationUserFields;
@@ -83,7 +92,7 @@ export const auth = betterAuth({
   },
 
   // Dozwolone origin (CORS + walidacja Better-Auth)
-  trustedOrigins: [env.frontendOrigin, 'http://localhost:5173', 'zglosto://'],
+  trustedOrigins: [...authorizationOrigins(env.frontendOrigin, env.nodeEnv), 'zglosto://'],
 
   // Włącz autoryzację email + hasło
   emailAndPassword: {
@@ -185,6 +194,9 @@ export const auth = betterAuth({
               `Email: ${user.email || 'N/A'}, ID: ${user.id}`,
               errorMessage,
             );
+            throw new APIError('SERVICE_UNAVAILABLE', {
+              message: 'Account provisioning is temporarily unavailable.',
+            });
           }
         },
       },
@@ -287,11 +299,9 @@ export const auth = betterAuth({
           `User ID: ${user.id}`,
           errorMessage,
         );
-        // W przypadku błędu zwróć bez zmian
-        return {
-          user: { ...user, uprawnienia: null, serviceKey: null },
-          session,
-        };
+        throw new APIError('SERVICE_UNAVAILABLE', {
+          message: 'Session permissions are temporarily unavailable.',
+        });
       }
     }),
   ],

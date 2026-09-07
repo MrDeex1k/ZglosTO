@@ -105,7 +105,7 @@ certyfikacja RTO/RPO pozostają w Fazie 12. Szczegóły:
 FastAPI ani sekretów zapisanych jawnym tekstem.
 
 Wynik: baza nie zawiera decyzji o ingressie ani klasie storage. Overlay Kubernetes wybiera
-ingress-nginx i `standard`, a K3s pakietowe Traefik, `local-path` i Metrics Server.
+Traefik i `standard`, a K3s pakietowe Traefik, `local-path` i Metrics Server.
 `deploy/cluster-profiles.json` zapisuje również wymaganie KEDA/cert-manager oraz rozróżnia
 K3s single-node bez HA od rekomendowanego, co najmniej trzyserwerowego wariantu HA.
 Walidator sprawdza te decyzje, neutralność bazy i deterministyczność renderów. Szczegóły:

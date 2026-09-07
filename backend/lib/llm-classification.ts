@@ -13,7 +13,6 @@ export interface ClassifyIncidentOptions {
   fetchImpl: typeof fetch;
   gatewayUrl: string;
   timeoutMs: number;
-  fallbackServiceKey: string;
 }
 
 function isFallbackReason(value: unknown): value is LlmFallbackReason {
@@ -22,11 +21,11 @@ function isFallbackReason(value: unknown): value is LlmFallbackReason {
 
 export function fallbackClassification(
   reason: unknown,
-  fallbackServiceKey: string,
+  requestedServiceKey: string,
 ): CurrentLlmClassificationResult {
   return {
     classification: 'unknown',
-    serviceKey: fallbackServiceKey,
+    serviceKey: requestedServiceKey,
     modelAvailable: false,
     source: 'fallback',
     reason: isFallbackReason(reason) ? reason : 'unavailable',
@@ -49,17 +48,16 @@ function modelClassification(
 export function normalizeLlmResponse(
   payload: unknown,
   requestedServiceKey: string,
-  fallbackServiceKey: string,
 ): CurrentLlmClassificationResult {
   try {
     const response = parseLlmClassificationResponse(payload);
     if (response.classification === 'unknown') {
       const reason = isFallbackReason(response.reason) ? response.reason : 'invalid_response';
-      return fallbackClassification(reason, fallbackServiceKey);
+      return fallbackClassification(reason, requestedServiceKey);
     }
     return modelClassification(response.classification, requestedServiceKey);
   } catch {
-    return fallbackClassification('invalid_response', fallbackServiceKey);
+    return fallbackClassification('invalid_response', requestedServiceKey);
   }
 }
 
@@ -69,28 +67,40 @@ export async function classifyIncident(
   options: ClassifyIncidentOptions,
 ): Promise<CurrentLlmClassificationResult> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), options.timeoutMs);
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  const deadline = new Promise<CurrentLlmClassificationResult>((resolve) => {
+    timeout = setTimeout(() => {
+      resolve(fallbackClassification('timeout', requestedServiceKey));
+      controller.abort();
+    }, options.timeoutMs);
+  });
+
+  const classify = async (): Promise<CurrentLlmClassificationResult> => {
+    try {
+      const response = await options.fetchImpl(`${options.gatewayUrl}${LLM_CLASSIFICATION_PATH}`, {
+        method: LLM_CLASSIFICATION_HTTP_METHOD,
+        headers: { 'Content-Type': LLM_CLASSIFICATION_CONTENT_TYPE },
+        body: JSON.stringify({ description, address: null, city: null }),
+        signal: controller.signal,
+      });
+      if (!response.ok) return fallbackClassification('unavailable', requestedServiceKey);
+      const payload: unknown = await response.json();
+      return normalizeLlmResponse(payload, requestedServiceKey);
+    } catch (error) {
+      const reason = controller.signal.aborted
+        ? 'timeout'
+        : error instanceof SyntaxError
+          ? 'invalid_response'
+          : 'unavailable';
+      return fallbackClassification(reason, requestedServiceKey);
+    }
+  };
 
   try {
-    const response = await options.fetchImpl(`${options.gatewayUrl}${LLM_CLASSIFICATION_PATH}`, {
-      method: LLM_CLASSIFICATION_HTTP_METHOD,
-      headers: { 'Content-Type': LLM_CLASSIFICATION_CONTENT_TYPE },
-      body: JSON.stringify({ description, address: null, city: null }),
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      return fallbackClassification('unavailable', options.fallbackServiceKey);
-    }
-
-    const payload: unknown = await response.json();
-    return normalizeLlmResponse(payload, requestedServiceKey, options.fallbackServiceKey);
-  } catch (error) {
-    const reason =
-      error instanceof Error && error.name === 'AbortError' ? 'timeout' : 'unavailable';
-    return fallbackClassification(reason, options.fallbackServiceKey);
+    // The deadline also covers a stalled body or a transport ignoring AbortSignal.
+    return await Promise.race([classify(), deadline]);
   } finally {
-    clearTimeout(timeout);
+    if (timeout !== null) clearTimeout(timeout);
   }
 }
 

@@ -17,6 +17,8 @@
 !packages/rate-limiting/**
 !packages/transient-store/
 !packages/transient-store/**
+!packages/workload-auth/
+!packages/workload-auth/**
 !packages/white-label-config/
 !packages/white-label-config/**
 

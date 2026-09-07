@@ -23,6 +23,13 @@ spec:
         app: pgbouncer
     spec:
       serviceAccountName: pgbouncer
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: pgbouncer
       enableServiceLinks: false
       terminationGracePeriodSeconds: 30
       securityContext:

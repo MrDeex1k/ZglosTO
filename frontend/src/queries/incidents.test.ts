@@ -1,6 +1,6 @@
 import { QueryClient } from '@tanstack/react-query';
 import type { CurrentIncidentListItemDto, CurrentResolvedIncidentDto } from '@zglosto/contracts';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../config/services', () => ({
   normalizeServiceKey: (serviceKey: string) => serviceKey,
@@ -13,6 +13,10 @@ vi.mock('../lib/incident-status', () => ({
 import { createAppQueryClient } from '../lib/query-client';
 import type { Incident } from '../types/incident';
 import {
+  adminIncidentsQueryOptions,
+  residentIncidentsQueryOptions,
+  resolvedIncidentsQueryOptions,
+  serviceIncidentsQueryOptions,
   incidentQueryKeys,
   mapIncident,
   mapResolvedIncident,
@@ -141,5 +145,54 @@ describe('application QueryClient', () => {
     expect(queryClient.getDefaultOptions().queries?.staleTime).toBe(30_000);
     expect(queryClient.getDefaultOptions().queries?.gcTime).toBe(600_000);
     expect(queryClient.getDefaultOptions().mutations?.retry).toBe(false);
+  });
+});
+
+describe('query cancellation reaches the HTTP request', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it.each([
+    {
+      queryKey: incidentQueryKeys.resolved(),
+      start: (client: QueryClient) => client.fetchQuery(resolvedIncidentsQueryOptions()),
+    },
+    {
+      queryKey: incidentQueryKeys.resident('resident@example.com'),
+      start: (client: QueryClient) =>
+        client.fetchQuery(residentIncidentsQueryOptions('resident@example.com')),
+    },
+    {
+      queryKey: incidentQueryKeys.admin('admin@example.com'),
+      start: (client: QueryClient) =>
+        client.fetchQuery(adminIncidentsQueryOptions('admin@example.com')),
+    },
+    {
+      queryKey: incidentQueryKeys.service('service@example.com'),
+      start: (client: QueryClient) =>
+        client.fetchQuery(serviceIncidentsQueryOptions('service@example.com')),
+    },
+  ])('aborts $queryKey without leaving cached data', async (options) => {
+    const client = createAppQueryClient();
+    let requestSignal: AbortSignal | undefined;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_url, init: RequestInit) => {
+        requestSignal = init.signal ?? undefined;
+        return new Promise<Response>((_resolve, reject) => {
+          requestSignal?.addEventListener(
+            'abort',
+            () => reject(new DOMException('Aborted', 'AbortError')),
+            { once: true },
+          );
+        });
+      }),
+    );
+    const request = options.start(client);
+    const assertion = expect(request).rejects.toThrow();
+    await client.cancelQueries({ queryKey: options.queryKey });
+    await assertion;
+    expect(requestSignal?.aborted).toBe(true);
+    expect(client.getQueryData(options.queryKey)).toBeUndefined();
+    client.clear();
   });
 });

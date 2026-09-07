@@ -1,6 +1,6 @@
 import { fetch as expoFetch } from 'expo/fetch';
 
-import { ApiError, isAbortError } from './errors';
+import { ApiError, assertRequestActive, isAbortError } from './errors';
 
 type ResponseParser<T> = (value: unknown) => T;
 export type MobileFetch = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
@@ -45,7 +45,12 @@ export function createApiClient({
   origin,
   timeoutMs: defaultTimeoutMs = 15_000,
 }: ApiClientOptions) {
-  async function raw(path: string, init: ApiRequestInit = {}): Promise<Response> {
+  // Keep cancellation and the deadline active until the response body is consumed.
+  async function readResponse<T>(
+    path: string,
+    init: ApiRequestInit,
+    read: (response: Response) => Promise<T>,
+  ): Promise<T> {
     const url = buildApiUrl(origin, path);
     const { signal: callerSignal, timeoutMs = defaultTimeoutMs, ...requestInit } = init;
     if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
@@ -66,11 +71,16 @@ export function createApiClient({
     }, timeoutMs);
 
     try {
-      return await fetcher(url, {
+      assertRequestActive(controller.signal);
+      const response = await fetcher(url, {
         ...requestInit,
         headers: withDefaultHeaders(requestInit),
         signal: controller.signal,
       });
+      assertRequestActive(controller.signal);
+      const result = await read(response);
+      assertRequestActive(controller.signal);
+      return result;
     } catch (error) {
       if (timedOut) {
         throw new ApiError('The API request timed out.', { cause: error, kind: 'timeout' });
@@ -78,11 +88,16 @@ export function createApiClient({
       if (isAbortError(error) || controller.signal.aborted) {
         throw new ApiError('Request was cancelled.', { cause: error, kind: 'aborted' });
       }
+      if (error instanceof ApiError) throw error;
       throw new ApiError('The API is unavailable.', { cause: error, kind: 'network' });
     } finally {
       clearTimeout(timeout);
       callerSignal?.removeEventListener('abort', abortFromCaller);
     }
+  }
+
+  function raw(path: string, init: ApiRequestInit = {}): Promise<Response> {
+    return readResponse(path, init, async (response) => response);
   }
 
   async function requestJson<T>(path: string, options: JsonRequestOptions<T>): Promise<T> {
@@ -95,46 +110,51 @@ export function createApiClient({
       serializedBody = JSON.stringify(body);
     }
 
-    const response = await raw(path, {
-      ...init,
-      ...(serializedBody === undefined ? {} : { body: serializedBody }),
-      headers,
-    });
-    const correlationId = response.headers.get('x-correlation-id');
+    return readResponse(
+      path,
+      {
+        ...init,
+        ...(serializedBody === undefined ? {} : { body: serializedBody }),
+        headers,
+      },
+      async (response) => {
+        const correlationId = response.headers.get('x-correlation-id');
 
-    if (!response.ok) {
-      throw new ApiError(`API request failed with HTTP ${response.status}.`, {
-        correlationId,
-        kind: 'http',
-        status: response.status,
-      });
-    }
+        if (!response.ok) {
+          throw new ApiError(`API request failed with HTTP ${response.status}.`, {
+            correlationId,
+            kind: 'http',
+            status: response.status,
+          });
+        }
 
-    let payload: unknown;
-    try {
-      payload = await response.json();
-    } catch (error) {
-      throw new ApiError('API returned invalid JSON.', {
-        cause: error,
-        correlationId,
-        kind: 'contract',
-        status: response.status,
-      });
-    }
+        let payload: unknown;
+        try {
+          payload = await response.json();
+        } catch (error) {
+          throw new ApiError('API returned invalid JSON.', {
+            cause: error,
+            correlationId,
+            kind: 'contract',
+            status: response.status,
+          });
+        }
 
-    try {
-      return parser(payload);
-    } catch (error) {
-      throw new ApiError('API response does not match the expected contract.', {
-        cause: error,
-        correlationId,
-        kind: 'contract',
-        status: response.status,
-      });
-    }
+        try {
+          return parser(payload);
+        } catch (error) {
+          throw new ApiError('API response does not match the expected contract.', {
+            cause: error,
+            correlationId,
+            kind: 'contract',
+            status: response.status,
+          });
+        }
+      },
+    );
   }
 
-  return { origin, raw, requestJson };
+  return { origin, raw, readResponse, requestJson };
 }
 
 export type ApiClient = ReturnType<typeof createApiClient>;

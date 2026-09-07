@@ -1,0 +1,21 @@
+# Kubernetes installation; K3s continues to use its packaged Traefik.
+deployment:
+  replicas: 2
+ingressClass:
+  enabled: true
+  isDefaultClass: false
+  name: traefik
+providers:
+  kubernetesIngress:
+    enabled: true
+    ingressClass: traefik
+ingressRoute:
+  dashboard:
+    enabled: false
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: kubernetes.io/hostname
+    whenUnsatisfiable: ScheduleAnyway
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: traefik

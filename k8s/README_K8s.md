@@ -1,3 +1,5 @@
+> Aktualne profile produkcyjne, migracja ingressu i procedura K3s HA: [infrastructure-profiles.md](../docs/infrastructure-profiles.md).
+
 # ZglosTO — bieżący deployment testowy Kubernetes
 
 Ten plik zawiera pełne, krok po kroku instrukcje uruchomienia aplikacji ZglosTO na Kubernetes (lokalnie i w prostym środowisku testowym). Jeśli chcesz wykonać szybkie lokalne uruchomienie bez Kubernetesa, zobacz główny `README.md` (sekcja Docker Compose).
@@ -17,7 +19,7 @@ Ten plik zawiera pełne, krok po kroku instrukcje uruchomienia aplikacji ZglosTO
 k8s/
 ├── base/              # Wspólne zasoby, ConfigMaps, PVC, workloady i polityki
 ├── overlays/
-│   ├── kubernetes/    # ingress-nginx, standard, zewnętrzny Metrics Server
+│   ├── kubernetes/    # Traefik, standard, zewnętrzny Metrics Server
 │   ├── kubernetes-rustfs/ # Kubernetes z lokalnym RustFS
 │   ├── kubernetes-observability-{external,local}/
 │   ├── kubernetes-redis-{external,local}/
@@ -40,7 +42,7 @@ k8s/
 - `kubectl` z Kustomize v5 zainstalowany i skonfigurowany
 - `docker` lub `podman` (obrazy będą budowane lokalnie)
 - Lokalny klaster Kubernetes: preferowane `minikube` lub `kind` dla testów
-- dla overlayu Kubernetes: ingress-nginx, klasa storage `standard` i Metrics Server
+- dla overlayu Kubernetes: Traefik, klasa storage `standard` i Metrics Server
 - dla overlayu K3s: niewyłączone pakietowe Traefik, `local-path` i Metrics Server
 - dla obu profili: cert-manager, Stakater Reloader, CNI egzekwujące NetworkPolicy,
   KEDA `>=2.20.0` oraz KEDA HTTP Add-on `0.15.0` w namespace `keda`

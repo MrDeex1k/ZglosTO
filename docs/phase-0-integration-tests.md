@@ -53,7 +53,7 @@ INTEGRATION_KEEP_RUNNING=1 \
 12. kontrolowany, aktywny adapter DMR pokrywa `municipal`, `emergency`, `timeout`,
     `unavailable` i `invalid_response`; wariant `disabled` jest testowany w smoke teście
     bazowego Compose oraz w testach jednostkowych gatewaya;
-13. fallback nigdy nie blokuje zapisu i zawsze zapisuje `unknown`, `source: fallback` oraz techniczny `reason`;
+13. fallback nigdy nie blokuje zapisu, zachowuje wybraną służbę i zapisuje `unknown`, `source: fallback` oraz techniczny `reason`;
 14. backend i authorization używają `DATABASE_URL` z hostem `pgbouncer`, nie otrzymują
     `DATABASE_DIRECT_URL`, mają wyłącznie Database CA, a rzeczywiste zapytanie potwierdza TLS
     1.3 przez pooler;

@@ -90,9 +90,10 @@ export function createAuthorizationClient(
           },
         );
 
-        outgoingRequest.setTimeout(environment.timeoutMs, () => {
+        const timeout = setTimeout(() => {
           outgoingRequest.destroy(new Error('Authorization request timed out'));
-        });
+        }, environment.timeoutMs);
+        outgoingRequest.once('close', () => clearTimeout(timeout));
         outgoingRequest.on('error', reject);
         outgoingRequest.end();
       });

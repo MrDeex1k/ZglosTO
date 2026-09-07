@@ -18,6 +18,13 @@ spec:
         app: backend
     spec:
       serviceAccountName: backend
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: backend
       enableServiceLinks: false
       securityContext:
         fsGroup: 1000

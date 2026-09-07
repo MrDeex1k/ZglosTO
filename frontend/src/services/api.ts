@@ -76,13 +76,20 @@ export function uploadReportImage(file: File): Promise<string> {
   return uploadWithPresignedUrl(`${API_BASE_URL}/mieszkaniec/obrazy/uploads`, file);
 }
 
-export async function fetchResolvedIncidents(): Promise<CurrentResolvedIncidentDto[]> {
-  const response = await fetch(`${API_BASE_URL}/mieszkaniec/incydenty/glowna`);
+export async function fetchResolvedIncidents(
+  signal?: AbortSignal,
+): Promise<CurrentResolvedIncidentDto[]> {
+  const response = await fetch(`${API_BASE_URL}/mieszkaniec/incydenty/glowna`, {
+    signal: signal ?? null,
+  });
   return parseCurrentResolvedIncidents(await readJson(response));
 }
 
-export async function fetchAllIncidents(): Promise<CurrentIncidentListItemDto[]> {
+export async function fetchAllIncidents(
+  signal?: AbortSignal,
+): Promise<CurrentIncidentListItemDto[]> {
   const response = await fetch(`${API_BASE_URL}/admin/incydenty`, {
+    signal: signal ?? null,
     credentials: 'include',
   });
   return parseCurrentIncidentList(await readJson(response));
@@ -122,8 +129,11 @@ export async function updateUserPermissions(
   await sendMutation(`${API_BASE_URL}/admin/uzytkownicy/service-key`, 'PATCH', body);
 }
 
-export async function fetchServiceIncidents(): Promise<CurrentIncidentListItemDto[]> {
+export async function fetchServiceIncidents(
+  signal?: AbortSignal,
+): Promise<CurrentIncidentListItemDto[]> {
   const response = await fetch(`${API_BASE_URL}/sluzby/incydenty`, {
+    signal: signal ?? null,
     credentials: 'include',
   });
   return parseCurrentIncidentList(await readJson(response));
@@ -158,8 +168,11 @@ export async function uploadResolvedImageService(incidentId: string, file: File)
   );
 }
 
-export async function fetchUserIncidents(): Promise<CurrentIncidentListItemDto[]> {
+export async function fetchUserIncidents(
+  signal?: AbortSignal,
+): Promise<CurrentIncidentListItemDto[]> {
   const response = await fetch(`${API_BASE_URL}/mieszkaniec/incydenty`, {
+    signal: signal ?? null,
     credentials: 'include',
   });
   return parseCurrentIncidentList(await readJson(response));

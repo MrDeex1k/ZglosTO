@@ -9,7 +9,6 @@ export abstract class IncidentClassifier {
   abstract classify(
     description: string,
     requestedServiceKey: string,
-    fallbackServiceKey: string,
   ): Promise<CurrentLlmClassificationResult>;
 }
 
@@ -25,14 +24,12 @@ export class LlmGatewayIncidentClassifier extends IncidentClassifier implements 
   async classify(
     description: string,
     requestedServiceKey: string,
-    fallbackServiceKey: string,
   ): Promise<CurrentLlmClassificationResult> {
     const environment = validateLlmEnvironment();
     this.#client ??= createLlmGatewayClient(environment);
     const startedAt = performance.now();
     try {
       const result = await classifyIncident(description, requestedServiceKey, {
-        fallbackServiceKey,
         fetchImpl: this.#client.fetch,
         gatewayUrl: environment.gatewayUrl,
         timeoutMs: environment.timeoutMs,

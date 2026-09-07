@@ -3,7 +3,7 @@
   value:
     namespaceSelector:
       matchLabels:
-        kubernetes.io/metadata.name: ingress-nginx
+        kubernetes.io/metadata.name: traefik
     podSelector:
       matchLabels:
-        app.kubernetes.io/name: ingress-nginx
+        app.kubernetes.io/name: traefik

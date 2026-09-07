@@ -27,6 +27,18 @@ Utwórz główny `.env` na podstawie `.env.example`. Authorization waliduje przy
 
 `EMAIL_DELIVERY_MODE=disabled` jest obecnym trybem zwykłego środowiska. Izolowany zestaw Fazy 0 ustawia `test`, zapisuje link Better Auth w pamięciowym outboksie i testuje rzeczywiste potwierdzenie. Tryb `test` jest odrzucany, jeśli `NODE_ENV` nie ma wartości `test`; nie zastępuje produkcyjnego providera poczty.
 
+Weryfikacja e-mail pozostaje opcjonalna (`requireEmailVerification: false`). Podłączenie
+produkcyjnego nadawcy, domeny i wymuszenie weryfikacji są odłożone. Przypisywanie wcześniejszych
+anonimowych zgłoszeń nadal wymaga zweryfikowanego adresu.
+
+Pula PostgreSQL ma domyślnie 10 połączeń, 5 s na uzyskanie połączenia oraz 30 s bezczynności
+(`DATABASE_POOL_MAX`, `DATABASE_CONNECTION_TIMEOUT_MS`, `DATABASE_IDLE_TIMEOUT_MS`). Błędy
+bezczynnych połączeń są obsługiwane bez nieobsłużonego zdarzenia `error` procesu. Awaria odczytu
+uprawnień zwraca 503; brak sesji nadal zwraca 401. Dane sesji i odpowiedzi API mają `no-store`.
+Żądania Auth mają limit body 64 KiB. W produkcji origin przeglądarki pochodzi z
+`FRONTEND_ORIGIN`; automatyczne zaufanie lokalnemu Vite obowiązuje tylko poza produkcją.
+Origin aplikacji natywnej `zglosto://` pozostaje obsługiwany.
+
 ### Uruchomienie
 
 ```bash

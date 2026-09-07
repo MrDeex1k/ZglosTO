@@ -10,6 +10,7 @@ import {
 import type { Incident } from '../types/incident';
 
 interface UseIncidentDataOptions {
+  pathname: string;
   isLoggedIn: boolean;
   userEmail: string;
   userRole: UserRole;
@@ -26,23 +27,29 @@ export interface IncidentData {
 }
 
 export function useIncidentData({
+  pathname,
   isLoggedIn,
   userEmail,
   userRole,
   canLoadAdminData,
 }: UseIncidentDataOptions): IncidentData {
-  const resolvedQuery = useQuery(resolvedIncidentsQueryOptions());
+  const isPrivateDashboard =
+    isLoggedIn && userEmail.length > 0 && pathname === `/dashboard/${userRole}`;
+  const resolvedQuery = useQuery({
+    ...resolvedIncidentsQueryOptions(),
+    enabled: pathname === '/',
+  });
   const residentQuery = useQuery({
     ...residentIncidentsQueryOptions(userEmail),
-    enabled: isLoggedIn && userRole === 'mieszkaniec' && userEmail.length > 0,
+    enabled: isPrivateDashboard && userRole === 'mieszkaniec',
   });
   const adminQuery = useQuery({
     ...adminIncidentsQueryOptions(userEmail),
-    enabled: isLoggedIn && userRole === 'admin' && userEmail.length > 0 && canLoadAdminData,
+    enabled: isPrivateDashboard && userRole === 'admin' && canLoadAdminData,
   });
   const serviceQuery = useQuery({
     ...serviceIncidentsQueryOptions(userEmail),
-    enabled: isLoggedIn && userRole === 'sluzby' && userEmail.length > 0,
+    enabled: isPrivateDashboard && userRole === 'sluzby',
   });
 
   return {

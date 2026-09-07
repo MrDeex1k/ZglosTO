@@ -1,8 +1,9 @@
+import { incidentSubmissionNotice } from '@zglosto/i18n';
 import { useForm } from '@tanstack/react-form';
 import { Loader2 } from 'lucide-react';
 import { useRef, useState } from 'react';
 
-import { enabledServices, normalizeServiceKey } from '../config/services';
+import { enabledServices, getServiceLabel, normalizeServiceKey } from '../config/services';
 import { getLocalizedText, whiteLabelConfig } from '../config/white-label';
 import { createIncidentFormSchema, type IncidentFormValues } from '../forms/schemas';
 import { submitClientForm } from '../forms/submit';
@@ -72,33 +73,17 @@ export function IncidentForm({ onSubmit, reporterEmail }: IncidentFormProps) {
           zdjecie_incydentu_zglaszanego_upload_id: imageUploadId,
         });
 
-        if (result.classification.classification === 'emergency') {
-          setAlertState({
-            isOpen: true,
-            type: 'emergency',
-            title: 'Pomoc ratunkowa',
-            message:
-              'Zgłoszenie zostało zarejestrowane. Na podstawie analizy Twojego zgłoszenia, sprawą powinny się zająć służby ratunkowe. Zadzwoń pod numer alarmowy 112!',
-          });
-        } else if (result.classification.classification === 'unknown') {
-          setAlertState({
-            isOpen: true,
-            type: 'review',
-            title: 'Zgłoszenie przyjęte',
-            message:
-              'Zgłoszenie zostało zapisane. Automatyczna klasyfikacja jest obecnie niedostępna, dlatego zgłoszenie zostanie zweryfikowane ręcznie.',
-          });
-        } else {
-          setAlertState({
-            isOpen: true,
-            type: 'success',
-            title: 'Sukces',
-            message: 'Zgłoszenie zostało pomyślnie wysłane i zarejestrowane w systemie!',
-          });
-        }
+        setAlertState({
+          isOpen: true,
+          ...incidentSubmissionNotice(
+            result.classification.classification,
+            getServiceLabel(result.incydent.typ_sluzby, getCurrentLocale()),
+            getCurrentLocale(),
+          ),
+        });
 
         pendingSubmit.current = {
-          service: normalizeServiceKey(result.classification.serviceKey),
+          service: normalizeServiceKey(result.incydent.typ_sluzby),
           description: incident.description,
           address: incident.address,
           latitude: null,

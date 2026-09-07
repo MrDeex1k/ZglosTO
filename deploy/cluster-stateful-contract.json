@@ -24,9 +24,11 @@
         "pgbackrest-data": "40Gi"
       },
       "backup": {
-        "executor": "pgbackrest-scheduler-sidecar",
-        "intervalSeconds": 86400,
-        "weeklyFullOtherwiseDifferential": true,
+        "executor": "pg-cron",
+        "fullSchedule": "0 2 * * 0",
+        "differentialSchedule": "0 3 * * *",
+        "retentionFull": 4,
+        "retentionDifferential": 14,
         "finalRestoreCertificationPhase": 12
       }
     },

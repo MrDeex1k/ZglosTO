@@ -43,8 +43,8 @@ Maszynowym źródłem prawdy jest `deploy/cluster-profiles.json`.
 
 | Decyzja                | Kubernetes                         | K3s                                      |
 | ---------------------- | ---------------------------------- | ---------------------------------------- |
-| ingress                | ingress-nginx, klasa `nginx`       | pakietowy Traefik, klasa `traefik`       |
-| namespace ingress      | `ingress-nginx`                    | `kube-system`                            |
+| ingress                | Traefik, klasa `traefik`           | pakietowy Traefik, klasa `traefik`       |
+| namespace ingress      | `traefik`                          | `kube-system`                            |
 | storage                | klasa `standard`                   | pakietowa klasa `local-path`             |
 | metryki zasobów        | wymagany Metrics Server            | pakietowy Metrics Server                 |
 | autoskalowanie kolejki | wymagany KEDA                      | KEDA instalowane jako zewnętrzny dodatek |
@@ -59,7 +59,7 @@ wyłącznie patch overlayu i odpowiadający mu kontrakt, nie bazę.
 NetworkPolicy dopuszcza publiczny ruch do projektowego Nginx wyłącznie z wybranego
 kontrolera ingress:
 
-- `ingress-nginx` w namespace `ingress-nginx` dla Kubernetes;
+- `Traefik` w namespace `traefik` dla Kubernetes;
 - Traefik w namespace `kube-system` dla K3s.
 
 Szczegółowe reguły przepływów między wszystkimi usługami zostaną domknięte w kroku 7.

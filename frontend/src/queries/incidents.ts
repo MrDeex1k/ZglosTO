@@ -62,16 +62,23 @@ export function mapIncident(apiIncident: CurrentIncidentListItemDto): Incident {
 export const resolvedIncidentsQueryOptions = () =>
   queryOptions({
     queryKey: incidentQueryKeys.resolved(),
-    queryFn: async () => (await fetchResolvedIncidents()).map(mapResolvedIncident),
+    queryFn: async ({ signal }) =>
+      (await fetchResolvedIncidents(signal))
+        .map(mapResolvedIncident)
+        .sort(
+          (first, second) =>
+            new Date(second.resolvedAt ?? second.createdAt).getTime() -
+            new Date(first.resolvedAt ?? first.createdAt).getTime(),
+        ),
   });
 
 function privateIncidentQueryOptions(
   queryKey: QueryKey,
-  queryFn: () => Promise<CurrentIncidentListItemDto[]>,
+  queryFn: (signal?: AbortSignal) => Promise<CurrentIncidentListItemDto[]>,
 ) {
   return queryOptions({
     queryKey,
-    queryFn: async () => (await queryFn()).map(mapIncident),
+    queryFn: async ({ signal }) => (await queryFn(signal)).map(mapIncident),
   });
 }
 

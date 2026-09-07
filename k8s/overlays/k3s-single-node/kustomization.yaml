@@ -1,0 +1,133 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../k3s
+
+replicas:
+  - name: backend
+    count: 1
+  - name: authorization
+    count: 1
+  - name: frontend
+    count: 1
+  - name: nginx
+    count: 1
+  - name: pgbouncer
+    count: 1
+  - name: media-worker
+    count: 1
+  - name: llm-gateway
+    count: 1
+
+configMapGenerator:
+  - name: zglosto-config
+    namespace: zglosto
+    behavior: merge
+    literals:
+      - LLM_GATEWAY_URL=https://llm-gateway:8130
+      - LLM_GATEWAY_SERVER_NAME=llm-gateway
+      - LLM_RUNTIME=disabled
+
+patches:
+  - patch: |-
+      apiVersion: autoscaling/v2
+      kind: HorizontalPodAutoscaler
+      metadata:
+        name: backend-hpa
+        namespace: zglosto
+      $patch: delete
+  - patch: |-
+      apiVersion: autoscaling/v2
+      kind: HorizontalPodAutoscaler
+      metadata:
+        name: authorization-hpa
+        namespace: zglosto
+      $patch: delete
+  - patch: |-
+      apiVersion: autoscaling/v2
+      kind: HorizontalPodAutoscaler
+      metadata:
+        name: frontend-hpa
+        namespace: zglosto
+      $patch: delete
+  - patch: |-
+      apiVersion: keda.sh/v1alpha1
+      kind: ScaledObject
+      metadata:
+        name: media-worker
+        namespace: zglosto
+      $patch: delete
+  - patch: |-
+      apiVersion: keda.sh/v1alpha1
+      kind: ScaledObject
+      metadata:
+        name: llm-gateway
+        namespace: zglosto
+      $patch: delete
+  - patch: |-
+      apiVersion: keda.sh/v1alpha1
+      kind: TriggerAuthentication
+      metadata:
+        name: media-worker-rabbitmq
+        namespace: zglosto
+      $patch: delete
+  - patch: |-
+      apiVersion: http.keda.sh/v1beta1
+      kind: InterceptorRoute
+      metadata:
+        name: llm-gateway
+        namespace: zglosto
+      $patch: delete
+  - patch: |-
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: llm-gateway-proxy
+        namespace: zglosto
+      $patch: delete
+  - patch: |-
+      apiVersion: cert-manager.io/v1
+      kind: Certificate
+      metadata:
+        name: keda-http-interceptor
+        namespace: zglosto
+      $patch: delete
+  - target:
+      kind: PodDisruptionBudget
+    patch: |-
+      - op: remove
+        path: /spec/minAvailable
+      - op: add
+        path: /spec/maxUnavailable
+        value: 1
+  - target:
+      kind: NetworkPolicy
+      name: allow-backend
+    patch: |-
+      - op: replace
+        path: /spec/egress/3
+        value:
+          to:
+            - podSelector:
+                matchLabels:
+                  app: llm-gateway
+          ports:
+            - protocol: TCP
+              port: 8130
+  - target:
+      kind: NetworkPolicy
+      name: allow-llm-gateway
+    patch: |-
+      - op: replace
+        path: /spec/ingress/0/from/1
+        value:
+          podSelector:
+            matchLabels:
+              app: backend
+  - target:
+      kind: NetworkPolicy
+      name: allow-rabbitmq
+    patch: |-
+      - op: remove
+        path: /spec/ingress/0/from/2

@@ -174,9 +174,9 @@ cache i liczniki są odtwarzalne; utrata poda powoduje jedynie kontrolowaną deg
 | `DATABASE_URL`                   | tak      | tak    | backend, authorization, media_worker, pgbouncer | Aplikacyjny URL bazy wskazujący PgBouncer.                         |
 | `DATABASE_DIRECT_URL`            | tak      | tak    | pgbouncer, migracje, backup, administracja      | Bezpośredni URL PostgreSQL omijający pooler.                       |
 | `DATABASE_TLS_CA_PATH`           | tak      | nie    | backend, authorization, media_worker            | Ścieżka Database CA używanego do weryfikacji DNS `pgbouncer`.      |
-| `DATABASE_POOL_MAX`              | nie      | nie    | backend                                         | Maksymalna liczba połączeń stałej puli procesu; domyślnie `10`.    |
-| `DATABASE_IDLE_TIMEOUT_MS`       | nie      | nie    | backend                                         | Zamknięcie bezczynnego połączenia; domyślnie `30000`.              |
-| `DATABASE_CONNECTION_TIMEOUT_MS` | nie      | nie    | backend                                         | Limit zestawienia połączenia; domyślnie `5000`.                    |
+| `DATABASE_POOL_MAX`              | nie      | nie    | backend, authorization                          | Maksymalna liczba połączeń stałej puli procesu; domyślnie `10`.    |
+| `DATABASE_IDLE_TIMEOUT_MS`       | nie      | nie    | backend, authorization                          | Zamknięcie bezczynnego połączenia; domyślnie `30000`.              |
+| `DATABASE_CONNECTION_TIMEOUT_MS` | nie      | nie    | backend, authorization                          | Limit zestawienia połączenia; domyślnie `5000`.                    |
 | `PGBOUNCER_PORT`                 | nie      | nie    | pgbouncer, Compose                              | Port poolera w sieci wewnętrznej; domyślnie `6432`.                |
 
 `DATABASE_URL` wskazuje `pgbouncer:6432`, natomiast `DATABASE_DIRECT_URL` wskazuje
@@ -199,22 +199,22 @@ czemu nie współdzieli połączeń ani cyklu życia z procesem HTTP.
 
 Startowe ustawienia poolera są jawne w `.env.example`:
 
-| Zmienna                              | Domyślna | Znaczenie                                   |
-| ------------------------------------ | -------- | ------------------------------------------- |
-| `PGBOUNCER_MAX_CLIENT_CONN`          | `100`    | Maksymalna liczba klientów poolera.         |
-| `PGBOUNCER_DEFAULT_POOL_SIZE`        | `20`     | Podstawowy limit połączeń upstream na pulę. |
-| `PGBOUNCER_RESERVE_POOL_SIZE`        | `5`      | Awaryjne połączenia upstream dla kolejki.   |
-| `PGBOUNCER_MAX_PREPARED_STATEMENTS`  | `200`    | Cache protocol-level prepared statements.   |
-| `PGBACKREST_BACKUP_INTERVAL_SECONDS` | `86400`  | Odstęp między backupami scheduler sidecara. |
+| Zmienna                             | Domyślna | Znaczenie                                   |
+| ----------------------------------- | -------- | ------------------------------------------- |
+| `PGBOUNCER_MAX_CLIENT_CONN`         | `100`    | Maksymalna liczba klientów poolera.         |
+| `PGBOUNCER_DEFAULT_POOL_SIZE`       | `20`     | Podstawowy limit połączeń upstream na pulę. |
+| `PGBOUNCER_RESERVE_POOL_SIZE`       | `5`      | Awaryjne połączenia upstream dla kolejki.   |
+| `PGBOUNCER_MAX_PREPARED_STATEMENTS` | `200`    | Cache protocol-level prepared statements.   |
 
 Wartości są bezpiecznym punktem startowym, ale nie są jeszcze wynikiem testu obciążeniowego.
 Krok 3 Fazy 3 jest świadomie odroczony do końcowej bramki Fazy 12: testy kompletnego systemu,
 strojenie tych wartości i ich relacji z `max_connections` PostgreSQL należy wykonać dopiero na
 samym końcu prac, gdy wszystkie usługi i docelowa infrastruktura będą gotowe oraz stabilne.
 
-W Kubernetes/K3s PostgreSQL działa jako StatefulSet. Sidecar pgBackRest wykonuje backup
-różnicowy po każdym interwale, a w niedzielę pełny. Finalna retencja, restore drill oraz
-potwierdzone RPO/RTO należą do Fazy 12. Zmienna interwału nie może zawierać sekretu.
+W Kubernetes/K3s PostgreSQL działa jako StatefulSet. Harmonogram pg_cron z obrazu bazy
+wykonuje backup różnicowy codziennie o 03:00 i pełny w niedzielę o 02:00. ConfigMap zachowuje
+retencję czterech pełnych i czternastu różnicowych kopii. Nie ma dodatkowego sidecara ani
+zmiennej interwału. Restore drill i potwierdzone RPO/RTO należą do Fazy 12.
 
 ## RabbitMQ i transactional outbox
 
