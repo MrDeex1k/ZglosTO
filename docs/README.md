@@ -46,7 +46,13 @@ opcjonalnym procesem klienta, nie częścią źródłowego wydania.
 - [runbook certyfikacji per klient](phase-12-operations-runbook.md) i
   [plan certyfikacji](phase-12-certification-plan.md).
 
-## D. Archiwum zakończonych faz
+## D. Plany zmian
+
+- [Migracja na Bun](bun-migration-plan.md) — zaakceptowany kierunek zastąpienia Node.js
+  i pnpm, zakres Mobile/Expo, etapy wdrożenia, próby zgodności i rollback;
+  implementacja przed nami.
+
+## E. Archiwum zakończonych faz
 
 Pliki `phase-0-*` … `phase-11-*` w tym katalogu oraz `Mobile/PHASE_*` są wersjonowanym
 archiwum decyzji, odbiorów i dowodów. Zachowują pierwotne ścieżki, ponieważ odwołują się do
