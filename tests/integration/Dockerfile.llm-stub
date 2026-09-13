@@ -7,4 +7,6 @@ COPY tests/integration/llm-stub.ts ./llm-stub.ts
 
 EXPOSE 8123
 
+USER bun
+
 CMD ["bun", "llm-stub.ts"]

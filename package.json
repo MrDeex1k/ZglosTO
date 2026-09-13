@@ -92,7 +92,7 @@
     "test:auth-provisioning": "bun scripts/test-auth-provisioning.ts",
     "test:infrastructure": "bun test ./scripts/test-infrastructure.ts --timeout 30000",
     "check:cluster-production": "bun scripts/check-cluster-production.ts",
-    "test:dependency-policy": "bun test ./scripts/test-dependency-policy.ts --timeout 30000",
+    "test:dependency-policy": "bun test ./scripts/test-dependency-policy.ts --timeout 30000 ./scripts/test-bun-review-fixes.ts",
     "check:workspaces": "bun scripts/check-bun-workspaces.ts",
     "test:runtime:bun": "bun scripts/bun-phase1-probe.ts && bun scripts/bun-phase1-otel-probe.ts --sigterm",
     "test:bun-deployment": "bun scripts/bun-deployment-drill.ts",

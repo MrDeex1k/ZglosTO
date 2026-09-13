@@ -35,3 +35,9 @@ Node >=26.8.1 pozostaje wymagany dla Expo/Metro, Expo Doctor i natywnego toolcha
 `env = false` w głównym `bunfig.toml` wyłącza automatyczne wczytywanie `.env` przez runtime i runner Bun. Narzędzia nie dziedziczą przypadkowo ustawień kontenerów. Przekazuj konfigurację jawnie przez środowisko lub `--env-file`; Compose oraz Expo zachowują własne mechanizmy konfiguracji. [Bun: env](https://bun.sh/docs/runtime/bunfig#env).
 
 Knip ma jawne wpisy dla CLI wywoływanych przez `--bun` lub plik wejściowy (`@commitlint/cli`, `husky`, `oxfmt`, `oxlint`, `turbo`, `sfw`), których użycia nie rozpoznaje parser komend. Nie wyłączono kontroli pozostałych zależności.
+
+Operacje `deps:install`, `deps:add` i `deps:update` używają wspólnej wyłącznej blokady
+`.state/dependency-operation.lock`, utrzymywanej od odczytu manifestów do końca instalacji.
+Druga operacja kończy się błędem bez zmian. Po przerwaniu procesu blokada może pozostać:
+usuń ten katalog dopiero po potwierdzeniu, że wrapper i procesy instalatora już nie działają.
+Kontrola ręcznych zmian manifestów przed zapisem nadal obowiązuje.

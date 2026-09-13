@@ -2,7 +2,7 @@ import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync } from 'node:f
 import { join, resolve } from 'node:path';
 
 const [service, destination] = process.argv.slice(2);
-if (!['backend', 'authorization', 'llm_gateway'].includes(service ?? '') || !destination)
+if (!service || !['backend', 'authorization', 'llm_gateway'].includes(service) || !destination)
   throw new Error('Usage: stage-production.ts backend|authorization|llm_gateway EMPTY_DIRECTORY');
 const target = resolve(destination);
 if (existsSync(target) && readdirSync(target).length)
@@ -19,6 +19,7 @@ const manifests = new Map(
     JSON.parse(readFileSync(join(path, 'package.json'), 'utf8')) as {
       name: string;
       dependencies?: Record<string, string>;
+      optionalDependencies?: Record<string, string>;
     },
   ]),
 );
@@ -27,7 +28,10 @@ const selected = new Set<string>();
 function include(path: string): void {
   if (selected.has(path)) return;
   selected.add(path);
-  for (const [name, version] of Object.entries(manifests.get(path)!.dependencies ?? {})) {
+  for (const [name, version] of Object.entries({
+    ...manifests.get(path)!.dependencies,
+    ...manifests.get(path)!.optionalDependencies,
+  })) {
     if (!version.startsWith('workspace:')) continue;
     const dependency = byName.get(name);
     if (!dependency) throw new Error(`Missing workspace dependency ${name}`);

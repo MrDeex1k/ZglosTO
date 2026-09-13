@@ -1,9 +1,9 @@
 # yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
 reviews:
   path_filters:
-    - "!**/*.[mM][dD]"
-    - "!**/*.json"
-    - "!**/*.toml"
-    - "!**/*.dockerignore"
-    - "!**/.dockerignore"
-    - "!**/*.sh"
+    - '!**/*.[mM][dD]'
+    - '!**/*.json'
+    - '!**/*.toml'
+    - '!**/*.dockerignore'
+    - '!**/.dockerignore'
+    - '!**/*.sh'

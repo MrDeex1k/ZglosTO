@@ -33,9 +33,14 @@ for (const workspace of ['', ...workspaces]) {
   const manifestPath = join(root, workspace, 'package.json');
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
     dependencies?: Record<string, string>;
+    optionalDependencies?: Record<string, string>;
   };
   const local = createRequire(manifestPath);
-  for (const name of Object.keys(manifest.dependencies ?? {})) {
+  for (const name of Object.keys({ ...manifest.dependencies, ...manifest.optionalDependencies })) {
+    const optional = Object.hasOwn(manifest.optionalDependencies ?? {}, name);
+    // Skip only absent optional packages, never broken exports or initialization failures.
+    if (optional && !(local.resolve.paths(name) ?? []).some((path) => existsSync(join(path, name))))
+      continue;
     // Keep failures attributable to a single dependency and its initialization.
     // eslint-disable-next-line no-await-in-loop
     await import(pathToFileURL(local.resolve(name)).href);
