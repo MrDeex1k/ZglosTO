@@ -56,7 +56,7 @@ printf '[restore] Restoring PostgreSQL through the direct connection\n'
 
 printf '[restore] Restoring Object Storage through the active S3-compatible provider\n'
 "${compose[@]}" run --rm --no-deps -T backend \
-  node dist/operations/object-storage-archive-cli.js restore \
+  bun dist/operations/object-storage-archive-cli.js restore \
   < "$backup_directory/object-storage.ndjson.gz"
 
 printf '[restore] Verifying database/Object Storage consistency\n'
@@ -65,7 +65,7 @@ if [ "${#services_to_resume[@]}" -eq 0 ] || [[ " ${services_to_resume[*]} " != *
   temporary_pgbouncer=true
 fi
 "${compose[@]}" start --wait --wait-timeout 120 pgbouncer >/dev/null
-"${compose[@]}" run --rm --no-deps -T backend node dist/operations/object-storage-audit-cli.js \
+"${compose[@]}" run --rm --no-deps -T backend bun dist/operations/object-storage-audit-cli.js \
   > "$backup_directory/post-restore-object-storage-audit.json"
 
 if [ "$temporary_pgbouncer" = true ]; then

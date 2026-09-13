@@ -10,6 +10,8 @@ export default defineConfig({
     },
   },
   test: {
+    server: { deps: { inline: ['zod'] } },
+    setupFiles: [fileURLToPath(new URL('../scripts/assert-test-runtime.ts', import.meta.url))],
     environment: 'node',
   },
 });

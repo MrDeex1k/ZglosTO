@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Read-only preflight. Scheduling capacity and storage health are checked before apply.
-kubectl get nodes -o json | node --input-type=module -e '
+kubectl get nodes -o json | bun --input-type=module -e '
 let input = "";
 for await (const chunk of process.stdin) input += chunk;
 const nodes = JSON.parse(input).items;
@@ -12,7 +12,7 @@ if (servers.length < 3) throw new Error("K3s HA requires at least three Ready em
 if (ready.filter(node => !node.spec.unschedulable).length < 3) throw new Error("K3s HA requires at least three schedulable nodes");
 '
 kubectl -n longhorn-system rollout status daemonset/longhorn-manager --timeout=60s
-kubectl -n longhorn-system get nodes.longhorn.io -o json | node --input-type=module -e '
+kubectl -n longhorn-system get nodes.longhorn.io -o json | bun --input-type=module -e '
 let input = "";
 for await (const chunk of process.stdin) input += chunk;
 const nodes = JSON.parse(input).items.filter(node => node.spec.allowScheduling &&

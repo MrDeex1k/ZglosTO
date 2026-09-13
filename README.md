@@ -45,7 +45,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&amp;logo=typescript&amp;logoColor=white" alt="TypeScript" height="28">
   <img src="https://img.shields.io/badge/zod-%233068b7.svg?style=for-the-badge&amp;logo=zod&amp;logoColor=white" alt="Zod" height="28">
-  <img src="https://img.shields.io/badge/node.js-%236DA55F.svg?style=for-the-badge&amp;logo=node.js&amp;logoColor=white" alt="Node.js" height="28">
+  <img src="https://img.shields.io/badge/Bun-000000.svg?style=for-the-badge&amp;logo=bun&amp;logoColor=white" alt="Bun" height="28">
   <img src="https://img.shields.io/badge/nestjs-%23E0234E.svg?style=for-the-badge&amp;logo=nestjs&amp;logoColor=white" alt="NestJS" height="28">
   <img src="https://img.shields.io/badge/hono-%23E36002.svg?style=for-the-badge&amp;logo=hono&amp;logoColor=white" alt="Hono" height="28">
   <img src="https://img.shields.io/badge/-Swagger-%23Clojure?style=for-the-badge&amp;logo=swagger&amp;logoColor=white" alt="Swagger / OpenAPI" height="28">
@@ -63,7 +63,7 @@
   <img src="https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&amp;logo=docker&amp;logoColor=white" alt="Docker" height="28">
   <img src="https://img.shields.io/badge/kubernetes-%23326ce5.svg?style=for-the-badge&amp;logo=kubernetes&amp;logoColor=white" alt="Kubernetes" height="28">
   <img src="https://img.shields.io/badge/K3s-%23FFC61C.svg?style=for-the-badge&amp;logo=k3s&amp;logoColor=black" alt="K3s" height="28">
-  <img src="https://img.shields.io/badge/pnpm-%234a4a4a.svg?style=for-the-badge&amp;logo=pnpm&amp;logoColor=f69220" alt="PNPM" height="28">
+  <img src="https://img.shields.io/badge/bun-%234a4a4a.svg?style=for-the-badge&amp;logo=bun&amp;logoColor=f69220" alt="Bun" height="28">
   <img src="https://img.shields.io/badge/turborepo-%23EF4444.svg?style=for-the-badge&amp;logo=turborepo&amp;logoColor=white" alt="Turborepo" height="28">
   <img src="https://img.shields.io/badge/Vitest-%23252529.svg?style=for-the-badge&amp;logo=vitest&amp;logoColor=FCC72B" alt="Vitest" height="28">
   <img src="https://img.shields.io/badge/oxc-%233451b2.svg?style=for-the-badge&amp;logo=oxc&amp;logoColor=white&amp;logoSize=auto" alt="Oxc" height="28">
@@ -76,13 +76,13 @@
 
 | Warstwa          | Technologie                                                                                                            | Odpowiedzialność                                                       |
 | ---------------- | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| **WEB**          | React, TanStack Start/Router/Query, Vite, Base UI, shadcn/ui, Tailwind CSS                                   | Publiczny feed, formularze, panele mieszkańca, służby i administratora |
+| **WEB**          | React, TanStack Start/Router/Query, Vite, Base UI, shadcn/ui, Tailwind CSS                                             | Publiczny feed, formularze, panele mieszkańca, służby i administratora |
 | **Mobile**       | React Native, Expo, Expo Router, NativeWind, TanStack Query, SecureStore, NetInfo                                      | iOS/Android z bezpieczną sesją                                         |
 | **Kontrakty**    | TypeScript, Zod, <code>@zglosto/contracts</code>, <code>@zglosto/i18n</code>, <code>@zglosto/white-label-config</code> | Wspólne typy i walidacja konfiguracji                                  |
-| **API i auth**   | Node.js, NestJS, Hono, Better Auth                                                                                     | API domenowe, sesje, role, rate limiting i integracje                  |
+| **API i auth**   | Bun, NestJS, Hono, Better Auth                                                                                         | API domenowe, sesje, role, rate limiting i integracje                  |
 | **Dane i media** | PostgreSQL, PgBouncer, RabbitMQ, Sharp, S3-compatible storage                                                          | Dane domenowe, kolejki, backup, zdjęcia i przetwarzanie obrazów        |
 | **Uruchomienie** | Docker Compose, Nginx, Kubernetes/K3s, Docker Model Runner                                                             | Lokalne demo, profile wdrożeniowe i opcjonalne AI                      |
-| **Jakość**       | PNPM, Turborepo, Vitest, Oxc, React Doctor, Expo Doctor                                                                             | Monorepo, testy, format, linting i kontrola jakości                    |
+| **Jakość**       | Bun, Turborepo, Vitest, Oxc, React Doctor, Expo Doctor                                                                 | Monorepo, testy, format, linting i kontrola jakości                    |
 
 > **Status projektu:** **Source Ready / Client-Built / Not Store-Published**. Repozytorium
 > dostarcza działający kod WEB, Mobile i usług backendowych. Każda instancja klienta
@@ -230,15 +230,15 @@ Cloudflare R2 i innymi providerami S3-compatible.
 
 ## Szybki start
 
-Trzy kroki uruchamiają pełny lokalny stack przez Docker Compose. Wymagany jest Node.js
-<code>>=26.5</code>, PNPM <code>11.22.0</code> oraz Docker Desktop albo OrbStack.
+Trzy kroki uruchamiają pełny lokalny stack przez Docker Compose. Wymagany jest Bun
+<code>1.4.2</code> oraz Docker Desktop albo OrbStack. Toolchain Mobile dodatkowo wymaga Node.js <code>>=26.8.1</code>.
 
 ```bash
 # 1. Utwórz lokalną konfigurację
 cp .env.example .env
 
 # 2. Zainstaluj zależności i wygeneruj ignorowane certyfikaty dev
-pnpm install --frozen-lockfile && pnpm certs:dev
+bun install --frozen-lockfile && bun run certs:dev
 
 # 3. Uruchom cały stack
 docker compose up -d --build

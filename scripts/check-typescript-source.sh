@@ -27,7 +27,7 @@ if rg -n '\bundefined\b' authorization backend packages/contracts/src tests \
   exit 1
 fi
 
-node --input-type=module -e '
+bun --input-type=module -e '
   import { readFile } from "node:fs/promises";
 
   const manifest = JSON.parse(await readFile("authorization/package.json", "utf8"));

@@ -41,7 +41,7 @@ spec:
             readOnlyRootFilesystem: true
             capabilities:
               drop: [ALL]
-          args: [node, --import, '@zglosto/observability/register', dist/nest/media-worker/main.js]
+          args: [bun, --preload, '@zglosto/observability/register', dist/nest/media-worker/main.js]
           env:
             - { name: OBSERVABILITY_MODE, value: disabled }
             - { name: OTEL_SERVICE_NAME, value: media_worker }
@@ -145,7 +145,7 @@ spec:
             requests: { memory: 256Mi, cpu: 100m }
             limits: { memory: 512Mi, cpu: 500m }
           startupProbe: &mediaProbe
-            exec: { command: [node, dist/nest/media-worker/healthcheck.js] }
+            exec: { command: [bun, dist/nest/media-worker/healthcheck.js] }
             periodSeconds: 5
             timeoutSeconds: 3
             failureThreshold: 30

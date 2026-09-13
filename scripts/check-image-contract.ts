@@ -316,6 +316,7 @@ function inspectForbiddenRuntimePackages(
   context: string | null,
   reference: string,
   packageNames: string[],
+  runtime: string,
 ): string[] {
   if (packageNames.length === 0) return [];
   const script = [
@@ -332,7 +333,7 @@ function inspectForbiddenRuntimePackages(
     'none',
     '--read-only',
     '--entrypoint',
-    'node',
+    runtime,
     reference,
     '-e',
     script,
@@ -350,6 +351,34 @@ function inspectImage(
   context: string | null,
   forbiddenRuntimeNodePackages: string[],
 ): LiveImage {
+  if (artifact.runtimeClass.startsWith('bun')) {
+    const version = dockerOutput(context, [
+      'run',
+      '--rm',
+      '--network',
+      'none',
+      '--read-only',
+      '--entrypoint',
+      'bun',
+      reference,
+      '-p',
+      'process.versions.bun',
+    ]).trim();
+    if (version !== '1.4.2') fail(`${reference} must execute Bun 1.4.2; got ${version}`);
+    const node = dockerOutput(context, [
+      'run',
+      '--rm',
+      '--network',
+      'none',
+      '--read-only',
+      '--entrypoint',
+      'sh',
+      reference,
+      '-c',
+      'command -v node || true',
+    ]).trim();
+    if (node !== '') fail(`${reference} still includes Node: ${node}`);
+  }
   const parsed: unknown = JSON.parse(
     dockerOutput(context, ['image', 'inspect', reference]),
   ) as unknown;
@@ -362,7 +391,7 @@ function inspectImage(
   const config = asRecord(image.Config, `docker image inspect ${reference}[0].Config`);
   const labelsValue = config.Labels;
   const labels =
-    labelsValue === null
+    labelsValue === null || labelsValue === undefined
       ? new Set<string>()
       : new Set(Object.keys(asRecord(labelsValue, `${reference}.Config.Labels`)));
 
@@ -384,10 +413,16 @@ function inspectImage(
       artifact.runtimeAuditRoots,
       artifact.runtimeAuditExcludes,
     ),
-    forbiddenRuntimePackages:
-      artifact.runtimeClass === 'node' || artifact.runtimeClass === 'node-shared'
-        ? inspectForbiddenRuntimePackages(context, reference, forbiddenRuntimeNodePackages)
-        : [],
+    forbiddenRuntimePackages: ['node', 'node-shared', 'bun', 'bun-shared'].includes(
+      artifact.runtimeClass,
+    )
+      ? inspectForbiddenRuntimePackages(
+          context,
+          reference,
+          forbiddenRuntimeNodePackages,
+          artifact.runtimeClass.startsWith('bun') ? 'bun' : 'node',
+        )
+      : [],
   };
 }
 
@@ -621,7 +656,7 @@ for (const artifact of artifacts) {
       fail(`${artifact.id} lacks required OCI labels: ${missingLabels.join(', ')}`);
     }
 
-    if (artifact.runtimeClass === 'node' || artifact.runtimeClass === 'node-shared') {
+    if (['node', 'node-shared', 'bun', 'bun-shared'].includes(artifact.runtimeClass)) {
       const forbiddenFiles = auditableFiles.filter((path: string) =>
         matchesAny(path, applicationPatterns),
       );

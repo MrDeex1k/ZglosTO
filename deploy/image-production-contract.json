@@ -34,7 +34,7 @@
     ],
     "forbiddenApplicationPathPatterns": [
       "^/app/(src|test|tests)(/|$)",
-      "^/app/(Dockerfile|README[^/]*|pnpm-lock\\.yaml|tsconfig[^/]*\\.json)$",
+      "^/app/(Dockerfile|README[^/]*|bun\\.lock|bunfig\\.toml|tsconfig[^/]*\\.json)$",
       "^/app/.*\\.(ts|tsx|map)$"
     ],
     "forbiddenRuntimeNodePackages": ["image-size"]
@@ -44,7 +44,7 @@
       "id": "authorization",
       "services": ["authorization"],
       "localImage": "zglosto-phase0-authorization:latest",
-      "runtimeClass": "node",
+      "runtimeClass": "bun",
       "runtimeAuditRoots": ["/app"],
       "runtimeAuditExcludes": ["/app/node_modules"],
       "baselineSizeBytes": 331998000,
@@ -58,7 +58,7 @@
       "id": "backend",
       "services": ["backend", "media_worker"],
       "localImage": "zglosto-phase0-backend:latest",
-      "runtimeClass": "node-shared",
+      "runtimeClass": "bun-shared",
       "runtimeAuditRoots": ["/app"],
       "runtimeAuditExcludes": ["/app/node_modules"],
       "baselineSizeBytes": 297922844,
@@ -72,7 +72,7 @@
       "id": "llm_gateway",
       "services": ["llm_gateway"],
       "localImage": "zglosto-phase0-llm_gateway:latest",
-      "runtimeClass": "node",
+      "runtimeClass": "bun",
       "runtimeAuditRoots": ["/app"],
       "runtimeAuditExcludes": ["/app/node_modules"],
       "baselineSizeBytes": 236252180,

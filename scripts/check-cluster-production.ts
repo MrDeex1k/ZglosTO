@@ -68,7 +68,7 @@ export function checkClusterProduction(rendered: string, ha = false): void {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   const overlay = process.argv[2];
-  if (!overlay) throw new Error('Usage: node scripts/check-cluster-production.ts OVERLAY [--ha]');
+  if (!overlay) throw new Error('Usage: bun scripts/check-cluster-production.ts OVERLAY [--ha]');
   const rendered = execFileSync('kubectl', ['kustomize', overlay], { encoding: 'utf8' });
   checkClusterProduction(rendered, process.argv.includes('--ha'));
   console.log(`Cluster production policy passed: ${overlay}`);

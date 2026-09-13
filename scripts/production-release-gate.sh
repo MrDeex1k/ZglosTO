@@ -12,9 +12,9 @@ fail() {
 
 static_gate() {
   cd "$ROOT_DIR"
-  CI=true pnpm check
-  pnpm audit:release
-  node scripts/test-production-compose-policy.ts
+  CI=true bun run check
+  bun run audit:release
+  bun scripts/test-production-compose-policy.ts
   printf '[production-release-gate] Static release gate passed\n'
 }
 

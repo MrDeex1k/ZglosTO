@@ -14,7 +14,7 @@ if [[ ! -d "$SOURCE_DIR" || ! -f "$MANIFEST" ]]; then
   exit 1
 fi
 
-node --input-type=module - "$MANIFEST" <<'NODE'
+bun --input-type=module - "$MANIFEST" <<'NODE'
 import { readFile } from 'node:fs/promises';
 
 const manifestPath = process.argv[2];

@@ -38,7 +38,7 @@ Produkcyjny Compose składa moduły przez cztery jawne zmienne:
 
 Object Storage nie ma trybu `disabled`. Wartości obrazów ZgłosTO nie znajdują się
 w produkcyjnym ENV: pochodzą wyłącznie z prywatnego `images.env` wygenerowanego przez
-`pnpm build:production`. Szczegóły opisuje
+`bun run build:production`. Szczegóły opisuje
 [Faza 11 / krok 10](phase-11-step-10-production-compose-modules.md).
 
 W Kubernetes/K3s publiczny runtime ENV jest źródłowo zapisany w
@@ -336,7 +336,7 @@ ten jeden plik jako `/app/config/city.yaml` w trybie read-only. Dla lokalnego pr
 można podać ścieżkę względną wobec katalogu uruchomienia, np.:
 
 ```bash
-WHITE_LABEL_CONFIG=./config/white-label/zglosto.yaml pnpm dev:backend
+WHITE_LABEL_CONFIG=./config/white-label/zglosto.yaml bun run dev:backend
 ```
 
 YAML jest publiczną konfiguracją produktu, a nie miejscem na sekrety. Cała jego dozwolona
@@ -344,13 +344,13 @@ część może trafić do bundla przeglądarkowego lub `GET /api/config/public`.
 pliku, błędny YAML, nieznane pola, nazwy pól przeznaczone na sekrety, materiał kluczy/tokenów,
 URL-e z poświadczeniami oraz składnię interpolacji `${...}`. Komunikat walidacji podaje ścieżkę
 i rodzaj naruszenia, ale nie wypisuje znalezionej wartości. Każdy wersjonowany plik
-`config/white-label/*.yaml` jest automatycznie ładowany przez zestaw testów `pnpm check`. Pierwsza poprawna
+`config/white-label/*.yaml` jest automatycznie ładowany przez zestaw testów `bun run check`. Pierwsza poprawna
 konfiguracja jest cache'owana na czas życia procesu; zmiana miasta wymaga restartu/rolloutu.
 
-W profilach Kubernetes/K3s `pnpm config:k8s:sync` synchronizuje to źródło do wejścia
+W profilach Kubernetes/K3s `bun run config:k8s:sync` synchronizuje to źródło do wejścia
 generatora Kustomize. Powstaje immutable `ConfigMap/zglosto-white-label-<hash>`, montowana
 read-only pod tą samą ścieżką `/app/config/city.yaml` w Authorization i backendzie.
-`pnpm check` odrzuca rozbieżność źródła i kopii wdrożeniowej.
+`bun run check` odrzuca rozbieżność źródła i kopii wdrożeniowej.
 
 Sekrety należy przekazywać bezpośrednio tylko do usługi, która ich potrzebuje, przez ENV albo
 produkcyjny menedżer sekretów/Kubernetes Secret. Nie należy umieszczać w YAML-u odwołań typu
@@ -386,7 +386,7 @@ Faza 0 dostarcza testowy outbox pozwalający zweryfikować cały kontrakt potwie
 
 ## Stan TLS/mTLS
 
-`pnpm certs:dev` tworzy osobne Service CA i Database CA w ignorowanym `.certs/`. Compose
+`bun run certs:dev` tworzy osobne Service CA i Database CA w ignorowanym `.certs/`. Compose
 montuje certyfikaty read-only zgodnie z najmniejszymi uprawnieniami. Authorization udostępnia
 wyłącznie `9956/mTLS`; backend, Nginx i healthcheck używają osobnych certyfikatów klienta.
 Nginx weryfikuje upstream i DNS `authorization`, a probe healthchecka ma dostęp wyłącznie do

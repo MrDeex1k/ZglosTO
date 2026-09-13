@@ -19,8 +19,8 @@ if [ ! -f "$CONFIG_PATH" ]; then
     exit 1
 fi
 
-pnpm --silent --filter @zglosto/white-label-config build >/dev/null
-CONFIG_METADATA=$(pnpm --silent --filter @zglosto/white-label-config metadata "$CONFIG_PATH" fields)
+bun run --silent --filter @zglosto/contracts --filter @zglosto/white-label-config build >/dev/null
+CONFIG_METADATA=$(bun packages/white-label-config/dist/cli.js "$CONFIG_PATH" fields)
 IFS=$'\t' read -r CITY_KEY CONFIG_VERSION CONFIG_CHECKSUM VALIDATED_CONFIG_PATH <<< "$CONFIG_METADATA"
 
 TAG=${REQUESTED_TAG:-$CONFIG_VERSION}

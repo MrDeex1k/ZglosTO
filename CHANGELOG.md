@@ -3,6 +3,16 @@
 Wszystkie istotne zmiany projektu są dokumentowane w tym pliku. Od wydania `1.0.0`
 historia zmian jest budowana na podstawie komunikatów zgodnych z Conventional Commits.
 
+## [Unreleased]
+
+### Zmieniono
+
+- zakończono migrację menedżera pakietów, usług, buildów i narzędzi na Bun 1.4.2;
+  Node pozostaje w toolchainie Expo/Metro, a urządzenia Mobile używają Hermes;
+- dodano kontrolę jednego lockfile, politykę aktualizacji przez Bun/SFW oraz próby
+  odbioru Compose, Kubernetes, K3s i rollbacku; otwarte warunki produkcyjne opisuje
+  [raport domknięcia migracji](docs/bun-phase6-results.md).
+
 ## [1.1.0] - 2026-09-02
 
 ### Zmieniono

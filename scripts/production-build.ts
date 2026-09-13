@@ -423,16 +423,19 @@ function whiteLabelMetadata(configPath: string): WhiteLabelMetadata {
     fail(`White-Label configuration does not exist: ${configPath}`);
   }
 
-  execute('pnpm', [
+  execute('bun', [
+    'run',
     '--silent',
     '--filter',
-    '@zglosto/white-label-config...',
+    '@zglosto/contracts',
+    '--filter',
+    '@zglosto/white-label-config',
     '--if-present',
     'build',
   ]);
   const output = execute(
-    'pnpm',
-    ['--silent', '--filter', '@zglosto/white-label-config', 'metadata', configPath, 'fields'],
+    'bun',
+    ['packages/white-label-config/dist/cli.js', absoluteConfig, 'fields'],
     { capture: true },
   );
   const [cityKey, configVersion, configChecksum, validatedConfigPath, ...extra] =
@@ -595,7 +598,7 @@ function main(): void {
     executeOptional('git', ['config', '--get', 'remote.origin.url']) ??
     'https://github.com/zglosto/zglosto';
   const metadata = whiteLabelMetadata(options.configPath);
-  execute('node', [
+  execute('bun', [
     resolveRepositoryPath(
       contract.sourceValidation.publicRepositoryScript,
       'source validation script',
@@ -655,7 +658,7 @@ function main(): void {
       });
     }
 
-    execute('node', imageContractArguments(built));
+    execute('bun', imageContractArguments(built));
     const totalBuildSeconds = built.reduce(
       (total: number, artifact: BuiltArtifact) => total + artifact.buildDurationSeconds,
       0,
@@ -685,7 +688,7 @@ function main(): void {
           whiteLabel: metadata,
         },
         toolchain: {
-          node: process.version,
+          bun: process.versions.bun,
           docker: execute('docker', ['version', '--format', '{{.Server.Version}}'], {
             capture: true,
           }),

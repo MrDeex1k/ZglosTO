@@ -6,6 +6,8 @@ const backendDirectory = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   test: {
+    server: { deps: { inline: ['zod'] } },
+    setupFiles: [fileURLToPath(new URL('../scripts/assert-test-runtime.ts', import.meta.url))],
     env: {
       WHITE_LABEL_CONFIG: resolve(backendDirectory, '../config/white-label/zglosto.yaml'),
     },

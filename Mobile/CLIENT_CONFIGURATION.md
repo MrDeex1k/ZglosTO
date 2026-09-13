@@ -33,8 +33,8 @@ trafić do YAML-a White-Label ani zmiennych `EXPO_PUBLIC_*`.
 5. Uruchom:
 
 ```bash
-pnpm check:mobile-client-configs
-pnpm test:white-label-builds
+bun run check:mobile-client-configs
+bun run test:white-label-builds
 ```
 
 6. Sprawdź Mobile na Android Emulator i iPhone Simulator, jeśli zmiana dotyczy wyglądu,

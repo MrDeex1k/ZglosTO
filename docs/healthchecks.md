@@ -126,5 +126,5 @@ Automatyzacje opisuje [smoke test startu Compose](compose-smoke-tests.md).
 Odporność opcjonalnego Redisa sprawdza:
 
 ```bash
-pnpm test:redis-failure
+bun run test:redis-failure
 ```

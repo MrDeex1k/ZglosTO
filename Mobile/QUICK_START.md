@@ -6,7 +6,7 @@ Cloudflare Quick Tunnel, Apple Developer, Google Play, EAS ani agent-device.
 ## Wymagania
 
 - macOS z Xcode dla iOS Simulator;
-- Node.js co najmniej 26.5 i PNPM w wersji zapisanej w `package.json`;
+- Bun 1.4.2 (pin w `.bun-version`) i Node.js co najmniej 26.8.1 dla Expo/Metro;
 - Docker Desktop albo OrbStack;
 - Java 17 i Android SDK dla Android Emulator;
 - co najmniej jeden skonfigurowany symulator lub emulator dla wybranej platformy.
@@ -16,9 +16,9 @@ Cloudflare Quick Tunnel, Apple Developer, Google Play, EAS ani agent-device.
 Z katalogu głównego świeżego klona:
 
 ```bash
-pnpm install --frozen-lockfile
-pnpm mobile:demo:check
-pnpm mobile:demo:up
+bun install --frozen-lockfile
+bun run mobile:demo:check
+bun run mobile:demo:up
 ```
 
 `mobile:demo:up`:
@@ -42,9 +42,9 @@ printf '%s\n' "$DEMO_RESIDENT_EMAIL" "$DEMO_SERVICE_EMAIL" "$DEMO_ADMIN_EMAIL"
 Następnie uruchom wybraną platformę:
 
 ```bash
-pnpm mobile:demo:ios
+bun run mobile:demo:ios
 # albo
-pnpm mobile:demo:android
+bun run mobile:demo:android
 ```
 
 iOS łączy się z `http://127.0.0.1:1236`, a Android Emulator z
@@ -55,8 +55,8 @@ HTTP jest dopuszczone wyłącznie dla jawnego środowiska
 ## Status i ponowne utworzenie danych
 
 ```bash
-pnpm mobile:demo:status
-pnpm mobile:demo:seed
+bun run mobile:demo:status
+bun run mobile:demo:seed
 ```
 
 `mobile:demo:seed` usuwa wyłącznie trzy konta `demo.*@example.test` i incydenty seedowane
@@ -72,14 +72,14 @@ Krótki przebieg prezentacji oraz opcjonalne zanonimizowane zdjęcie formularza 
 ## Zatrzymanie i cleanup
 
 ```bash
-pnpm mobile:demo:down
+bun run mobile:demo:down
 ```
 
 Zatrzymanie zachowuje wolumeny i credentials. Pełny, nieodwracalny cleanup izolowanego
 demo wykonuje:
 
 ```bash
-pnpm mobile:demo:clean
+bun run mobile:demo:clean
 ```
 
 Polecenie usuwa wyłącznie projekt Compose `zglosto-mobile-demo`, jego wolumeny oraz

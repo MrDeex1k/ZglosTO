@@ -9,11 +9,11 @@
   "type": "module",
   "main": "dist/src/server.js",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "dev": "node --import @zglosto/observability/register --watch src/server.ts",
-    "start": "node --import @zglosto/observability/register dist/src/server.js",
-    "test": "vitest run",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "build": "bun run --bun tsc -p tsconfig.build.json",
+    "dev": "bun --preload @zglosto/observability/register --watch src/server.ts",
+    "start": "bun --preload @zglosto/observability/register dist/src/server.js",
+    "test": "bun run --bun vitest run",
+    "typecheck": "bun run --bun tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@hono/node-server": "2.1.1",
@@ -29,6 +29,7 @@
     "vitest": "4.1.11"
   },
   "engines": {
+    "bun": "1.4.2",
     "node": ">=26.8.1"
   }
 }

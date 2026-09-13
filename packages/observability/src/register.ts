@@ -60,6 +60,8 @@ function start(): void {
       [ATTR_DEPLOYMENT_ENVIRONMENT_NAME]:
         process.env.OTEL_DEPLOYMENT_ENVIRONMENT?.trim() || process.env.NODE_ENV || 'development',
       [ATTR_SERVICE_NAME]: serviceName,
+      'process.runtime.name': process.versions.bun ? 'bun' : 'nodejs',
+      'process.runtime.version': process.versions.bun || process.versions.node,
       [ATTR_SERVICE_NAMESPACE]: 'zglosto',
       [ATTR_SERVICE_VERSION]: process.env.OTEL_SERVICE_VERSION?.trim() || 'development',
     }),

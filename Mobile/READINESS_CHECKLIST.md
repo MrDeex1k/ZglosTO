@@ -1,5 +1,7 @@
 # Mobile readiness — iOS, iPadOS i Android
 
+Po migracji Bun aktualne wymagania narzędziowe opisuje [Quick Start](QUICK_START.md), a granice weryfikacji — [raport migracji](../docs/bun-phase6-results.md). Dawne wyniki pnpm/Expo Doctor poniżej dotyczą historycznych checkpointów.
+
 Stan audytu bazowego: 2026-08-19. Kod produktowy został od tego czasu ukończony. Dokument
 pozostaje checklistą narzędziową dla klienta wykonującego własny build i wdrożenie; pozycje
 dotyczące domen, signingów i sklepów nie blokują źródłowego wydania ZgłosTO.

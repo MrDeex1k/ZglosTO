@@ -150,7 +150,7 @@ kubectl -n zglosto port-forward service/grafana 3001:3000
 ```
 
 Maszynowym źródłem prawdy jest `deploy/observability-contract.json`, a
-`pnpm check:observability` renderuje wszystkie wspierane warianty Compose/Kubernetes/K3s,
+`bun run check:observability` renderuje wszystkie wspierane warianty Compose/Kubernetes/K3s,
 także połączenia z RustFS, odrzuca `both` oraz sprawdza nieblokującą awarię Collectora.
 Szczegółowy wynik wdrożenia opisuje
 [Faza 9 / krok 8](phase-9-step-8-observability.md).

@@ -1,8 +1,8 @@
 **
 
 !package.json
-!pnpm-lock.yaml
-!pnpm-workspace.yaml
+!bun.lock
+!bunfig.toml
 !tsconfig.base.json
 
 !frontend/
@@ -36,3 +36,5 @@
 **/*.pfx
 
 !frontend/.env.production
+
+!scripts/stage-production.ts

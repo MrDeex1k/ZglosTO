@@ -14,11 +14,11 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "metadata": "node dist/cli.js",
-    "test": "vitest run src",
-    "test:watch": "vitest src",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "build": "bun run --bun tsc -p tsconfig.build.json",
+    "metadata": "bun dist/cli.js",
+    "test": "bun run --bun vitest run src",
+    "test:watch": "bun run --bun vitest src",
+    "typecheck": "bun run --bun tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@zglosto/contracts": "workspace:*",

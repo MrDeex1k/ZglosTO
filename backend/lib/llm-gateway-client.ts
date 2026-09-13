@@ -1,3 +1,4 @@
+import { injectTraceContext } from '@zglosto/observability';
 import { readFileSync } from 'node:fs';
 import { Agent, request } from 'node:https';
 import { LLM_CLASSIFICATION_HTTP_METHOD, LLM_CLASSIFICATION_PATH } from '@zglosto/contracts';
@@ -68,7 +69,7 @@ export function createLlmGatewayClient(environment: LlmEnvironment): LlmGatewayC
           target,
           {
             agent,
-            headers: Object.fromEntries(headers.entries()),
+            headers: { ...Object.fromEntries(headers.entries()), ...injectTraceContext() },
             method,
             servername: environment.serverName,
             ...(init.signal ? { signal: init.signal } : {}),

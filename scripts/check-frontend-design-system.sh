@@ -15,7 +15,7 @@ if [[ ! -d "$SOURCE_DIR" || ! -f "$MANIFEST" || ! -f "$COMPONENTS_CONFIG" || ! -
   exit 1
 fi
 
-node --input-type=module - "$MANIFEST" "$COMPONENTS_CONFIG" "$CSS_FILE" <<'NODE'
+bun --input-type=module - "$MANIFEST" "$COMPONENTS_CONFIG" "$CSS_FILE" <<'NODE'
 import { readFile } from 'node:fs/promises';
 
 const [manifestPath, componentsPath, cssPath] = process.argv.slice(2);

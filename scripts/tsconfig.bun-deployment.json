@@ -1,0 +1,17 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "types": ["node"],
+    "lib": ["ES2022", "DOM"]
+  },
+  "include": [
+    "bun-deployment-drill.ts",
+    "render-cluster-candidate.ts",
+    "test-bun-deployment.ts",
+    "lib/bun-performance.ts"
+  ]
+}

@@ -6,8 +6,7 @@ Od 2026-09-02 projekt używa następujących przypiętych obrazów:
 
 | Obszar                                          | Obraz                                                                                          |
 | ----------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| build Node.js                                   | `node:26.8.1-alpine3.24`                                                                       |
-| minimalny runtime usług Node                    | `alpine:3.24.1` + binarny Node 26.8.1                                                          |
+| minimalny runtime usług Bun                     | `alpine:3.24.1` + binarny Bun 1.4.2                                                            |
 | publiczny Nginx i runtime statycznego frontendu | `nginx:1.31.4-alpine3.24-slim`                                                                 |
 | opcjonalny model DMR                            | `ai/gemma3-qat:1B-Q4_K_M`                                                                      |
 | baza własnego obrazu database                   | `postgres:18.6-alpine3.24`                                                                     |
@@ -53,14 +52,14 @@ Model DMR ma zweryfikowany digest
 uruchamiany wyłącznie przez opcjonalny `docker-compose.llm.yml`. Nie jest obrazem
 aplikacyjnym budowanym przez `build-images.sh`.
 
-Node 26 nie dostarcza Corepack w obrazie bazowym. Buildery instalują więc jawnie `pnpm@11.25.0` przez dołączone npm, po czym wszystkie operacje workspace, instalacji i deploy nadal wykonuje PNPM. Wersja spełnia bieżącą 24-godzinną kwarantannę i nie jest oznaczona w rejestrze jako wycofana.
+Buildery używają Bun 1.4.2 z przypiętego digestem obrazu Alpine (musl, amd64/arm64), bez binarki Node. Bun wykonuje frozen install, CLI kompilatora, build Vite oraz skrypty stagingu. `scripts/stage-production.ts` zbiera wyłącznie produkcyjny graf workspace i ich dist do pustego katalogu. Osobna instalacja production/offline/frozen tworzy samodzielny store. Obraz zawiera ten graf w `/app`, a katalog roboczy usługi to `/app/backend`, `/app/authorization` lub `/app/llm_gateway`. Komendy `dist/...` i użytkownik non-root pozostają zachowane. Runtime Bun zastępuje Node; finalne obrazy usług nie zawierają binarki Node.
 
 Backend HTTP i `media_worker` są budowane z tego samego, niezmiennego artefaktu
 `backend/Dockerfile`, ale Compose uruchamia je jako dwa niezależne procesy i kontenery z
 różnymi komendami, ENV, healthcheckami oraz limitami zasobów. Worker nie dziedziczy runtime'u
 procesu backendu i nie otwiera portu `3000`; współdzielenie obrazu ogranicza wyłącznie
 duplikowanie zależności i kodu infrastrukturalnego. Pipeline workera używa dokładnie
-przypiętego `sharp@0.35.4`; natywne binaria libvips są instalowane przez PNPM dla platformy
+przypiętego `sharp@0.35.4`; natywne binaria libvips są instalowane przez Bun dla platformy
 obrazu podczas builda, a test obrazu wykonuje rzeczywiste kodowanie WebP.
 
 ## PostgreSQL 18
@@ -88,7 +87,7 @@ QEMU i `push`.
 
 Build wymaga czystego checkoutu przy dokładnym tagu Git, nadaje lokalny tag
 `wersja-architektura-revision`, zapisuje manifest oraz `images.env` i uruchamia
-`pnpm check:images:target`. W stanie ustalonym pozostaje wyłącznie aktywne wydanie. Krok 10
+`bun run check:images:target`. W stanie ustalonym pozostaje wyłącznie aktywne wydanie. Krok 10
 podłączył manifest i `images.env` do produkcyjnego Compose, który nie pobiera własnych
 obrazów i domyślnie dodaje RustFS. Trivy oraz SBOM występowały w pierwotnej realizacji
 Fazy 11, ale od decyzji właściciela z 2026-08-26 nie są częścią bieżącego pipeline'u ani
@@ -101,13 +100,13 @@ hardeningu i pipeline'u znajduje się w
 
 Krok 2 zapisał wspólny [kontrakt i budżety obrazów](phase-11-step-2-image-contract.md).
 Maszynowym źródłem prawdy jest `deploy/image-production-contract.json`, a
-`pnpm check:image-contract` blokuje niespójność kontraktu i snapshotu. Lokalny
-`pnpm check:images:local` sprawdza rzeczywiste obrazy z bieżącym limitem regresji,
-natomiast `pnpm check:images:target` jest końcową bramką odchudzenia i hardeningu.
+`bun run check:image-contract` blokuje niespójność kontraktu i snapshotu. Lokalny
+`bun run check:images:local` sprawdza rzeczywiste obrazy z bieżącym limitem regresji,
+natomiast `bun run check:images:target` jest końcową bramką odchudzenia i hardeningu.
 
 Kroki 3–8 wdrożyły [docelowe obrazy runtime](phase-11-steps-3-8-runtime-images.md).
-Wszystkie osiem artefaktów przechodzi `pnpm check:images:target`; usługi Node korzystają
-z minimalnego Alpine z samym Node, frontend i edge Nginx działają bez root na portach
+Wszystkie osiem artefaktów przechodzi `bun run check:images:target`; usługi używają
+minimalnego Alpine z Bun, frontend i edge Nginx działają bez root na portach
 nieuprzywilejowanych, a PgBouncer stale jako UID 70.
 
 Krok 9 wdrożył [produkcyjny build ze źródeł](phase-11-step-9-source-build-plan.md).

@@ -1,6 +1,8 @@
 # Plan migracji z Node.js i pnpm na Bun
 
-Status: kierunek migracji zaakceptowany; implementacja i certyfikacja Bun przed nami.
+Status: faza 6 — migracja kodu zakończona. Bun 1.4.2 jest jedynym menedżerem pakietów oraz runtime usług i narzędzi; Node pozostaje w toolchainie Expo/Metro. [Domknięcie i zachowane wyjątki](bun-phase6-results.md). Certyfikacja produkcyjna pozostaje otwarta: [wyniki i blokady fazy 5](bun-phase5-results.md).
+Faza 0: zakończona na podstawie potwierdzenia użytkownika o gotowości stanu bazowego.
+Faza 1: zakończona jako weryfikacja wykonalności — [wyniki Bun 1.4.2](bun-phase1-results.md), sprawdzone prototypy i wymagania dla fazy 2.
 Data przeglądu: 2026-09-12. Baza brancha migracji: `main` / `40cd505`.
 Przegląd objął również lokalny projekt `docs-site` i wspólny build z frontendem,
 zapisane następnie w stashu `WIP main before Bun migration branch 2026-09-12`.
@@ -47,12 +49,12 @@ wykonuje się pod Bun. Potwierdzamy faktyczny runtime narzędzi, zachowując opi
 wyjątek Node. Na telefonie pozostaje silnik React Native. mTLS, OpenTelemetry i sharp
 to próby zgodności do wykonania, a nie stwierdzone przeszkody uniemożliwiające migrację.
 
-## Inwentaryzacja codebase
+## Inwentaryzacja codebase przed migracją
 
 | Obszar          | Stan odczytany z repozytorium                                                                                                  | Zakres migracji                                                             |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
 | Root            | [package.json](../package.json): Node `>=26.8.1`, pnpm `11.25.0`, Turbo `2.10.12`; [.node-version](../.node-version): `26.8.1` | Pin Bun, `packageManager`, engines i skrypty; wyjątek Node dla Mobile       |
-| Workspace       | [pnpm-workspace.yaml](../pnpm-workspace.yaml): 7 wpisów, w tym `packages/*`; lockfile `9.0`                                    | Workspaces/reguły w package.json i bunfig.toml; jeden bun.lock              |
+| Workspace       | `pnpm-workspace.yaml` (baseline): 7 wpisów, w tym `packages/*`; lockfile `9.0`                                                 | Workspaces/reguły w package.json i bunfig.toml; jeden bun.lock              |
 | Backend         | [manifest](../backend/package.json): NestJS `12.0.1`, Express, pg, AWS SDK S3                                                  | Bun uruchamia `dist/nest/main.js`; sprawdzić DI, middleware, I/O i shutdown |
 | Media worker    | Wspólny obraz backendu, `dist/nest/media-worker/main.js`, sharp `0.35.4`, AMQP                                                 | Natywne binaria, obróbka plików, ack/retry/DLQ i restart                    |
 | Authorization   | [manifest](../authorization/package.json): Better Auth `1.7.2`, Hono, @hono/node-server, pg                                    | `dist/server.js`; sesje, cookies, origins, provisioning i mTLS              |
@@ -79,9 +81,7 @@ Kontrolować logi, porównać wersje/integrity i nie akceptować niezamierzonych
 Kolejne instalacje: `bun install --frozen-lockfile`, z osobną kontrolą obecności
 `bun.lock`. [Bun install](https://bun.sh/docs/pm/cli/install).
 
-Punkt wyjścia to jawny `linker = "isolated"`, ograniczający przypadkowy dostęp do
-niezadeklarowanych zależności.
-[Bun: isolated installs](https://bun.sh/docs/pm/isolated-installs).
+W fazie 1 punktem wyjścia był `isolated`. W fazie 2 porównanie Expo Doctor ujawniło duplikaty natywnych modułów w różnych kontekstach peer dependencies. Wybrano `linker = "hoisted"`; usuwa te duplikaty bez zmiany wersji pakietów. NativeWind otrzymał jawną zależność pluginu Babel, a frontend przypina rozwiązywanie React do własnego workspace. Szczegóły i testy opisuje [raport fazy 2](bun-phase2-results.md).
 
 Sprawdzić osobno React web `19.2.8` i Mobile `19.2.3` oraz TypeScript `7.0.2`
 w root/usługach i `6.0.3` w Mobile/docs. Odbiór wymaga właściwych wersji widocznych
@@ -112,7 +112,7 @@ czasu publikacji.
 
 ```toml
 [install]
-linker = "isolated"
+linker = "hoisted"
 minimumReleaseAge = 86400
 ```
 
@@ -266,11 +266,11 @@ Nowy manifest i dowody pomiarów powstają dopiero dla sprawdzonej migracji.
 | 3. Runtime    | Kolejno gateway, authorization, backend i worker; preload i healthchecki      | Próby I/O/mTLS/shutdown oraz integracyjne każdej usługi                                           |
 | 4. Narzędzia  | Skrypty repo, build web/docs, testy i operacje pod Bun                        | Pozostałe wywołania Node ograniczone do jawnych wyjątków                                          |
 | 5. Wdrożenie  | Compose, Kubernetes, K3s, amd64/arm64, white-label, limity i rollback         | Dowody runtime, wydajności, audytu i odtworzenia poprzedniej wersji                               |
-| 6. Domknięcie | Usunięcie aktywnych konfiguracji pnpm i workaroundów; instrukcje              | Jeden manager i bun.lock; Node wyłącznie w opisanym toolchainie Mobile                            |
+| 6. Domknięcie | Usunięcie aktywnej konfiguracji pnpm i zbędnych obejść; instrukcje            | Jeden manager i bun.lock; Node wyłącznie w opisanym toolchainie Mobile                            |
 
-Pin Bun nie został jeszcze wybrany ani zainstalowany w ramach tego dokumentu.
-Przed implementacją ustalić stabilną wersję, zapisać ją w packageManager, konfiguracji
-developerskiej i buildów oraz obrazach. Testy dotyczą dokładnie tego pinu.
+Wybrany pin: Bun 1.4.2, sprawdzony w fazie 1 na macOS i Linux arm64/amd64.
+W kolejnych fazach zapisać go w packageManager, konfiguracji developerskiej,
+buildach i obrazach. Aktywna konfiguracja używa Bun jako managera, runtime usług i narzędzi. Jawny wyjątek Node obejmuje Expo/Metro, Expo Doctor i natywny toolchain Mobile. Docs-site pozostaje poza aktywnym checkoutem (stash); jego build wymaga osobnej weryfikacji po przywróceniu.
 
 Minimalna macierz wykorzystuje istniejące skrypty po ich portowaniu:
 
@@ -314,10 +314,11 @@ Nie zamieniać samej binarki w obrazie zawierającym nowy graf zależności.
 ## Dowody i niewiadome
 
 Dokument opiera się na przeglądzie manifestów, kodu startowego/mTLS/telemetrii,
-Dockerfile, skryptów i dokumentacji producentów. Nie wykonywano instalacji Bun,
-konwersji lockfile, testów aplikacji pod Bun ani budowania obrazów Bun.
+Dockerfile, skryptów i dokumentacji producentów. Późniejsze próby runtime, konwersji
+lockfile i polityki instalacji opisuje [raport fazy 1](bun-phase1-results.md).
+Wykonano pełną instalację izolowanej kopii, obrazy prób obu architektur oraz staging
+produkcyjnego podgrafu usług. Docelowa integracja w aktywnym repo pozostaje przed nami.
 
-Etap 1 musi rozstrzygnąć: pin Bun, NodeSDK/instrumentację, TLSSocket/certyfikaty,
-pełny import bieżącego lockfile, odmowę przy brakującym czasie publikacji, integrację
-SFW, samodzielne pakowanie workspace i native dependencies na obu architekturach.
-Każdy wynik zapisać z wersją Bun, platformą, komendą, kodem wyjścia i logiem.
+Raport fazy 1 rozstrzyga wykonalność tych obszarów i zapisuje wymagane adaptacje:
+metadane bin lockfile, adapter mTLS, walidację dat publikacji i konfigurację Vitest.
+Kolejne fazy integrują te warianty i poddają je pełnym bramkom aplikacji oraz wdrożenia.

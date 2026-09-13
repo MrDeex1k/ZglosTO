@@ -1,5 +1,7 @@
 # Roadmapa projektu ZgłosTO — przegląd faz
 
+Aktualizacja runtime: [migracja Bun zakończona](bun-phase6-results.md). Wzmianki o PNPM i Node w zakończonych fazach poniżej opisują ich historyczny stan.
+
 ## Historyczny stan na 2026-08-25
 
 Fazy 0-10 są zakończone. Faza 10 zamknęła typowany kontrakt,

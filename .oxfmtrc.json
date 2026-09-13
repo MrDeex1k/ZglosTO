@@ -10,6 +10,7 @@
     ".pnpm-store/**",
     ".state/phase-12/**",
     "docs-site/.astro/**",
-    "docs-site/.nimbus/**"
+    "docs-site/.nimbus/**",
+    "bun.lock"
   ]
 }

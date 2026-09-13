@@ -118,7 +118,7 @@ log "Generating isolated development certificate hierarchy"
 
 log "Validating Compose configuration"
 env S3_ENDPOINT=https://object-storage.example.invalid S3_AUTO_CREATE_BUCKET=false \
-  "${BASE_COMPOSE[@]}" config --format json | node -e '
+  "${BASE_COMPOSE[@]}" config --format json | bun -e '
     let input = "";
     process.stdin.setEncoding("utf8");
     process.stdin.on("data", (chunk) => { input += chunk; });
@@ -151,13 +151,13 @@ done
 
 log "Checking that application database traffic uses PgBouncer"
 for service in authorization backend media_worker; do
-  compose exec -T "$service" node -e \
+  compose exec -T "$service" bun -e \
     "const fs = require('node:fs'); const url = new URL(process.env.DATABASE_URL); if (url.hostname !== 'pgbouncer') process.exit(1); if (Object.hasOwn(process.env, 'DATABASE_DIRECT_URL')) process.exit(2); if (!fs.statSync(process.env.DATABASE_TLS_CA_PATH).isFile()) process.exit(3); if (fs.existsSync('/run/secrets/database/pgbouncer-server.key') || fs.existsSync('/run/secrets/database/postgres-server.key')) process.exit(4)"
 done
 
 log "Checking the standalone media_worker boundary"
-compose exec -T media_worker node dist/nest/media-worker/healthcheck.js
-compose exec -T media_worker node -e \
+compose exec -T media_worker bun dist/nest/media-worker/healthcheck.js
+compose exec -T media_worker bun -e \
   "if (process.env.SERVICE_NAME !== 'media_worker') process.exit(1); if (!Object.hasOwn(process.env, 'S3_ENDPOINT')) process.exit(2); if (Object.hasOwn(process.env, 'AUTH_SERVICE_URL')) process.exit(3); if (new URL(process.env.RABBITMQ_URL).protocol !== 'amqps:') process.exit(4); if (Object.keys(process.env).some((name) => name.startsWith('RUSTFS_'))) process.exit(5);"
 
 log "Checking TLS 1.3 on both database transport segments"
@@ -177,9 +177,9 @@ compose exec -T pgbouncer sh -c \
   'if PGSSLMODE=disable psql "$PGBOUNCER_CLIENT_URL" -v ON_ERROR_STOP=1 -tAc "SELECT 1" >/dev/null 2>&1; then exit 1; fi'
 
 log "Checking the neutral S3 Object Storage boundary"
-compose exec -T backend node -e \
+compose exec -T backend bun -e \
   "if (Object.keys(process.env).some((name) => name.startsWith('RUSTFS_'))) process.exit(1)"
-compose exec -T backend node dist/storage/verify-storage.js
+compose exec -T backend bun dist/storage/verify-storage.js
 
 log "Checking that Phase 0 database migrations are repeatable"
 for migration in "$ROOT_DIR"/database/migrations/*.sql; do
@@ -223,7 +223,7 @@ assert_contains "Backend health" "$backend_health" '"config":{'
 assert_contains "Backend config" "$backend_health" '"status":"valid"'
 
 log "Checking internal authorization readiness"
-authorization_health="$(compose exec -T authorization node -e \
+authorization_health="$(compose exec -T authorization bun -e \
   "import('./dist/src/healthcheck.js').catch(() => process.exit(1))")"
 assert_contains "Authorization readiness" "$authorization_health" '"service":"authorization"'
 assert_contains "Authorization readiness" "$authorization_health" '"database":"up"'

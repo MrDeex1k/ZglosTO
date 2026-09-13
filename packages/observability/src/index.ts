@@ -3,6 +3,7 @@ import {
   metrics,
   propagation,
   SpanStatusCode,
+  SpanKind,
   trace,
   type Attributes,
   type Context,
@@ -93,6 +94,36 @@ export async function withSpan<Result>(
         span.end();
       }
     });
+}
+
+// The HTTP/2 compatibility listener is not instrumented by the Node HTTP SDK.
+// Extract the remote parent explicitly and keep it active through the Hono pipeline.
+export async function withHttpServerSpan<Result extends { status: number }>(
+  request: Pick<Request, 'method' | 'headers'>,
+  operation: () => Promise<Result>,
+): Promise<Result> {
+  const parent = extractedTraceContext(Object.fromEntries(request.headers));
+  return trace
+    .getTracer('zglosto')
+    .startActiveSpan(
+      'http.server',
+      { kind: SpanKind.SERVER, attributes: { 'http.request.method': request.method } },
+      parent,
+      async (span) => {
+        try {
+          const response = await operation();
+          span.setAttribute('http.response.status_code', response.status);
+          if (response.status >= 500) span.setStatus({ code: SpanStatusCode.ERROR });
+          return response;
+        } catch (error: unknown) {
+          span.recordException(error instanceof Error ? error : new Error('Unknown HTTP failure'));
+          span.setStatus({ code: SpanStatusCode.ERROR });
+          throw error;
+        } finally {
+          span.end();
+        }
+      },
+    );
 }
 
 export function addCounter(name: string, value = 1, attributes: Attributes = {}): void {

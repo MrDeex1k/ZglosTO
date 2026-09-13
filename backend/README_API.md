@@ -31,20 +31,20 @@ Utwórz główny `.env` na podstawie `.env.example`. Backend wymaga `DATABASE_UR
 ### Uruchomienie
 
 ```bash
-pnpm install --frozen-lockfile
-pnpm --filter backend-zglosto build
-pnpm --filter backend-zglosto start
+bun install --frozen-lockfile
+bun run --filter backend-zglosto build
+bun run --filter backend-zglosto start
 ```
 
 Testy jednostkowe są uruchamiane przez Vitest:
 
 ```bash
-pnpm --filter backend-zglosto test
-pnpm --filter backend-zglosto test:watch
+bun run --filter backend-zglosto test
+bun run --filter backend-zglosto test:watch
 ```
 
 Produkcyjny build używa `tsconfig.build.json`. Pliki `*.test.ts` i `vitest.config.ts` są
-sprawdzane przez `pnpm typecheck`, ale nie są emitowane do `dist` ani kopiowane do obrazu
+sprawdzane przez `bun run typecheck`, ale nie są emitowane do `dist` ani kopiowane do obrazu
 produkcyjnego.
 
 Serwer uruchomi się na porcie **3000**.

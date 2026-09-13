@@ -1,5 +1,7 @@
 # Plan wdrożenia aplikacji mobilnej
 
+Po migracji Bun aktualne wymagania narzędziowe opisuje [Quick Start](QUICK_START.md), a granice weryfikacji — [raport migracji](../docs/bun-phase6-results.md). Dawne wyniki pnpm/Expo Doctor poniżej dotyczą historycznych checkpointów.
+
 > **Status dokumentu:** archiwum wykonawcze Faz 0–7 i backlog po `1.0.0`. Bieżącym
 > źródłem prawdy jest [CURRENT_STATE.md](CURRENT_STATE.md), a ścieżkę klienta opisuje
 > [CLIENT_HANDOFF.md](CLIENT_HANDOFF.md). Mobile 1.0 ma status

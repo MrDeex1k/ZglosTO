@@ -63,20 +63,20 @@ zostać wstrzymane.
 
 ## Środowisko developerskie
 
-Repozytorium wymaga Node.js `>=26.8.1` i PNPM `11.25.0`. Zależności JavaScript są
+Repozytorium wymaga Bun `1.4.2`; toolchain Expo dodatkowo wymaga Node.js `>=26.8.1`. Zależności JavaScript są
 instalowane przez Socket Firewall i podlegają 24-godzinnej kwarantannie publikacji.
 
 ```bash
-pnpm install --frozen-lockfile
-pnpm certs:dev
+bun install --frozen-lockfile
+bun run certs:dev
 ```
 
 Po pierwszym bootstrapie używaj chronionych poleceń:
 
 ```bash
-pnpm deps:install
-pnpm deps:add -- <pakiet>
-pnpm deps:update
+bun run deps:install
+bun run deps:add <pakiet>
+bun run deps:update
 ```
 
 Instrukcje uruchomienia Docker Compose i pozostałych profili znajdują się w
@@ -87,17 +87,17 @@ Instrukcje uruchomienia Docker Compose i pozostałych profili znajdują się w
 Przed otwarciem pull requesta uruchom pełną bramkę repozytorium:
 
 ```bash
-pnpm check
+bun run check
 ```
 
 Jeśli zmiana dotyczy API, bazy, autoryzacji, brokera, Object Storage, zdjęć, LLM,
 konfiguracji Compose albo komunikacji między usługami, uruchom również:
 
 ```bash
-pnpm test:integration
+bun run test:integration
 ```
 
-`pnpm check` obejmuje polityki źródeł i wdrożeń, OxFmt, OxLint, TypeScript, testy Vitest,
+`bun run check` obejmuje polityki źródeł i wdrożeń, OxFmt, OxLint, TypeScript, testy Vitest,
 testowe buildy White-Label i zadania zarządzane przez Turborepo. Zmiana zachowania,
 konfiguracji, zmiennych środowiskowych lub procesu wdrożenia musi aktualizować właściwą
 dokumentację w tym samym PR.
@@ -140,7 +140,7 @@ Przed wysłaniem PR upewnij się, że:
 
 - zmiana ma jasny cel i wskazuje powiązane issue, jeśli ma to zastosowanie;
 - dokumentacja i przykładowe konfiguracje są aktualne;
-- `pnpm check` oraz wymagane testy integracyjne przeszły;
+- `bun run check` oraz wymagane testy integracyjne przeszły;
 - commity są zgodne z Conventional Commits;
 - PR nie zawiera sekretów ani danych osobowych;
 - źródło każdego elementu wkładu jest znane i legalne;

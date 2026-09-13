@@ -78,16 +78,16 @@ YAML
         KUSTOMIZE_OVERLAY=$DEPLOY_OVERLAY_DIR
 fi
 if [ "$CLUSTER_PROFILE" = 'k3s-ha' ]; then
-        node scripts/check-cluster-production.ts "$KUSTOMIZE_OVERLAY" --ha
+        bun scripts/check-cluster-production.ts "$KUSTOMIZE_OVERLAY" --ha
 else
-        node scripts/check-cluster-production.ts "$KUSTOMIZE_OVERLAY"
+        bun scripts/check-cluster-production.ts "$KUSTOMIZE_OVERLAY"
 fi
 RENDERED_PROFILE=$(kubectl kustomize "$KUSTOMIZE_OVERLAY")
 AUTOSCALING_ENABLED=0
 if grep -q '^kind: ScaledObject$' <<< "$RENDERED_PROFILE"; then AUTOSCALING_ENABLED=1; fi
 
-pnpm --silent --filter @zglosto/white-label-config build >/dev/null
-CONFIG_METADATA=$(pnpm --silent --filter @zglosto/white-label-config metadata "$CONFIG_PATH" fields)
+bun run --silent --filter @zglosto/contracts --filter @zglosto/white-label-config build >/dev/null
+CONFIG_METADATA=$(bun packages/white-label-config/dist/cli.js "$CONFIG_PATH" fields)
 IFS=$'\t' read -r CITY_KEY CONFIG_VERSION CONFIG_CHECKSUM VALIDATED_CONFIG_PATH <<< "$CONFIG_METADATA"
 TAG=${REQUESTED_TAG:-$CONFIG_VERSION}
 
@@ -269,7 +269,7 @@ check_command "Warstwy zależne od konfiguracji osiągnęły readiness"
 
 echo "Weryfikowanie checksumy konfiguracji uruchomionych warstw..."
 BACKEND_READINESS=$(kubectl exec deployment/backend -n "$NAMESPACE" -- \
-        node -e "fetch('http://127.0.0.1:3000/health/ready').then(r => r.text()).then(t => process.stdout.write(t))")
+        bun -e "fetch('http://127.0.0.1:3000/health/ready').then(r => r.text()).then(t => process.stdout.write(t))")
 AUTHORIZATION_READINESS=$(kubectl exec deployment/authorization -n "$NAMESPACE" -- \
         node dist/src/healthcheck.js)
 FRONTEND_READINESS=$(kubectl exec deployment/frontend -n "$NAMESPACE" -- \

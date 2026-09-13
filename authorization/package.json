@@ -11,11 +11,11 @@
   "type": "module",
   "main": "dist/server.js",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "dev": "node --import @zglosto/observability/register --watch server.ts",
-    "start": "node --import @zglosto/observability/register dist/server.js",
-    "test": "vitest run --dir src",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "build": "bun run --bun tsc -p tsconfig.build.json",
+    "dev": "bun --preload @zglosto/observability/register --watch server.ts",
+    "start": "bun --preload @zglosto/observability/register dist/server.js",
+    "test": "bun run --bun vitest run --dir src",
+    "typecheck": "bun run --bun tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@better-auth/expo": "1.7.2",
@@ -36,6 +36,7 @@
     "vitest": "4.1.11"
   },
   "engines": {
+    "bun": "1.4.2",
     "node": ">=26.8.1"
   }
 }

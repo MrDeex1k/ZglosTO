@@ -70,3 +70,14 @@ artefaktu publikacji lub obowiązku klienta. Wzmianki o tych narzędziach w doku
 historycznych opisują stan z chwili realizacji i nie są bieżącym wymaganiem. Kontrole kodu,
 zależności, sekretów, obrazów, Compose i runtime pozostają obowiązkowe zgodnie z procedurą
 wydania 1.0.0.
+
+- [Bun — wdrożenie i wyniki fazy 2](bun-phase2-results.md).
+
+- [Bun — runtime usług i wyniki fazy 3](bun-phase3-results.md).
+
+- [Bun — narzędzia, buildy i wyniki fazy 4](bun-phase4-results.md).
+
+- [Bun — odbiór wdrożenia i wyniki fazy 5](bun-phase5-results.md).
+- [Bun — procedura odbioru i rollbacku](bun-deployment-runbook.md).
+
+- [Bun — domknięcie migracji, faza 6](bun-phase6-results.md).

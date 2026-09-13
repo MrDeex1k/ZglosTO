@@ -67,8 +67,8 @@ kubectl apply -k k8s/overlays/k3s-redis-external
 Przed wdrożeniem konfigurację sprawdzają:
 
 ```bash
-pnpm check:redis
-pnpm check:redis-resilience
+bun run check:redis
+bun run check:redis-resilience
 ```
 
 ## Readiness i interpretacja stanu
@@ -145,7 +145,7 @@ Izolowany test Compose zatrzymuje Redisa, wymaga przejścia obu usług
 powrotu `degraded -> ok`:
 
 ```bash
-pnpm test:redis-failure
+bun run test:redis-failure
 ```
 
 Test tworzy własny projekt Compose i usuwa go po zakończeniu. Nie należy uruchamiać tego

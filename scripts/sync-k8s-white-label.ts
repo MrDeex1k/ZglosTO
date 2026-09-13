@@ -15,7 +15,9 @@ if (checkOnly) {
     throw new Error(`Generated Kubernetes White-Label config is missing: ${generatedPath}`);
   }
   if (generated !== source) {
-    throw new Error('Generated Kubernetes White-Label config is stale; run pnpm config:k8s:sync');
+    throw new Error(
+      'Generated Kubernetes White-Label config is stale; run bun run config:k8s:sync',
+    );
   }
   process.stdout.write('Kubernetes White-Label config is synchronized.\n');
 } else {

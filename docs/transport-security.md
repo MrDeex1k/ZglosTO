@@ -155,7 +155,7 @@ wybrane środowisko udostępniają taki tryb.
 - Uprawnienia do kluczy prywatnych są ograniczone do użytkownika procesu; wolumeny z sekretami
   są read-only.
 
-Lokalne certyfikaty tworzy `pnpm certs:dev`. Authorization waliduje przy starcie komplet
+Lokalne certyfikaty tworzy `bun run certs:dev`. Authorization waliduje przy starcie komplet
 `AUTHORIZATION_MTLS_*`, rozdzielenie tożsamości backendu/Nginx i ścieżki montowane pod
 `/run/secrets/service`. Backend waliduje komplet `AUTH_SERVICE_*`, używa wyłącznie HTTPS,
 sprawdza Service CA i nazwę serwera oraz ma dostęp tylko do własnego klucza klienta. Katalog

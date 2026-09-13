@@ -390,6 +390,6 @@ Na istniejącej bazie zastosuj migrację 015 przez bezpośrednie połączenie Po
 wdrożenia. Sam restart kontenera z istniejącym wolumenem nie uruchamia init-scripts.
 Migracja nie zmienia zasad weryfikacji e-mail.
 
-`pnpm test:auth-provisioning` sprawdza migrację i świeżą instalację na osobnym
+`bun run test:auth-provisioning` sprawdza migrację i świeżą instalację na osobnym
 PostgreSQL w Dockerze: bez sieci, opublikowanych portów i trwałego wolumenu. Test
 obejmuje błąd zapisu roli, retry, rollback, idempotencję i zachowanie istniejących ról.

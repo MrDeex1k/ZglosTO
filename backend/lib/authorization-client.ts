@@ -1,3 +1,4 @@
+import { injectTraceContext } from '@zglosto/observability';
 import { readFileSync } from 'node:fs';
 import { Agent, request } from 'node:https';
 import type { AuthorizationEnvironment } from '../config/env.ts';
@@ -50,6 +51,7 @@ export function createAuthorizationClient(
           {
             agent,
             headers: {
+              ...injectTraceContext(),
               cookie,
               ...(correlationId === null ? {} : { 'x-correlation-id': correlationId }),
             },

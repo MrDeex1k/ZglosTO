@@ -1,5 +1,7 @@
 # ZgłosTO 1.0.0
 
+Ten dokument opisuje historyczne wydanie 1.0.0 i jego wyniki. Dla bieżącego brancha po migracji używaj [procedury Bun](bun-deployment-runbook.md) oraz [raportu domknięcia](bun-phase6-results.md); wcześniejsze pozytywne wyniki audytu nie oznaczają aktualnej zgody na wydanie.
+
 ## Zakres wydania
 
 `1.0.0` jest pierwszym wspólnie wersjonowanym baseline'em całego monorepo. Obejmuje

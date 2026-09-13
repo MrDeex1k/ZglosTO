@@ -28,7 +28,7 @@ services:
       <<: *otel-app-environment
       OTEL_SERVICE_NAME: backend
   media_worker:
-    command: [node, --import, '@zglosto/observability/register', dist/nest/media-worker/main.js]
+    command: [bun, --preload, '@zglosto/observability/register', dist/nest/media-worker/main.js]
     environment:
       <<: *otel-app-environment
       OTEL_SERVICE_NAME: media_worker

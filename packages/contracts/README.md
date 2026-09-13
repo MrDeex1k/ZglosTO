@@ -60,6 +60,6 @@ import {
 ## Polecenia
 
 ```bash
-pnpm --filter @zglosto/contracts typecheck
-pnpm --filter @zglosto/contracts build
+bun run --filter @zglosto/contracts typecheck
+bun run --filter @zglosto/contracts build
 ```

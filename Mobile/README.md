@@ -113,17 +113,17 @@ Najkrótsza, izolowana ścieżka demonstracyjna jest opisana w
 [QUICK_START.md](QUICK_START.md):
 
 ```bash
-pnpm mobile:demo:check
-pnpm mobile:demo:up
-pnpm mobile:demo:ios # albo mobile:demo:android
+bun run mobile:demo:check
+bun run mobile:demo:up
+bun run mobile:demo:ios # albo mobile:demo:android
 ```
 
 Z katalogu głównego monorepo:
 
 ```bash
-pnpm --dir Mobile ios
-pnpm --dir Mobile android
-NODE_OPTIONS=--dns-result-order=ipv4first pnpm --dir Mobile dev --lan
+bun run --cwd Mobile ios
+bun run --cwd Mobile android
+NODE_OPTIONS=--dns-result-order=ipv4first bun run --cwd Mobile dev --lan
 ```
 
 Pierwsze dwie komendy wykonują lokalny prebuild, kompilują development clienta i
@@ -140,7 +140,7 @@ EXPO_PUBLIC_APP_ENV=development \
 EXPO_PUBLIC_ALLOW_HTTP_ORIGIN=true \
 EXPO_PUBLIC_API_ORIGIN=http://127.0.0.1:1235 \
 NODE_OPTIONS=--dns-result-order=ipv4first \
-pnpm --dir Mobile dev --localhost
+bun run --cwd Mobile dev --localhost
 ```
 
 Android Emulator używa `http://10.0.2.2:1235` zamiast `127.0.0.1`. Dla Metro
@@ -154,17 +154,17 @@ Po dodaniu lub aktualizacji modułu natywnego trzeba ponownie wykonać `ios` i
 Podstawowe bramki jakości:
 
 ```bash
-pnpm --dir Mobile quality
-pnpm --dir Mobile build
+bun run --cwd Mobile quality
+bun run --cwd Mobile build
 npx -y react-doctor@latest Mobile --no-telemetry --verbose
-pnpm check
+bun run check
 ```
 
 Opcjonalna, lokalna regresja po uruchomieniu demo i Metro:
 
 ```bash
-AGENT_DEVICE_PLATFORM=android AGENT_DEVICE_DEVICE='Pixel 9' pnpm mobile:regression
-AGENT_DEVICE_PLATFORM=ios AGENT_DEVICE_DEVICE='iPhone 17 Pro' pnpm mobile:regression
+AGENT_DEVICE_PLATFORM=android AGENT_DEVICE_DEVICE='Pixel 9' bun run mobile:regression
+AGENT_DEVICE_PLATFORM=ios AGENT_DEVICE_DEVICE='iPhone 17 Pro' bun run mobile:regression
 ```
 
 Wymaga `agent-device`; podstawowy Quick Start nie wymaga tego narzędzia.
@@ -288,7 +288,7 @@ opisuje [PHASE_5_1_2_VERIFICATION.md](PHASE_5_1_2_VERIFICATION.md).
   ze swojego panelu, a administrator widzi w Mobile tylko komunikat o wymaganym
   komputerze i wylogowanie, bez linku WEB —
   [PHASE_6_0_ROLE_BOUNDARIES.md](PHASE_6_0_ROLE_BOUNDARIES.md);
-- integracja z PNPM/Turborepo: gotowa; `build`, `test` i `typecheck` obejmują Mobile;
+- integracja z Bun/Turborepo: gotowa; `build`, `test` i `typecheck` obejmują Mobile;
 - minimalne systemy: iOS/iPadOS 17.0 oraz Android 12 / API 31;
 - zakres pierwszego wydania: panel mieszkańca i panel służb; admin poza v1;
 - buildy: lokalne i wykonywane osobno dla każdej instancji klienta;
@@ -297,7 +297,7 @@ opisuje [PHASE_5_1_2_VERIFICATION.md](PHASE_5_1_2_VERIFICATION.md).
   Expo Doctor 21/21 i React Doctor 100/100 (2026-08-19);
 - weryfikacja Fazy 2: działający ekran na iPhone 17, iPad Pro 11″ i Pixel 9;
   cold start z cache oraz rewalidacja `304` sprawdzone; Expo Doctor 21/21,
-  React Doctor 0 błędów i pełne `pnpm check` zaliczone 2026-08-19;
+  React Doctor 0 błędów i pełne `bun run check` zaliczone 2026-08-19;
 - wersja workspace: `1.0.0`, wspólna z bazowym wydaniem repozytorium; nie oznacza to
   opublikowania aplikacji w App Store ani Google Play;
 - gotowość konkretnego hosta jest weryfikowana osobno dla instancji klienta;

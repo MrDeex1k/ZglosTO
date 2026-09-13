@@ -1,3 +1,4 @@
+import { withHttpServerSpan } from '@zglosto/observability';
 import { randomUUID } from 'node:crypto';
 import {
   ContractValidationError,
@@ -66,6 +67,12 @@ function authFailureAttributes(result: WorkloadVerificationResult): Record<strin
 
 export function createApp(runtime: ModelRuntime, protection: GatewayRequestProtection): Hono {
   const app = new Hono();
+  app.use('*', (context, next) =>
+    withHttpServerSpan(context.req.raw, async () => {
+      await next();
+      return context.res;
+    }),
+  );
   let activeClassifications = 0;
 
   app.use('*', async (context, next) => {

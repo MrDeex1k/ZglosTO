@@ -10,7 +10,7 @@ const temporaryDirectory = mkdtempSync(join(tmpdir(), 'zglosto-production-policy
 
 function expectRejected(label: string, arguments_: string[]): void {
   try {
-    execFileSync('node', [checker, ...arguments_], {
+    execFileSync('bun', [checker, ...arguments_], {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
     });

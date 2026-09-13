@@ -1,11 +1,31 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "ignore": ["docs-site/.astro/**"],
-  "ignoreBinaries": ["kubectl"],
+  "ignoreBinaries": ["kubectl", "openssl"],
   "ignoreUnresolved": ["./scripts/generate-dev-certificates.sh"],
   "workspaces": {
     ".": {
-      "entry": ["scripts/production-build.ts", "scripts/phase12-*.ts", "tests/integration/**/*.ts"]
+      "entry": [
+        "scripts/production-build.ts",
+        "scripts/phase12-*.ts",
+        "tests/integration/**/*.ts",
+        "scripts/bun-phase1*.ts",
+        "scripts/bun-phase1/vitest.config.ts",
+        "scripts/stage-production.ts",
+        "scripts/verify-production-install.ts",
+        "scripts/check-integration-telemetry.ts",
+        "scripts/render-cluster-candidate.ts"
+      ],
+      "ignoreDependencies": [
+        "sfw",
+        "react",
+        "@babel/core",
+        "@commitlint/cli",
+        "husky",
+        "oxfmt",
+        "oxlint",
+        "turbo"
+      ]
     },
     "authorization": {
       "entry": ["src/auth.ts", "src/healthcheck.ts"]
@@ -16,7 +36,8 @@
         "nest/media-worker/healthcheck.ts",
         "operations/object-storage-archive-cli.ts",
         "operations/object-storage-audit-cli.ts",
-        "storage/verify-storage.ts"
+        "storage/verify-storage.ts",
+        "nest/media-worker/main.ts"
       ]
     },
     "llm_gateway": {
@@ -34,7 +55,8 @@
       "ignoreDependencies": [
         "expo-build-properties",
         "expo-dev-client",
-        "react-native-css-interop"
+        "react-native-css-interop",
+        "@babel/plugin-transform-react-jsx"
       ],
       "metro": false
     }

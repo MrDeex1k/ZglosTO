@@ -25,7 +25,7 @@ k8s/**/secret*.yaml
 *.p12
 *.pfx
 
-# Node.js / PNPM / TypeScript / Vite
+# Bun / TypeScript / Vite (legacy package caches remain ignored)
 node_modules/
 .pnpm-store/
 .turbo/
@@ -44,7 +44,6 @@ vite.config.ts.timestamp-*
 package-lock.json
 npm-shrinkwrap.json
 yarn.lock
-bun.lock
 bun.lockb
 
 # Python / uv

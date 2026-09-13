@@ -10,7 +10,7 @@ RPO, pojemność i zachowanie pod obciążeniem zostaną zmierzone w Fazie 12.
 
 ## Wymagania hosta
 
-- Linux `amd64` albo `arm64`, Docker Engine z Compose v2, Node 26, PNPM i nftables;
+- Linux `amd64` albo `arm64`, Docker Engine z Compose v2, Bun 1.4.2 i nftables;
 - konto systemowe `zglosto`, którego członkostwo w grupie `docker` daje uprawnienia
   równoważne root i musi być ograniczone administracyjnie;
 - checkout dokładnego, podpisanego lub świadomie zatwierdzonego tagu Git w
@@ -60,9 +60,9 @@ capabilities oraz zapis wyłącznie do katalogów stanu i backupu.
 Na dokładnym tagu Git:
 
 ```bash
-pnpm deps:install
-pnpm release:production:static
-pnpm build:production -- --version <tag-git>
+bun run deps:install
+bun run release:production:static
+bun run build:production -- --version <tag-git>
 PRODUCTION_ENV_FILE=/etc/zglosto/production.env \
   ./scripts/production-compose.sh verify-host
 PRODUCTION_ENV_FILE=/etc/zglosto/production.env \
@@ -130,10 +130,10 @@ architektury oraz restore z zewnętrznie skopiowanego backupu.
 
 ## Bramki
 
-- `pnpm release:production:static` — pełne testy projektu, buildy, 54 warianty i testy
+- `bun run release:production:static` — pełne testy projektu, buildy, 54 warianty i testy
   negatywne;
-- `pnpm release:production:validate` — rzeczywiste obrazy, host, sekrety i render Compose;
-- `PRODUCTION_GATE_RUNTIME=1 pnpm release:production:runtime` — wyłącznie na dedykowanym
+- `bun run release:production:validate` — rzeczywiste obrazy, host, sekrety i render Compose;
+- `PRODUCTION_GATE_RUNTIME=1 bun run release:production:runtime` — wyłącznie na dedykowanym
   hoście akceptacyjnym: deploy, restart, smoke i backup;
 - `PRODUCTION_GATE_RESTORE=1` rozszerza ostatnią bramkę o destrukcyjny test restore w oknie
   serwisowym.

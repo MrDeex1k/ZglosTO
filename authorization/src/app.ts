@@ -1,3 +1,4 @@
+import { withHttpServerSpan } from '@zglosto/observability';
 import { randomUUID } from 'node:crypto';
 import { addCounter, recordHistogram } from '@zglosto/observability';
 import {
@@ -51,6 +52,12 @@ export function createAuthorizationApp(
   options: CreateAuthorizationAppOptions,
 ): Hono<AuthorizationHonoEnvironment> {
   const app = new Hono<AuthorizationHonoEnvironment>();
+  app.use('*', (context, next) =>
+    withHttpServerSpan(context.req.raw, async () => {
+      await next();
+      return context.res;
+    }),
+  );
 
   app.use('*', async (context, next) => {
     const incoming = CorrelationIdSchema.safeParse(context.req.header('x-correlation-id')?.trim());

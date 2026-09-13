@@ -203,7 +203,7 @@ validate() {
   command -v docker >/dev/null 2>&1 || fail "docker is not installed"
   command -v curl >/dev/null 2>&1 || fail "curl is not installed"
   validate_secret_files
-  node "$ROOT_DIR/scripts/check-production-compose.ts" \
+  bun "$ROOT_DIR/scripts/check-production-compose.ts" \
     "$ENV_FILE" \
     --images-env "$IMAGES_ENV_FILE" \
     --manifest "$BUILD_MANIFEST_FILE" \
@@ -434,7 +434,7 @@ restore() {
 
 verify_host() {
   [ "$(uname -s)" = 'Linux' ] || fail 'the production host must run Linux'
-  for executable in docker curl node nft; do
+  for executable in docker curl bun nft; do
     command -v "$executable" >/dev/null 2>&1 ||
       fail "$executable is not installed on the production host"
   done

@@ -2,9 +2,9 @@
 set -euo pipefail
 
 PROFILE=${1:-}
-TAG=${IMAGE_TAG:-phase9-baseline}
+TAG=${IMAGE_TAG:-bun-acceptance}
 KEEP_CLUSTER=${KEEP_CLUSTER:-0}
-KIND_VERSION=${KIND_VERSION:-v0.31.0}
+KIND_VERSION=${KIND_VERSION:-v0.32.0}
 KIND_NODE_IMAGE=${KIND_NODE_IMAGE:-kindest/node:v1.35.8@sha256:07b2536e30b803ed61d1677a79df6115f798ce64c80f9e22f6ed45afd09323c0}
 K3D_VERSION=${K3D_VERSION:-v5.9.0}
 K3S_IMAGE=${K3S_IMAGE:-rancher/k3s:v1.36.4-k3s1}
@@ -15,7 +15,13 @@ KEDA_HTTP_CHART_VERSION=${KEDA_HTTP_CHART_VERSION:-0.15.0}
 TRAEFIK_CHART_VERSION=${TRAEFIK_CHART_VERSION:-41.4.0}
 LOCAL_PATH_VERSION=${LOCAL_PATH_VERSION:-v0.0.36}
 CLUSTER_NAME=${CLUSTER_NAME:-zglosto-phase9-$PROFILE}
-INGRESS_TEST_PORT=${INGRESS_TEST_PORT:-18136}
+if [ "$PROFILE" = 'k3s' ]; then
+    export PORT=${PORT:-18235}
+    INGRESS_TEST_PORT=${INGRESS_TEST_PORT:-18236}
+else
+    export PORT=${PORT:-18135}
+    INGRESS_TEST_PORT=${INGRESS_TEST_PORT:-18136}
+fi
 INGRESS_FORWARD_PID=
 
 case "$PROFILE" in
@@ -26,32 +32,62 @@ case "$PROFILE" in
         ;;
 esac
 
-for command in docker kubectl helm curl; do
+for command in docker kubectl helm curl bun; do
     command -v "$command" >/dev/null 2>&1 || {
         echo "$command is required" >&2
         exit 1
     }
 done
 
+case "$CLUSTER_NAME" in
+    zglosto-*) ;;
+    *) echo "Disposable cluster name must start with zglosto-" >&2; exit 1 ;;
+esac
+if [ "$PROFILE" = 'kubernetes' ]; then
+    command -v kind >/dev/null
+    [[ "$(kind version)" == "kind $KIND_VERSION "* ]] || { echo "kind $KIND_VERSION is required" >&2; exit 1; }
+    existing_clusters=$(kind get clusters)
+    ! printf '%s\n' "$existing_clusters" | grep -Fxq "$CLUSTER_NAME" || { echo "Cluster already exists" >&2; exit 1; }
+else
+    command -v k3d >/dev/null
+    existing_clusters=$(k3d cluster list --no-headers)
+    ! printf '%s\n' "$existing_clusters" | awk '{print $1}' | grep -Fxq "$CLUSTER_NAME" || { echo "Cluster already exists" >&2; exit 1; }
+fi
+TEST_STATE=$(mktemp -d "${TMPDIR:-/tmp}/zglosto-cluster.XXXXXX")
+export KUBECONFIG="$TEST_STATE/kubeconfig"
+export HELM_CONFIG_HOME="$TEST_STATE/helm/config"
+export HELM_CACHE_HOME="$TEST_STATE/helm/cache"
+export HELM_DATA_HOME="$TEST_STATE/helm/data"
+CLUSTER_CREATED=0
+bun scripts/render-cluster-candidate.ts "$PROFILE" "$TAG" > "$TEST_STATE/candidate.yaml"
+
 delete_cluster() {
     if [ -n "$INGRESS_FORWARD_PID" ]; then
         kill "$INGRESS_FORWARD_PID" >/dev/null 2>&1 || true
         wait "$INGRESS_FORWARD_PID" >/dev/null 2>&1 || true
     fi
-    if [ "$KEEP_CLUSTER" = "1" ]; then
-        echo "Keeping cluster $CLUSTER_NAME"
+    if [ "$KEEP_CLUSTER" = "1" ] && [ "$CLUSTER_CREATED" = "1" ]; then
+        echo "Keeping cluster $CLUSTER_NAME; KUBECONFIG=$KUBECONFIG"
         return
     fi
+    if [ "$CLUSTER_CREATED" = "0" ]; then rm -rf "$TEST_STATE"; return; fi
     if [ "$PROFILE" = "kubernetes" ]; then
         kind delete cluster --name "$CLUSTER_NAME" >/dev/null 2>&1 || true
     else
         k3d cluster delete "$CLUSTER_NAME" >/dev/null 2>&1 || true
     fi
+    rm -rf "$TEST_STATE"
 }
 trap delete_cluster EXIT
 
-echo "Building the immutable Phase 9 image set..."
+echo "Building the candidate image set..."
 ./build-images.sh "$TAG"
+audit_arguments=(--inspect --mode target)
+for artifact in authorization backend llm_gateway frontend nginx database pgbouncer rabbitmq; do
+    repository=${artifact//_/-}
+    audit_arguments+=(--image "$artifact=zglosto/$repository:$TAG")
+done
+bun scripts/check-image-contract.ts "${audit_arguments[@]}"
 
 images=(
     "zglosto/database:$TAG"
@@ -63,6 +99,7 @@ images=(
     "zglosto/frontend:$TAG"
     "zglosto/nginx:$TAG"
     "rustfs/rustfs:1.0.0-rc.5"
+    "redis:8.10.1-alpine3.23"
 )
 
 if [ "$PROFILE" = "kubernetes" ]; then
@@ -70,7 +107,8 @@ if [ "$PROFILE" = "kubernetes" ]; then
         echo "kind $KIND_VERSION is required" >&2
         exit 1
     }
-    kind create cluster --name "$CLUSTER_NAME" --image "$KIND_NODE_IMAGE" --wait 180s
+    CLUSTER_CREATED=1
+    kind create cluster --kubeconfig "$KUBECONFIG" --name "$CLUSTER_NAME" --image "$KIND_NODE_IMAGE" --wait 180s
     kind load docker-image --name "$CLUSTER_NAME" "${images[@]}"
     kubectl apply -f \
         "https://raw.githubusercontent.com/rancher/local-path-provisioner/$LOCAL_PATH_VERSION/deploy/local-path-storage.yaml"
@@ -88,9 +126,16 @@ else
         echo "k3d $K3D_VERSION is required" >&2
         exit 1
     }
-    k3d cluster create "$CLUSTER_NAME" --image "$K3S_IMAGE" --servers 1 --agents 1 --wait
+    CLUSTER_CREATED=1
+    k3d cluster create "$CLUSTER_NAME" --image "$K3S_IMAGE" --servers 1 --agents 1 --wait \
+        --kubeconfig-update-default=false --kubeconfig-switch-context=false
+    k3d kubeconfig get "$CLUSTER_NAME" > "$KUBECONFIG"
     k3d image import --cluster "$CLUSTER_NAME" "${images[@]}"
 fi
+
+expected_context="kind-$CLUSTER_NAME"
+if [ "$PROFILE" = 'k3s' ]; then expected_context="k3d-$CLUSTER_NAME"; fi
+[ "$(kubectl config current-context)" = "$expected_context" ] || { echo "Unexpected test context" >&2; exit 1; }
 
 echo "Installing pinned deployment controllers..."
 if [ "$PROFILE" = 'kubernetes' ]; then
@@ -141,14 +186,19 @@ spec:
   selfSigned: {}
 YAML
 
-overlay="k8s/overlays/$PROFILE-rustfs"
+kubectl -n zglosto create secret generic zglosto-redis-acl --from-file=users.acl=tests/fixtures/redis/users.acl
+kubectl -n zglosto create secret generic zglosto-redis-credentials \
+    --from-literal=REDIS_URL='redis://zglosto:integration-redis-password@redis:6379/0' \
+    --from-file=RATE_LIMIT_HMAC_KEY=tests/fixtures/redis/rate-limit-hmac
+
+overlay="$TEST_STATE/candidate.yaml"
 echo "Validating CRD schemas through the live API server..."
-kubectl apply --server-side --dry-run=server -k "$overlay" >/dev/null
-kubectl apply -k "$overlay"
+kubectl apply --server-side --dry-run=server -f "$overlay" >/dev/null
+kubectl apply -f "$overlay"
 
 kubectl -n zglosto wait --for=condition=Ready certificate/keda-http-interceptor --timeout=3m
 kubectl -n zglosto get secret zglosto-keda-http-tls -o json |
-    node --input-type=module -e '
+    bun --input-type=module -e '
       let input = "";
       for await (const chunk of process.stdin) input += chunk;
       const source = JSON.parse(input);
@@ -176,7 +226,20 @@ echo "Checking routing through the actual ingress controller..."
 ingress_namespace=traefik
 if [ "$PROFILE" = 'k3s' ]; then ingress_namespace=kube-system; fi
 kubectl -n "$ingress_namespace" port-forward --address 127.0.0.1 service/traefik \
-    "$INGRESS_TEST_PORT:80" >/dev/null 2>&1 &
+    "$INGRESS_TEST_PORT:80" >"$TEST_STATE/ingress-forward.log" 2>&1 &
 INGRESS_FORWARD_PID=$!
+ingress_ready=0
+for _attempt in {1..60}; do
+    if ! kill -0 "$INGRESS_FORWARD_PID" 2>/dev/null; then
+        cat "$TEST_STATE/ingress-forward.log" >&2
+        exit 1
+    fi
+    if grep -q "^Forwarding from 127.0.0.1:$INGRESS_TEST_PORT " "$TEST_STATE/ingress-forward.log"; then
+        ingress_ready=1
+        break
+    fi
+    sleep 1
+done
+[ "$ingress_ready" = '1' ] || { echo "Ingress port-forward did not bind" >&2; exit 1; }
 curl --fail --silent --show-error --retry 20 --retry-connrefused --retry-delay 1 \
     -H 'Host: zglosto.example.invalid' "http://127.0.0.1:$INGRESS_TEST_PORT/" >/dev/null
