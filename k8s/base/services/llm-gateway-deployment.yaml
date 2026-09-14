@@ -114,14 +114,16 @@ spec:
               cpu: '500m'
           livenessProbe:
             exec:
-              command: [node, dist/src/healthcheck.js]
+              command: [bun, dist/src/healthcheck.js]
             initialDelaySeconds: 5
             periodSeconds: 10
+            timeoutSeconds: 5
           readinessProbe:
             exec:
-              command: [node, dist/src/healthcheck.js]
+              command: [bun, dist/src/healthcheck.js]
             initialDelaySeconds: 2
             periodSeconds: 5
+            timeoutSeconds: 5
       volumes:
         - name: service-ca
           secret:

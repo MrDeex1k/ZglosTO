@@ -9,8 +9,8 @@ oraz najczęstsze problemy.
 
 Do uruchomienia pełnego WEB/API przez Docker Compose potrzebujesz:
 
-- Node.js w wersji <code>>=26.8.1</code>;
-- PNPM <code>11.25.0</code>;
+- Node.js w wersji <code>>=26.8.1</code> dla Expo/Metro i natywnego toolchainu Mobile;
+- Bun <code>1.4.2</code>;
 - Docker Engine;
 - <code>openssl</code> i <code>curl</code>.
 
@@ -23,7 +23,7 @@ Sprawdź wersje przed pierwszym startem:
 
 ```bash
 node --version
-pnpm --version
+bun --version
 docker compose version
 openssl version
 ```
@@ -37,7 +37,7 @@ Wykonaj polecenia z katalogu głównego repozytorium:
 cp .env.example .env
 
 # 2. Zainstaluj zależności i wygeneruj ignorowane certyfikaty developerskie
-pnpm install --frozen-lockfile && pnpm certs:dev
+bun install --frozen-lockfile && bun run certs:dev
 
 # 3. Zbuduj obrazy i uruchom cały stack
 docker compose up -d --build
@@ -126,8 +126,8 @@ oddzielnych wolumenów i pliku <code>.env.example</code>, więc nie miesza danyc
 środowiskiem na porcie 1235.
 
 ```bash
-pnpm mobile:demo:check
-pnpm mobile:demo:up
+bun run mobile:demo:check
+bun run mobile:demo:up
 ```
 
 Polecenie <code>mobile:demo:up</code> buduje i uruchamia izolowany stack, a następnie
@@ -137,8 +137,8 @@ tworzy trzy syntetyczne konta i przykładowe zgłoszenia. Demo jest dostępne po
 Do sprawdzenia statusu i ponownego zasilenia danych:
 
 ```bash
-pnpm mobile:demo:status
-pnpm mobile:demo:seed
+bun run mobile:demo:status
+bun run mobile:demo:seed
 ```
 
 Losowe hasła są zapisane wyłącznie lokalnie w
@@ -148,7 +148,7 @@ ich do README, issue, logów ani commitów.
 Jeśli port 1236 jest zajęty, wybierz inny port:
 
 ```bash
-MOBILE_DEMO_HTTP_PORT=1237 pnpm mobile:demo:up
+MOBILE_DEMO_HTTP_PORT=1237 bun run mobile:demo:up
 ```
 
 Pełny scenariusz prezentacji i zakres danych opisuje
@@ -157,16 +157,16 @@ znajduje się w [Mobile/docs/screenshots/README.md](../Mobile/docs/screenshots/R
 
 ## 6. Uruchomienie klienta Mobile
 
-Po wykonaniu <code>pnpm mobile:demo:up</code> uruchom wybraną platformę:
+Po wykonaniu <code>bun run mobile:demo:up</code> uruchom wybraną platformę:
 
 ```bash
-pnpm mobile:demo:ios
+bun run mobile:demo:ios
 ```
 
 albo:
 
 ```bash
-pnpm mobile:demo:android
+bun run mobile:demo:android
 ```
 
 iOS Simulator łączy się z lokalnym API przez <code>127.0.0.1:1236</code>, a Android
@@ -252,9 +252,9 @@ publicznego endpointu. Przed zmianą profilu przeczytaj
 Procesy developerskie uruchamia się z katalogu głównego:
 
 ```bash
-pnpm dev:frontend
-pnpm dev:backend
-pnpm dev:authorization
+bun run dev:frontend
+bun run dev:backend
+bun run dev:authorization
 ```
 
 Każdy proces działa w osobnym terminalu. Do szybkiego przeglądu całego produktu zalecany
@@ -264,27 +264,27 @@ uruchamia komplet zależności infrastrukturalnych.
 Najważniejsze polecenia repozytorium:
 
 ```bash
-pnpm lint
-pnpm format
-pnpm format:check
-pnpm typecheck
-pnpm build
-pnpm test
+bun run lint
+bun run format
+bun run format:check
+bun run typecheck
+bun run build
+bun run test
 ```
 
 Pełna bramka jakości:
 
 ```bash
-pnpm check
+bun run check
 ```
 
-<code>pnpm check</code> obejmuje kontrolę źródeł, dead code, format, lint, typecheck,
+<code>bun run check</code> obejmuje kontrolę źródeł, dead code, format, lint, typecheck,
 testy, testy wariantów White-Label oraz build monorepo.
 
 Pełny zestaw integracyjny uruchamia własny, izolowany Compose:
 
 ```bash
-pnpm test:integration
+bun run test:integration
 ```
 
 ## 9. Cleanup
@@ -298,13 +298,13 @@ docker compose down
 Zatrzymanie demo Mobile zachowuje jego dane i credentials:
 
 ```bash
-pnpm mobile:demo:down
+bun run mobile:demo:down
 ```
 
 Pełne usunięcie wyłącznie izolowanego demo Mobile:
 
 ```bash
-pnpm mobile:demo:clean
+bun run mobile:demo:clean
 ```
 
 Jeśli chcesz wyzerować lokalną bazę bazowego Compose, możesz usunąć jego wolumeny:
@@ -353,7 +353,7 @@ Nginx startuje dopiero po gotowości zależnych usług. Po zmianie certyfikatów
 konfiguracji zbuduj i odtwórz kontenery:
 
 ```bash
-pnpm certs:dev
+bun run certs:dev
 docker compose up -d --build
 ```
 
@@ -361,9 +361,9 @@ docker compose up -d --build
 
 - iOS Simulator używa <code>http://127.0.0.1:1236</code>;
 - Android Emulator używa <code>http://10.0.2.2:1236</code>;
-- sprawdź, czy działa <code>pnpm mobile:demo:status</code>;
-- po zmianie modułu natywnego ponów <code>pnpm mobile:demo:ios</code> albo
-  <code>pnpm mobile:demo:android</code>, ponieważ samo Metro nie przebudowuje
+- sprawdź, czy działa <code>bun run mobile:demo:status</code>;
+- po zmianie modułu natywnego ponów <code>bun run mobile:demo:ios</code> albo
+  <code>bun run mobile:demo:android</code>, ponieważ samo Metro nie przebudowuje
   CocoaPods ani Gradle.
 
 ### Demo nie może utworzyć danych
@@ -371,8 +371,8 @@ docker compose up -d --build
 Sprawdź healthcheck i status bazy, a następnie ponów seed:
 
 ```bash
-pnpm mobile:demo:status
-pnpm mobile:demo:seed
+bun run mobile:demo:status
+bun run mobile:demo:seed
 ```
 
 Pamiętaj, że publiczny feed może być cachowany przez Nginx. Po reseedzie odczekaj na
@@ -389,3 +389,9 @@ wygaśnięcie cache albo odtwórz wyłącznie kontener Nginx projektu demo.
 - [Kubernetes / K3s](../k8s/README_K8s.md) — wdrożenia klastrowe;
 - [Mobile handoff](../Mobile/CLIENT_HANDOFF.md) — droga od lokalnego buildu do przekazania
   klientowi.
+
+## Migracja istniejącego checkoutu na Bun
+
+Przed pierwszą instalacją Bun usuń wygenerowane katalogi `node_modules` w root i workspace albo przenieś je poza repozytorium. Nie mieszaj instalacji pnpm z Bun. Następnie wykonaj `bun install --frozen-lockfile` i `bun run check`. Pin to Bun 1.4.2; Node >=26.8.1 pozostaje wymagany dla toolchainu Expo. Usługi, skrypty, build web, testy i typecheck wykonuje Bun. Polecenie `bun run test` uruchamia Vitest pod Bun; `bun test` jest używany wyłącznie dla wskazanych testów infrastruktury i polityki zależności. Główny bunfig wyłącza automatyczne ładowanie `.env`; konfigurację narzędzi przekazuj jawnie.
+
+Backend NestJS w trybie dev jest kompilowany przez `tsc --watch`, a Bun obserwuje wynikowe `dist`. Zachowuje to metadane dekoratorów potrzebne dependency injection. Authorization i gateway wykonują TypeScript bezpośrednio przez Bun. Testy Vitest i pozostałe narzędzia są przenoszone osobno w fazie 4.

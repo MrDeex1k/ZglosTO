@@ -14,7 +14,7 @@
     "zglosto_redis_operation_duration_seconds"
   ],
   "alerts": ["ZglostoRedisUnavailable", "ZglostoRedisOperationErrors", "ZglostoRedisHighLatency"],
-  "automatedFailureTest": "pnpm test:redis-failure",
+  "automatedFailureTest": "bun run test:redis-failure",
   "fallbacks": {
     "authorizationRateLimit": "local-memory",
     "incidentRateLimit": "local-memory",

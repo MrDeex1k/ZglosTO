@@ -35,7 +35,7 @@ stop_for_maintenance nginx authorization backend media_worker
 
 printf '[backup] Auditing Object Storage references\n'
 set +e
-"${compose[@]}" run --rm --no-deps -T backend node dist/operations/object-storage-audit-cli.js \
+"${compose[@]}" run --rm --no-deps -T backend bun dist/operations/object-storage-audit-cli.js \
   > "$backup_directory/object-storage-audit.json"
 audit_status=$?
 set -e
@@ -50,7 +50,7 @@ printf '[backup] Creating PostgreSQL logical backup through the direct connectio
   > "$backup_directory/database.dump"
 
 printf '[backup] Creating provider-neutral Object Storage archive\n'
-"${compose[@]}" run --rm --no-deps -T backend node dist/operations/object-storage-archive-cli.js backup \
+"${compose[@]}" run --rm --no-deps -T backend bun dist/operations/object-storage-archive-cli.js backup \
   > "$backup_directory/object-storage.ndjson.gz"
 
 created_at=$(date -u '+%Y-%m-%dT%H:%M:%SZ')

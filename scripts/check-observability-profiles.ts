@@ -184,9 +184,9 @@ for (const image of [
 }
 
 const failureProbe = spawnSync(
-  process.execPath,
+  'bun',
   [
-    '--import',
+    '--preload',
     './packages/observability/src/register.ts',
     '--eval',
     'console.log("product-ready")',

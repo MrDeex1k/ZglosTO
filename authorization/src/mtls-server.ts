@@ -1,5 +1,9 @@
 import { readFileSync } from 'node:fs';
-import { createServer } from 'node:https';
+import {
+  createSecureServer as createServer,
+  type Http2ServerRequest,
+  type Http2ServerResponse,
+} from 'node:http2';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { TLSSocket } from 'node:tls';
 import { X509Certificate } from 'node:crypto';
@@ -9,7 +13,7 @@ import type { MtlsEnvironment } from './env.ts';
 
 type AuthorizationFetch = Parameters<typeof getRequestListener>[0];
 
-function certificateIdentity(request: IncomingMessage): string | null {
+function certificateIdentity(request: IncomingMessage | Http2ServerRequest): string | null {
   const socket = request.socket;
   if (!(socket instanceof TLSSocket) || !socket.authorized) return null;
 
@@ -47,13 +51,15 @@ function permittedPath(identity: string, path: string, environment: MtlsEnvironm
   return false;
 }
 
-function rejectIdentity(response: ServerResponse): void {
+function rejectIdentity(response: ServerResponse | Http2ServerResponse): void {
   const body = JSON.stringify({ error: 'Forbidden workload identity' });
-  response.writeHead(403, {
+  response.statusCode = 403;
+  for (const [name, value] of Object.entries({
     'content-type': 'application/json; charset=UTF-8',
     'content-length': Buffer.byteLength(body).toString(),
     'cache-control': 'no-store',
-  });
+  }))
+    response.setHeader(name, value);
   response.end(body);
 }
 
@@ -62,6 +68,7 @@ export function startMtlsAuthorizationServer(
   environment: MtlsEnvironment,
 ): ReturnType<typeof createServer> {
   const requestListener = getRequestListener(fetch);
+  // Bun exposes the verified peer certificate through this HTTP/1-compatible TLS listener.
   const server = createServer(
     {
       key: readFileSync(environment.privateKeyPath),
@@ -69,6 +76,8 @@ export function startMtlsAuthorizationServer(
       ca: readFileSync(environment.caPath),
       requestCert: true,
       rejectUnauthorized: true,
+      allowHTTP1: true,
+      ALPNProtocols: ['http/1.1'],
       minVersion: 'TLSv1.3',
     },
     (request, response) => {

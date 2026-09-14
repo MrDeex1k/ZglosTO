@@ -13,7 +13,7 @@
 
 - [ ] PR dotyczy jednego spójnego problemu i wskazuje issue, jeśli ma to zastosowanie.
 - [ ] Dokumentacja i pliki `*.example` zostały zaktualizowane, jeśli zmieniło się zachowanie lub konfiguracja.
-- [ ] Uruchomiłem `pnpm check` i odpowiednie testy integracyjne albo wyjaśniłem, dlaczego nie były możliwe.
+- [ ] Uruchomiłem `bun run check` i odpowiednie testy integracyjne albo wyjaśniłem, dlaczego nie były możliwe.
 - [ ] Commity są zgodne z Conventional Commits.
 - [ ] PR nie zawiera sekretów, danych osobowych ani prawdziwych danych wdrożeniowych.
 - [ ] Mam prawo przekazać wszystkie elementy wkładu i ujawniłem istotne wykorzystanie AI.

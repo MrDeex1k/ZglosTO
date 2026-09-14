@@ -126,7 +126,7 @@ for (const path of paths) {
   for (const [label, pattern] of secretPatterns) {
     if (pattern.test(text)) findings.push(`${path} (${label})`);
   }
-  for (const match of path === 'pnpm-lock.yaml' ? [] : text.matchAll(emailPattern)) {
+  for (const match of path === 'bun.lock' ? [] : text.matchAll(emailPattern)) {
     const domain = match[1]?.toLowerCase();
     if (
       domain !== undefined &&

@@ -1,8 +1,8 @@
 **
 
 !package.json
-!pnpm-lock.yaml
-!pnpm-workspace.yaml
+!bun.lock
+!bunfig.toml
 !tsconfig.base.json
 
 !backend/
@@ -42,3 +42,7 @@
 **/*.crt
 **/*.p12
 **/*.pfx
+
+!scripts/stage-production.ts
+!scripts/verify-production-install.ts
+!scripts/dev-service.ts

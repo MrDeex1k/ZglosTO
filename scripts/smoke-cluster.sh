@@ -5,12 +5,14 @@ NAMESPACE=${NAMESPACE:-zglosto}
 PORT=${PORT:-18135}
 TIMEOUT=${TIMEOUT:-300s}
 PORT_FORWARD_PID=
+PORT_FORWARD_LOG=$(mktemp "${TMPDIR:-/tmp}/zglosto-port-forward.XXXXXX")
 
 cleanup() {
     if [ -n "$PORT_FORWARD_PID" ]; then
         kill "$PORT_FORWARD_PID" >/dev/null 2>&1 || true
         wait "$PORT_FORWARD_PID" >/dev/null 2>&1 || true
     fi
+    rm -f "$PORT_FORWARD_LOG"
 }
 trap cleanup EXIT
 
@@ -35,29 +37,36 @@ for deployment in authorization backend frontend media-worker nginx; do
     kubectl -n "$NAMESPACE" rollout status "deployment/$deployment" --timeout="$TIMEOUT"
 done
 
+if kubectl -n "$NAMESPACE" get statefulset/redis >/dev/null 2>&1; then
+    kubectl -n "$NAMESPACE" rollout status statefulset/redis --timeout="$TIMEOUT"
+    kubectl -n "$NAMESPACE" exec deployment/backend -- bun -e \
+        'const response = await fetch("http://127.0.0.1:3000/health/ready"); const health = await response.json(); if (!response.ok || health.redis !== "up") throw new Error("Local Redis is not healthy from backend");'
+fi
+
 echo "Checking cert-manager, KEDA and HTTP autoscaling resources..."
 kubectl -n "$NAMESPACE" wait --for=condition=Ready certificate --all --timeout="$TIMEOUT"
 kubectl -n "$NAMESPACE" wait --for=condition=Ready scaledobject/media-worker --timeout="$TIMEOUT"
 kubectl -n "$NAMESPACE" wait --for=condition=Ready scaledobject/llm-gateway --timeout="$TIMEOUT"
 
-kubectl -n "$NAMESPACE" port-forward --address 127.0.0.1 service/nginx "$PORT:1235" >/tmp/zglosto-port-forward.log 2>&1 &
+kubectl -n "$NAMESPACE" port-forward --address 127.0.0.1 service/nginx "$PORT:1235" >"$PORT_FORWARD_LOG" 2>&1 &
 PORT_FORWARD_PID=$!
 port_forward_ready=0
 for _ in {1..60}; do
-    if curl --fail --silent --show-error "http://127.0.0.1:$PORT/health" >/dev/null; then
+    if grep -q "^Forwarding from 127.0.0.1:$PORT " "$PORT_FORWARD_LOG" && \
+        curl --fail --silent --show-error "http://127.0.0.1:$PORT/health" >/dev/null; then
         port_forward_ready=1
         break
     fi
     if ! kill -0 "$PORT_FORWARD_PID" >/dev/null 2>&1; then
         echo "Nginx port-forward terminated before becoming ready" >&2
-        cat /tmp/zglosto-port-forward.log >&2
+        cat "$PORT_FORWARD_LOG" >&2
         exit 1
     fi
     sleep 1
 done
 if [ "$port_forward_ready" != "1" ]; then
     echo "Nginx did not become reachable through port-forward within 60 seconds" >&2
-    cat /tmp/zglosto-port-forward.log >&2
+    cat "$PORT_FORWARD_LOG" >&2
     exit 1
 fi
 
@@ -94,7 +103,7 @@ kubectl -n "$NAMESPACE" exec statefulset/database -c database -- \
     psql -p 54325 -U zglosto -d zglosto_db -v ON_ERROR_STOP=1 \
     -c 'CREATE TABLE IF NOT EXISTS phase9_deployment_marker (id integer PRIMARY KEY); INSERT INTO phase9_deployment_marker VALUES (9) ON CONFLICT DO NOTHING;' >/dev/null
 kubectl -n "$NAMESPACE" exec deployment/backend -- \
-    node -e "if (!process.env.DATABASE_URL_FILE) process.exit(1)" >/dev/null
+    bun -e "if (!process.env.DATABASE_URL_FILE) process.exit(1)" >/dev/null
 
 database_pod=$(kubectl -n "$NAMESPACE" get pod -l app=database -o jsonpath='{.items[0].metadata.name}')
 kubectl -n "$NAMESPACE" delete pod "$database_pod" --wait=true --timeout="$TIMEOUT" >/dev/null

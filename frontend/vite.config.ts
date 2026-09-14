@@ -1,3 +1,5 @@
+import { createRequire } from 'node:module';
+import { dirname } from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 import { tanstackStart } from '@tanstack/react-start/plugin/vite';
 import react, { reactCompilerPreset } from '@vitejs/plugin-react';
@@ -59,10 +61,14 @@ function authorizationProxy(command: string, isPreview: boolean) {
 // https://vite.dev/config/
 export default defineConfig(({ command, isPreview }) => ({
   resolve: {
+    dedupe: ['react', 'react-dom'],
     alias: {
+      react: dirname(createRequire(import.meta.url).resolve('react/package.json')),
+      'react-dom': dirname(createRequire(import.meta.url).resolve('react-dom/package.json')),
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  ssr: { noExternal: true },
   plugins: [
     whiteLabelReadinessPlugin,
     tanstackStart({

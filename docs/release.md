@@ -6,6 +6,9 @@
 > [roadmapa](roadmap-overview.md). Faza 12 jest certyfikacją per klient, nie warunkiem
 > źródłowego wydania `1.0.0`.
 
+> Migracja runtime na Bun została zakończona później; wzmianki o Node/pnpm poniżej
+> opisują wcześniejszy plan. Aktualne zasady: [domknięcie migracji Bun](bun-phase6-results.md).
+
 ## Cel
 
 Plan zakłada uporządkowaną modernizację systemu ZglosTO do aplikacji White-Label dla miast.
@@ -46,7 +49,7 @@ Dokument opisujacy stan obecny ma pierwszenstwo przy ocenie tego, co system robi
 
 ## Docelowe decyzje
 
-- Menedzer pakietow: PNPM wszedzie, najlepiej jako workspace obejmujacy `frontend`, `backend`, `authorization`, `llm_gateway` i wspolne pakiety.
+- Menedzer pakietow: Bun wszedzie, najlepiej jako workspace obejmujacy `frontend`, `backend`, `authorization`, `llm_gateway` i wspolne pakiety.
 - Jezyk aplikacyjny: TypeScript wszedzie tam, gdzie dziala aplikacja web/API.
 - Runtime aplikacyjny: Node 26 dla `authorization`, `backend` i `llm_gateway`. Node 26 jest obecnie linia Current wedlug harmonogramu Node.js; przed produkcja trzeba potwierdzic status LTS, obrazy bazowe i kompatybilnosc bibliotek.
 - Frontend: migracja z Vite React SPA do TanStack Start w trybie SPA została wykonana w
@@ -79,21 +82,21 @@ Dokument opisujacy stan obecny ma pierwszenstwo przy ocenie tego, co system robi
 
 ## Docelowy obraz uslug
 
-| Usluga            | Docelowy stack                          | Odpowiedzialnosc                                                                         |
-| ----------------- | --------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `frontend`        | TanStack Start, React, TypeScript, PNPM | UI, route loadery i wyłącznie cienkie BFF; bez logiki domenowej oraz dostępu do storage  |
-| `authorization`   | Hono, Node 26, TypeScript, Better Auth  | logowanie, rejestracja, sesje, role i kontrakt auth dla frontendu oraz backendu          |
-| `backend`         | NestJS, platform-express, Node 26, TS   | API domenowe incydentów, admina, służb, storage, integracja z auth i LLM gateway         |
-| `media_worker`    | NestJS standalone, TypeScript, Sharp    | asynchroniczna walidacja i konwersja zdjęć do WebP                                       |
-| `llm_gateway`     | Hono, Node 26, TypeScript               | cienki adapter między NestJS a modelem LLM, timeouts, fallbacki, normalizacja odpowiedzi |
-| `model_runner`    | Docker Model Runner                     | opcjonalny lokalny runtime modelu, wlaczany flaga/profilami                              |
-| `postgres`        | PostgreSQL                              | dane domenowe, auth i metadane plików; pozostaje źródłem prawdy                          |
-| `redis`           | Redis                                   | opcjonalny wspólny cache i liczniki rate limitingu w trybie `local` lub `external`       |
-| `pgbouncer`       | PgBouncer                               | pooling polaczen do PostgreSQL dla auth/backend/gateway                                  |
-| `rabbitmq`        | RabbitMQ                                | trwałe kolejki zadań mediów i asynchronicznych operacji LLM                              |
-| `object_storage`  | S3-compatible                           | prywatne zdjęcia; provider wybierany przez neutralne `S3_*`                              |
-| `rustfs`          | RustFS                                  | opcjonalny lokalny provider Object Storage                                               |
-| `nginx` / ingress | Nginx lub Ingress Controller            | wejscie HTTP, routing, TLS w srodowiskach produkcyjnych                                  |
+| Usluga            | Docelowy stack                         | Odpowiedzialnosc                                                                         |
+| ----------------- | -------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `frontend`        | TanStack Start, React, TypeScript, Bun | UI, route loadery i wyłącznie cienkie BFF; bez logiki domenowej oraz dostępu do storage  |
+| `authorization`   | Hono, Node 26, TypeScript, Better Auth | logowanie, rejestracja, sesje, role i kontrakt auth dla frontendu oraz backendu          |
+| `backend`         | NestJS, platform-express, Node 26, TS  | API domenowe incydentów, admina, służb, storage, integracja z auth i LLM gateway         |
+| `media_worker`    | NestJS standalone, TypeScript, Sharp   | asynchroniczna walidacja i konwersja zdjęć do WebP                                       |
+| `llm_gateway`     | Hono, Node 26, TypeScript              | cienki adapter między NestJS a modelem LLM, timeouts, fallbacki, normalizacja odpowiedzi |
+| `model_runner`    | Docker Model Runner                    | opcjonalny lokalny runtime modelu, wlaczany flaga/profilami                              |
+| `postgres`        | PostgreSQL                             | dane domenowe, auth i metadane plików; pozostaje źródłem prawdy                          |
+| `redis`           | Redis                                  | opcjonalny wspólny cache i liczniki rate limitingu w trybie `local` lub `external`       |
+| `pgbouncer`       | PgBouncer                              | pooling polaczen do PostgreSQL dla auth/backend/gateway                                  |
+| `rabbitmq`        | RabbitMQ                               | trwałe kolejki zadań mediów i asynchronicznych operacji LLM                              |
+| `object_storage`  | S3-compatible                          | prywatne zdjęcia; provider wybierany przez neutralne `S3_*`                              |
+| `rustfs`          | RustFS                                 | opcjonalny lokalny provider Object Storage                                               |
+| `nginx` / ingress | Nginx lub Ingress Controller           | wejscie HTTP, routing, TLS w srodowiskach produkcyjnych                                  |
 
 ## White-Label
 
@@ -149,7 +152,7 @@ services:
 - Przed migracjami trzeba spisac kontrakty API: endpointy, payloady, cookies, role, statusy, format zdjec, format konfiguracji White-Label i kontrakt LLM gateway.
 - Aktualizacje pakietow, migracje frameworkow i optymalizacje obrazow robimy osobnymi falami.
 - Wszystkie wersje narzedzi oznaczone jako przyszle albo zmienne, w tym Node 26, TanStack Start, Docker Model Runner i serverless scaling, trzeba potwierdzic w dniu realizacji.
-- PNPM workspace i wspolne typy powinny byc wprowadzone przed przepisywaniem glownego backendu, zeby nie dublowac kontraktow.
+- Bun workspace i wspolne typy powinny byc wprowadzone przed przepisywaniem glownego backendu, zeby nie dublowac kontraktow.
 
 ## Faza 0: Audyt, baseline i kontrakty
 
@@ -195,7 +198,7 @@ Stan: **zakonczona 2026-07-17**. Kroki 1-9 sa wdrozone i zweryfikowane. Audyt, b
 
 Dlaczego teraz: bez baseline'u i kontraktow nie da sie bezpiecznie migrowac auth, backendu, storage, LLM i routingu.
 
-## Faza 1: PNPM workspace, TypeScript i wspolne kontrakty
+## Faza 1: Bun workspace, TypeScript i wspolne kontrakty
 
 Stan: **zakonczona 2026-07-17**. Workspace, wspolne kontrakty, pelna migracja kodu i testow
 do TypeScript, wspolny tryb strict, testy kontraktowe, baseline Oxfmt oraz koncowa bramka
@@ -207,7 +210,7 @@ migrację kodu aplikacyjnego i testowego JavaScript do TypeScript, zakaz `any` w
 pierwszej strony oraz jawny `null` albo unię dyskryminowaną zamiast `undefined` w kontraktach
 i domenie.
 
-1. **Wdrozone przed Faza 1, zaktualizowane 2026-09-02:** PNPM `11.25.0` jest jedynym package managerem JavaScript/TypeScript; zaleznosci bezposrednie sa przypiete dokladnie, aktualizacje maja 24-godzinna kwarantanne publikacji, a operacje na pakietach JavaScript chroni Socket Firewall (`sfw`).
+1. **Wdrozone przed Faza 1, zaktualizowane 2026-09-02:** Bun `1.4.2` jest jedynym package managerem JavaScript/TypeScript; zaleznosci bezposrednie sa przypiete dokladnie, aktualizacje maja 24-godzinna kwarantanne publikacji, a operacje na pakietach JavaScript chroni Socket Firewall (`sfw`).
 2. **Wdrozone przed Faza 1:** workspace obejmuje `frontend`, `backend`, `authorization` i `packages/*`, a repozytorium ma jeden glowny `pnpm-lock.yaml`.
 3. **Wdrożone 2026-07-17:** wspólny pakiet `packages/contracts` zawiera:
 
@@ -230,21 +233,21 @@ i domenie.
 - Oxlint jako podstawowy linter JavaScript/TypeScript;
 - Oxfmt jako jedyny formatter;
 - wspolne konfiguracje w katalogu glownym;
-- `pnpm build`;
-- `pnpm lint`;
-- `pnpm format` i `pnpm format:check`;
-- `pnpm test`;
-- `pnpm typecheck`.
-- `pnpm check`;
-- `pnpm quality:phase1`.
+- `bun run build`;
+- `bun run lint`;
+- `bun run format` i `bun run format:check`;
+- `bun run test`;
+- `bun run typecheck`.
+- `bun run check`;
+- `bun run quality:phase1`.
 
   Wszystkie projekty dziedzicza `tsconfig.base.json`, a jednorazowy baseline Oxfmt objal cale
   repozytorium.
 
 5. ESLint zostal usuniety po uruchomieniu natywnych pluginow Oxlint dla React, TypeScript, importow i accessibility. React Doctor pozostaje dodatkowa kontrola zmian React, a ostrzezenia wykryte przy migracji tworza jawny backlog do uporzadkowania.
-6. TypeScript `7.0.2` jest uzywany jako natywny `tsc` do osobnego `pnpm typecheck`. Oxlint dziala bez type-aware lintingu i bez `oxlint-tsgolint`; dodac ten pakiet dopiero, jesli projekt zdecyduje sie na reguly zalezne od informacji typow.
-7. **Wdrozone przed Faza 1:** usunieto lockfile innych managerow, a instalacje lokalne i kontenerowe uzywaja `pnpm install --frozen-lockfile`.
-8. **Wdrozone przed Faza 1:** obrazy frontend/backend/authorization korzystaja z Node `26.5.0` i PNPM, wspolnego kontekstu workspace oraz produkcyjnego `pnpm deploy`. Migracje frameworkow do Hono, NestJS i TanStack Start pozostaja w swoich fazach.
+6. TypeScript `7.0.2` jest uzywany jako natywny `tsc` do osobnego `bun run typecheck`. Oxlint dziala bez type-aware lintingu i bez `oxlint-tsgolint`; dodac ten pakiet dopiero, jesli projekt zdecyduje sie na reguly zalezne od informacji typow.
+7. **Wdrozone przed Faza 1:** usunieto lockfile innych managerow, a instalacje lokalne i kontenerowe uzywaja `bun install --frozen-lockfile`.
+8. **Wdrozone przed Faza 1:** obrazy frontend/backend/authorization korzystaja z Node `26.5.0` i Bun, wspolnego kontekstu workspace oraz produkcyjnego `bun run deploy`. Migracje frameworkow do Hono, NestJS i TanStack Start pozostaja w swoich fazach.
 9. **Wdrożone 2026-07-17:** cały kod aplikacyjny backendu Express, jego testy jednostkowe
    oraz izolowane testy integracyjne zostały przeniesione z JavaScript/MJS do TypeScript.
    Testy jednostkowe i kontraktowe używają Vitest, a integracja natywnego runnera Node 26.
@@ -262,7 +265,7 @@ i domenie.
     zgodnie z [ADR-021](architecture-decisions.md). Polityke egzekwuje
     `scripts/check-typescript-source.sh`.
 12. **Wdrozone 2026-07-17:** osiem testow kontraktowych chroni sesje, role, DTO incydentow,
-    katalog statusow i fallback LLM. `pnpm quality:phase1` uruchamia kontrole zrodel, Oxfmt,
+    katalog statusow i fallback LLM. `bun run quality:phase1` uruchamia kontrole zrodel, Oxfmt,
     Oxlint, strict typecheck, 16 testow jednostkowych/kontraktowych, wszystkie buildy i pelny
     izolowany zestaw integracyjny Compose.
 
@@ -298,7 +301,7 @@ Publiczny `GET /api/config/public` zwraca jawna allowliste danych, tylko aktywne
 publiczny klucz fallbacku, wersje i checksum SHA-256. Silny ETag, `If-None-Match`, odpowiedz
 `304` i krotki cache HTTP pozwalaja klientom bezpiecznie rewalidowac konfiguracje po rolloutach.
 Granica konfiguracji blokuje pola sekretow, material kluczy/tokenow, URL-e z poswiadczeniami
-i interpolacje ENV bez ujawniania znalezionej wartosci w bledzie. `pnpm check` waliduje kazdy
+i interpolacje ENV bez ujawniania znalezionej wartosci w bledzie. `bun run check` waliduje kazdy
 wersjonowany YAML miasta, a sekrety pozostaja w ENV lub Kubernetes Secret.
 Backend i authorization laduja config przed otwarciem portu, a ich readiness laczy stan bazy
 z wersja i checksumem zwalidowanej konfiguracji. Frontend Vite generuje ten sam typowany
@@ -321,7 +324,7 @@ pelny build frontendu, co chroni aplikacje przed ponownym hardcode'em miasta.
 8. **Wdrozone 2026-07-18:** nieaktywne i usuniete z YAML-a uslugi pozostaja w `service_types`; nowe zgloszenia i przypisania sa blokowane w aplikacji oraz PostgreSQL, a historia i ponowna aktywacja pozostaja obslugiwane.
 9. **Wdrozone 2026-07-18:** `routing.fallbackServiceKey` jest jedynym zrodlem routingu awaryjnego; schemat wymaga aktywnej uslugi, backend stosuje klucz dla wszystkich awarii LLM, a model runner zwraca `serviceKey: null` i nie posiada osobnej konfiguracji fallbacku.
 10. **Wdrozone 2026-07-18:** dodano publiczny, filtrowany `GET /api/config/public` z wersja, checksum SHA-256, ETagiem, cache HTTP i obsluga `304`; odpowiedz zawiera tylko aktywne uslugi oraz publiczny klucz fallbacku, ale nie ustawienia integracji.
-11. **Wdrozone 2026-07-18:** White-Label YAML jest traktowany jako publiczny; kontrakt blokuje pola i wartosci sekretow oraz interpolacje ENV, bledy sa redagowane, a `pnpm check` waliduje wszystkie konfiguracje. Sekrety pozostaja w ENV/Secret.
+11. **Wdrozone 2026-07-18:** White-Label YAML jest traktowany jako publiczny; kontrakt blokuje pola i wartosci sekretow oraz interpolacje ENV, bledy sa redagowane, a `bun run check` waliduje wszystkie konfiguracje. Sekrety pozostaja w ENV/Secret.
 12. **Wdrozone 2026-07-18:** backend i authorization waliduja config przed nasluchem, frontend waliduje go przy buildzie i wymaga artefaktu przy starcie Nginx; readiness raportuje wersje/checksum i nie moze byc poprawne dla blednej konfiguracji.
 13. **Wdrozone 2026-07-18, zaktualizowane 2026-07-28:** build przyjmuje jeden zwalidowany YAML i niezmienny tag oraz osadza ten sam config w trzech warstwach. Manifest lokalnego builda zapisuje wersję, rewizję i checksum; etykiety obrazów są odroczone do rzeczywistego CI/CD. Deploy wymusza rollout checksumą, odrzuca `latest` i weryfikuje readiness wszystkich warstw. Panel admina i hot reload pozostaja niedostepne.
 14. **Wdrozone 2026-07-18:** dodano niezalezne konfiguracje testowe Gdanska i Wroclawia; wspolne testy loadera, publicznego API i rzeczywiste buildy frontendu sprawdzaja odmienne nazwy, branding, locale, feature flags, katalogi uslug i fallback bez hardcode'u Warszawy.
@@ -440,7 +443,7 @@ Dlaczego tutaj: po dodaniu PgBouncera i RustFS zmienia sie sposob pracy z danymi
    aktywnego katalogu, a testy obejmują propagację ról i izolację służb. Nazwę
    `typ_uprawnien` usunięto z runtime sesji, API i konsumentów; pozostaje wyłącznie w
    historycznej migracji schematu.
-6. **Wdrozone 2026-07-18:** dodano `pnpm certs:dev`, który przez OpenSSL tworzy w ignorowanym
+6. **Wdrozone 2026-07-18:** dodano `bun run certs:dev`, który przez OpenSSL tworzy w ignorowanym
    `.certs/` oddzielne, 30-dniowe Service CA i Database CA oraz 7-dniowe certyfikaty ECDSA.
    Klucze mają prawa `600`, certyfikaty `644`, katalog nie trafia do kontekstu builda, a
    Compose montuje wymagane sekrety read-only. Service CA wystawia serwer Authorization oraz
@@ -493,7 +496,7 @@ Dlaczego tutaj: po dodaniu PgBouncera i RustFS zmienia sie sposob pracy z danymi
 16. **Wdrozone 2026-07-18:** zsynchronizowano dokumentację architektury, transportu,
     healthchecków, testów, zmiennych środowiskowych i zależności. Diagram transportu odpowiada
     runtime Compose; konfiguracja ENV nie wymagała nowych zmiennych. Fazę zamknięto przez
-    `pnpm check`, walidację Compose i pełny izolowany test integracyjny z backup/restore.
+    `bun run check`, walidację Compose i pełny izolowany test integracyjny z backup/restore.
 
 Uzasadnienie: Hono pasuje do lekkiego serwisu HTTP, ma dobry model middleware i pozwala utrzymac auth jako osobna granice systemu.
 
@@ -528,7 +531,7 @@ i kryteria Fazy 6 opisuje [plan Fazy 6](phase-6-nestjs-plan.md).
    Standard Schema, generowanie OpenAPI oraz rejestrację i zwolnienie hooków `SIGTERM`.
    Skompilowany proces przeszedł probe HTTP i kontrolowane zakończenie. Fastify nie jest
    zależnością, a stary runtime pozostaje aktywny w Compose do cutoveru. Szczegóły i macierz:
-   [plan Fazy 6](phase-6-nestjs-plan.md#kroki-realizacji). Pełne `pnpm check` i build obrazu
+   [plan Fazy 6](phase-6-nestjs-plan.md#kroki-realizacji). Pełne `bun run check` i build obrazu
    backendu przechodzą.
 3. **Wdrożone 2026-07-20:** wydzielono moduły:
 
@@ -549,7 +552,7 @@ i kryteria Fazy 6 opisuje [plan Fazy 6](phase-6-nestjs-plan.md).
   przez Nest DI. Moduły infrastrukturalne są liśćmi, kolejne warstwy zależą wyłącznie w
   kierunku `Residents/Services/Admin -> Incidents -> Jobs/Media -> Database/Storage`, z
   osobnymi liśćmi `AuthBridge`, `WhiteLabel` i `LlmGateway`.
-  Pełne `pnpm check`, 45 testów backendu i build obrazu backendu przechodzą. Compose nadal
+  Pełne `bun run check`, 45 testów backendu i build obrazu backendu przechodzą. Compose nadal
   uruchamia dotychczasowy runtime.
 
 4. **Wdrożone 2026-07-20:** dodano techniczny `PlatformModule`: Zod ENV, lokalny
@@ -561,7 +564,7 @@ i kryteria Fazy 6 opisuje [plan Fazy 6](phase-6-nestjs-plan.md).
    przez adaptery PostgreSQL, RabbitMQ i outbox w krokach 8-9. Opcje konfliktów tras z roboczej
    wersji NestJS 12 pozostają odłożone do stabilnego API w Fazie 13. Testy obejmują także brak
    wycieku szczegółów 5xx, błędny response i awarię jednego z zamykanych zasobów. Pełne
-   `pnpm check`, 35 testów kontraktów, 50 testów backendu i build obrazu przechodzą.
+   `bun run check`, 35 testów kontraktów, 50 testów backendu i build obrazu przechodzą.
 5. **Wdrożone 2026-07-20:** przeniesiono do NestJS `/health/live`, oba aliasy readiness i
    `/config/public`. `WhiteLabelModule` ładuje jedną aktywną konfigurację przed startem,
    a techniczny `HealthModule` składa podmienialne adaptery PostgreSQL TLS i S3. Readiness
@@ -643,7 +646,7 @@ pełny test integracyjny obejmuje zapis WebP, retry i DLQ.
     i tymczasowy override rollbacku. Manifest chroni bezpośrednio 20 tras NestJS. Usunięto
     bezpośrednie `express`, `body-parser`, `cookie-parser`, `cors` i zbędne typy. Runtime
     Express pozostaje wyłącznie zależnością oficjalnej platformy `@nestjs/platform-express`,
-    a `@types/express` obsługuje jawne typy adaptera. Audyt zależności, `pnpm check`, build
+    a `@types/express` obsługuje jawne typy adaptera. Audyt zależności, `bun run check`, build
     Compose i pełna integracja są końcową bramką funkcjonalną Fazy 6.
     Dlaczego po auth i storage: NestJS powinien integrowac sie juz z docelowym auth, White-Label config, PgBouncerem, RustFS i LLM gateway.
 
@@ -727,7 +730,7 @@ Dlaczego osobny gateway: backend domenowy nie powinien znac szczegolow modelu an
 - poprawiono `asChild` na `render` oraz dodano kontrakty `items` wymagane przez select Base UI;
 - TypeScript, OxFmt, OxLint i build przechodzą, a pełny React Doctor zwraca `0/0/0`;
 - dialog, select, checkbox, Escape i powrót fokusu przeszły test przeglądarkowy.
-- pełne `CI=true pnpm check` przechodzi, w tym 159 testów Vitest i testy buildów
+- pełne `CI=true bun run check` przechodzi, w tym 159 testów Vitest i testy buildów
   White-Label.
 
 5. **Wdrożone 2026-07-24:** po osobnym zamknięciu Fazy 8A frontend został
@@ -744,7 +747,7 @@ Dlaczego osobny gateway: backend domenowy nie powinien znac szczegolow modelu an
 - obraz Docker serwuje `dist/client`, a nginx używa natywnego fallbacku
   TanStack Start `_shell.html`;
 - readiness White-Label, dwa warianty buildów miejskich, 159 testów Vitest,
-  TypeScript, OxFmt, OxLint i pełne `pnpm check` przechodzą;
+  TypeScript, OxFmt, OxLint i pełne `bun run check` przechodzą;
 - React Doctor zwraca `0/0/0`, Docker build przechodzi, a test pełnego Compose w
   przeglądarce uruchamia stronę bez błędów i ostrzeżeń konsoli.
 
@@ -861,7 +864,7 @@ Szczegóły opisuje [dokument wdrożenia TanStack Form i Zod](phase-8-tanstack-f
 Szczegóły opisuje [dokument TanStack Query](phase-8-tanstack-query.md).
 
 12. **Wdrożone 2026-07-24:** NestJS pozostaje jedynym API domenowym, a granica frontendu
-    jest egzekwowana przez `pnpm check:source`:
+    jest egzekwowana przez `bun run check:source`:
     - frontend korzysta z same-origin `/api`, `/api/auth` i publicznych pakietów kontraktów;
     - manifest oraz źródła nie mogą zależeć od sterowników bazy, ORM, klientów S3/Object
       Storage, RabbitMQ ani implementacji innych usług workspace;
@@ -914,7 +917,7 @@ Szczegóły opisuje [dokument warstwy mapowej](phase-8-map-layer.md).
       `destructive`, `success` i `warning` wraz z wariantami tekstu;
     - komponenty przestały używać surowych palet `red-*`, `green-*` i `amber-*` dla
       stanów;
-    - `pnpm check:source` egzekwuje konfigurację shadcn, granicę wrapperów, obecność
+    - `bun run check:source` egzekwuje konfigurację shadcn, granicę wrapperów, obecność
       tokenów i zakaz regresji przez pozytywne oraz negatywne fixture.
 
 Szczegóły opisuje [kontrakt design systemu](phase-8-design-system.md).
@@ -969,7 +972,7 @@ zestawieniem wymagań zakresu.
 - `deploy/cluster-secret-contract.json` opisuje zewnętrzne Secrety bez ich wartości;
 - sekrety są nieopcjonalnymi plikami read-only, a bramka odrzuca `secretKeyRef`, `envFrom`
   oraz sekrety w ConfigMapach;
-- `pnpm check:cluster-config` waliduje oba profile.
+- `bun run check:cluster-config` waliduje oba profile.
 
   Szczegóły: [konfiguracja i sekrety Fazy 9 / kroku 4](phase-9-step-4-cluster-configuration.md).
 
@@ -1004,7 +1007,7 @@ zestawieniem wymagań zakresu.
 - aplikacje używają `DATABASE_URL` przez PgBouncera, bez dostępu do direct URL;
 - pgBackRest ma osobny wolumen i scheduler backupów;
 - domyślne profile używają zewnętrznego S3, a osobne overlaye opcjonalnie dodają RustFS;
-- kontrakt i cztery rendery sprawdza `pnpm check:cluster-stateful`.
+- kontrakt i cztery rendery sprawdza `bun run check:cluster-stateful`.
 
   Cache modeli pozostaje zakresem kroku runtime/LLM, a pełny restore drill Fazy 12.
   Szczegóły: [usługi stanowe Fazy 9 / kroku 5](phase-9-step-5-stateful-services.md).
@@ -1189,14 +1192,14 @@ Kroki wykonawcze:
    cache’u.
 9. **Wdrożone 2026-07-25:** dostarczono `local` i `external` dla Compose, Kubernetes i
    K3s wraz z plikowymi sekretami, ACL, NetworkPolicy, healthcheckami lokalnego Redis oraz
-   automatycznym testem parytetu `pnpm check:redis`. Lokalny Redis 8.10.1 przechowuje
+   automatycznym testem parytetu `bun run check:redis`. Lokalny Redis 8.10.1 przechowuje
    wyłącznie odtwarzalne dane w pamięci; profil zewnętrzny wymaga `rediss://` i
    zweryfikowanego CA.
 10. **Wdrożone i zweryfikowane 2026-07-25:** Authorization i backend raportują awarię
     wyłącznie Redisa jako `200` + `status: degraded`, zachowując lokalny limiter i fallback
     publicznego odczytu do PostgreSQL. Dodano metryki stanu, wyników i opóźnień operacji,
     alerty Prometheus, panele Grafany oraz maszynowy kontrakt odporności. Test
-    `pnpm test:redis-failure` potwierdza sekwencję `ok -> degraded -> ok`, działanie odczytu
+    `bun run test:redis-failure` potwierdza sekwencję `ok -> degraded -> ok`, działanie odczytu
     podczas awarii i ponowne połączenie obu usług po restarcie Redisa.
 11. **Wdrożone 2026-07-25:** dodano operatorski
     [runbook Redis](redis-operations.md), zsynchronizowano statusy roadmapy, audyt
@@ -1224,8 +1227,8 @@ Status: **14/14 kroków wykonanych — Faza 11 zakończona**. Szczegóły:
 2. **Wdrożone 2026-07-26:** ustalono maszynowe budżety rozmiaru i czasu builda,
    dwa poziomy egzekwowania, dozwoloną zawartość runtime oraz wspólny kontrakt
    bezpieczeństwa i platform dla ośmiu unikalnych artefaktów. Bramka baseline
-   działa w `pnpm check:source`, a target będzie wymagana do zamknięcia fazy.
-3. **Wdrożone 2026-07-26:** przygotowano wspólny wzorzec builda Node z `pnpm fetch`,
+   działa w `bun run check:source`, a target będzie wymagana do zamknięcia fazy.
+3. **Wdrożone 2026-07-26:** przygotowano wspólny wzorzec builda Node z `bun run fetch`,
    cache BuildKit, minimalnym artefaktem, nie-root, sygnałami i targetami.
 4. **Wdrożone 2026-07-26:** zastosowano wzorzec do `authorization`; runtime nie zawiera
    źródeł, lockfile ani narzędzi buildowych i mieści się w budżecie 260 MB.
@@ -1400,7 +1403,7 @@ egzekwuje błąd dla duplikatów i shadowingu tras oraz rozwiązuje je według s
 Testy zachowują 20 operacji OpenAPI, kontrakty Standard Schema, strukturalne `errorCode` i
 kontrolowany graceful shutdown.
 
-Aktualizacja objęła również pozostałe zależności workspace, Node `26.8.1`, PNPM `11.25.0`
+Aktualizacja objęła również pozostałe zależności workspace, Node `26.8.1`, Bun `1.4.2`
 oraz bieżące obrazy Node, Nginx, Redis, RustFS, Loki, Grafana, Kind i K3s. Aktualizacja RustFS
 została wykonana bez osobnego testu zachowania istniejących danych, zgodnie z decyzją
 właściciela. Wspólne bramki statyczne, obrazy i izolowany runtime przeszły. Load test,
@@ -1408,7 +1411,7 @@ rollout/rollback, retencja i RPO/RTO na docelowym hoście należą do certyfikac
 
 Dziewięć poprawek Expo SDK 57 opublikowanych 2026-09-01 między `16:18Z` i `18:08Z` nie
 spełniało jeszcze 24-godzinnej kwarantanny podczas zamknięcia tej migracji. Pozostają
-odłożone do kolejnego zwykłego przebiegu `pnpm deps:update`; nie utworzono dla nich wyjątku.
+odłożone do kolejnego zwykłego przebiegu `bun run deps:update`; nie utworzono dla nich wyjątku.
 
 Poniższa lista stanowi utrzymywany kontrakt bramki i została wykonana podczas tej migracji.
 Punkty wymagające docelowego hosta są realizowane osobno dla każdego klienta w Fazie 12 i nie
@@ -1433,7 +1436,7 @@ są dowodem wspólnego baseline'u źródłowego.
 6. Ponownie wygenerować OpenAPI i potwierdzić dokładnie 20 operacji, kontrakty request/response,
    strukturalne `errorCode`, cookie auth oraz brak publicznego endpointu klasyfikacji LLM.
 7. Uruchomić pełną bramkę jakości: peer dependencies bez ostrzeżeń, audyt zależności,
-   `pnpm check`, testy kontraktowe i backendu, produkcyjne buildy wszystkich obrazów oraz pełny
+   `bun run check`, testy kontraktowe i backendu, produkcyjne buildy wszystkich obrazów oraz pełny
    izolowany test integracyjny przez Nginx.
 8. Powtórzyć wspólne krytyczne scenariusze wydaniowe: graceful shutdown, RabbitMQ
    retry/DLQ/outbox, przetwarzanie zdjęć, fallback LLM, backup/restore i TLS/mTLS/AMQPS.
@@ -1488,7 +1491,7 @@ Jest rozwojem produktu po podstawowej bramce wydaniowej. LLM pozostaje pomocniki
 ## Sugerowana kolejnosc skrocona
 
 1. Audyt, kontrakty, healthchecki, smoke testy.
-2. PNPM workspace, TypeScript i wspolne kontrakty.
+2. Bun workspace, TypeScript i wspolne kontrakty.
 3. White-Label config: miasto, logo, lista sluzb.
 4. PgBouncer, provider-neutralny Object Storage, czysty model zdjec bez migracji danych oraz
    opcjonalny lokalny RustFS.

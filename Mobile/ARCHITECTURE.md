@@ -17,14 +17,14 @@
 
 `Mobile/` jest pakietem workspace. Bootstrap:
 
-1. utrzymuje `Mobile` w `pnpm-workspace.yaml`;
+1. utrzymuje `Mobile` w `package.json (workspaces)`;
 2. korzysta z `package.json`, `app.config.ts`, `tsconfig.json` i Vitest;
-3. zachowuje jeden główny `pnpm-lock.yaml`;
+3. zachowuje jeden główny `bun.lock`;
 4. potwierdza, że Metro używa automatycznej konfiguracji monorepo dla Expo SDK 57,
    bez ręcznych `watchFolders` i `extraNodeModules`;
 5. wykonuje buildy lokalnie przez `expo run:ios` i `expo run:android`.
 
-Expo SDK 57 automatycznie obsługuje Metro w pnpm monorepo; ręczna konfiguracja Metro
+Expo SDK 57 automatycznie obsługuje Metro w Bun monorepo; ręczna konfiguracja Metro
 nie została dodana.
 
 ## Planowana struktura

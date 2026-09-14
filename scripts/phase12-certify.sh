@@ -28,19 +28,19 @@ prepare_artifacts() {
 
 static_gate() {
   cd "$ROOT_DIR"
-  CI=true pnpm check
+  CI=true bun run check
 }
 
 host_gate() {
   prepare_artifacts
   PHASE12_EVIDENCE_FILE="$ARTIFACT_DIR/host.json" \
-    node "$ROOT_DIR/scripts/phase12-host-audit.ts"
+    bun "$ROOT_DIR/scripts/phase12-host-audit.ts"
 }
 
 dmr_gate() {
   prepare_artifacts
   PHASE12_EVIDENCE_FILE="$ARTIFACT_DIR/dmr.json" \
-    node "$ROOT_DIR/scripts/phase12-dmr-test.ts"
+    bun "$ROOT_DIR/scripts/phase12-dmr-test.ts"
 }
 
 public_edge_gate() {
@@ -48,7 +48,7 @@ public_edge_gate() {
   [ -n "${PHASE12_PUBLIC_BASE_URL:-}" ] ||
     fail 'edge requires PHASE12_PUBLIC_BASE_URL=https://the-real-domain'
   PHASE12_EVIDENCE_FILE="$ARTIFACT_DIR/public-edge.json" \
-    node "$ROOT_DIR/scripts/phase12-public-edge-test.ts"
+    bun "$ROOT_DIR/scripts/phase12-public-edge-test.ts"
 }
 
 soak_gate() {
@@ -60,14 +60,14 @@ soak_gate() {
     PHASE12_LOAD_CONCURRENCY="${PHASE12_SOAK_CONCURRENCY:-20}" \
     PHASE12_LOAD_PACING_MS="${PHASE12_SOAK_PACING_MS:-50}" \
     PHASE12_EVIDENCE_FILE="$ARTIFACT_DIR/soak-public-read.json" \
-    node "$ROOT_DIR/scripts/phase12-load-test.ts"
+    bun "$ROOT_DIR/scripts/phase12-load-test.ts"
 }
 
 observability_gate() {
   require_destructive_guard
   prepare_artifacts
   PHASE12_EVIDENCE_FILE="$ARTIFACT_DIR/observability-local.json" \
-    node "$ROOT_DIR/scripts/phase12-observability-drill.ts"
+    bun "$ROOT_DIR/scripts/phase12-observability-drill.ts"
 }
 
 integration_gate() {
@@ -109,14 +109,14 @@ load_gate() {
   PHASE12_BASE_URL="http://127.0.0.1:$INTEGRATION_HTTP_PORT" \
     PHASE12_LOAD_SCENARIO=public-read \
     PHASE12_EVIDENCE_FILE="$ARTIFACT_DIR/load-public-read.json" \
-    node "$ROOT_DIR/scripts/phase12-load-test.ts"
+    bun "$ROOT_DIR/scripts/phase12-load-test.ts"
   PHASE12_BASE_URL="http://127.0.0.1:$INTEGRATION_HTTP_PORT" \
     PHASE12_LOAD_SCENARIO=incident-write \
     PHASE12_EVIDENCE_FILE="$ARTIFACT_DIR/load-incident-write.json" \
-    node "$ROOT_DIR/scripts/phase12-load-test.ts"
+    bun "$ROOT_DIR/scripts/phase12-load-test.ts"
   media_drained=0
   for _attempt in $(seq 1 60); do
-    phase12_load_compose exec -T backend node --input-type=module -e \
+    phase12_load_compose exec -T backend bun --input-type=module -e \
       "import { NestFactory } from '@nestjs/core'; import { AppModule } from './dist/nest/app.module.js'; import { OutboxPublisherService } from './dist/nest/modules/jobs/outbox-publisher.service.js'; const app = await NestFactory.createApplicationContext(AppModule, { logger: false }); await app.get(OutboxPublisherService).tickOnce(); await app.close();"
     active_jobs="$(
       phase12_load_compose exec -T database sh -c \

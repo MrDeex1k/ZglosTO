@@ -1,5 +1,7 @@
 # Audyt stanu obecnego ZglosTO
 
+Runtime i menedżer pakietów zostały zaktualizowane po [domknięciu migracji Bun](bun-phase6-results.md). Node `>=26.8.1` pozostaje wyłącznie narzędziem Expo/Metro; urządzenia Mobile używają Hermes.
+
 ## Cel dokumentu
 
 Ten dokument opisuje aktualny stan architektury, kontraktów i zależności systemu ZglosTO po
@@ -78,7 +80,7 @@ obrazy Node, które nadal zawierają źródła i część narzędzi buildowych o
 procesy aplikacyjne jako root. W finalnych obrazach nie znaleziono sekretów.
 Krok 2 ustanowił [produkcyjny kontrakt obrazów](phase-11-step-2-image-contract.md),
 budżety rozmiaru i cold/warm buildów oraz bramki `baseline` i `target`. Statyczna walidacja
-jest częścią `pnpm check:source`, a sprawdzenie lokalnych obrazów potwierdziło brak regresji
+jest częścią `bun run check:source`, a sprawdzenie lokalnych obrazów potwierdziło brak regresji
 większej niż 5% i brak ścieżek sekretów. Kroki 3–8 wdrożyły
 [minimalne obrazy runtime](phase-11-steps-3-8-runtime-images.md), użytkowników nie-root,
 healthchecki, porty nieuprzywilejowane i hardening workloadów. Metadane wydania zapisuje
@@ -104,10 +106,10 @@ runbook Compose, handoff do K3s i maszynowy kontrakt zamknięcia. Faza 11 jest z
 
 | Usługa              | Katalog           | Runtime / obraz                            | Port                | Rola                                                  |
 | ------------------- | ----------------- | ------------------------------------------ | ------------------- | ----------------------------------------------------- |
-| `frontend`          | `frontend/`       | Node 26.8.1 build + Nginx 1.31.4           | `8080` w kontenerze | SPA React dla mieszkańca, służb i admina              |
-| `backend`           | `backend/`        | Node 26.8.1 + NestJS 12 stable + Express 5 | `3000`              | API incydentów, statystyk i administracji             |
-| `authorization`     | `authorization/`  | Node 26.8.1 + Hono 4 + Better Auth         | `9956` mTLS         | logowanie, rejestracja, sesja, role z `uzytkownicy`   |
-| `llm_gateway`       | `llm_gateway/`    | Node 26.8.1 + Hono 4 + TypeScript          | `8130`              | stabilna granica backendu do wymiennego runtime'u LLM |
+| `frontend`          | `frontend/`       | Bun 1.4.2 build + Nginx 1.31.4             | `8080` w kontenerze | SPA React dla mieszkańca, służb i admina              |
+| `backend`           | `backend/`        | Bun 1.4.2 + NestJS 12 stable + Express 5   | `3000`              | API incydentów, statystyk i administracji             |
+| `authorization`     | `authorization/`  | Bun 1.4.2 + Hono 4 + Better Auth           | `9956` mTLS         | logowanie, rejestracja, sesja, role z `uzytkownicy`   |
+| `llm_gateway`       | `llm_gateway/`    | Bun 1.4.2 + Hono 4 + TypeScript            | `8130`              | stabilna granica backendu do wymiennego runtime'u LLM |
 | Docker Model Runner | poza repozytorium | llama.cpp + Gemma 3 1B QAT                 | API hosta DMR       | opcjonalna inferencja za gatewayem                    |
 | `database`          | `database/`       | PostgreSQL 18.6 + `pg_cron` + `pgbackrest` | `${POSTGRES_PORT}`  | dane domenowe i tabele Better Auth                    |
 | `pgbouncer`         | obraz zewnętrzny  | PgBouncer 1.25.2                           | `6432`              | transaction pooling dla backendu i authorization      |
@@ -194,11 +196,11 @@ modernizacji. W development Vite udostępnia te same prefiksy i proxy do lokalny
 - shadcn/ui `base-nova` na Base UI
 - Better Auth client
 
-Jedynym package managerem JavaScript/TypeScript jest PNPM `11.25.0`, z jednym `pnpm-lock.yaml` w katalogu głównym i workspace obejmującym `frontend`, `backend`, `authorization`, `llm_gateway`, `Mobile` oraz `packages/*`. Wspólny toolchain używa Oxlint `1.80.0`, Oxfmt `0.65.0` oraz skryptów root `pnpm lint`, `pnpm format`, `pnpm format:check`, `pnpm typecheck`, `pnpm build` i `pnpm test`. Oxlint działa obecnie bez trybu type-aware; pełny typecheck wykonuje osobno TypeScript 7. `oxlint-tsgolint` nie jest zainstalowany. Bezpośrednie zależności są przypięte dokładnie, PNPM odrzuca publikacje młodsze niż 24 godziny, a operacje na zależnościach JavaScript są chronione przez lokalny Socket Firewall (`sfw`) i skrypty `pnpm deps:*`.
+Jedynym package managerem JavaScript/TypeScript jest Bun `1.4.2`, z jednym `bun.lock` w katalogu głównym i workspace obejmującym `frontend`, `backend`, `authorization`, `llm_gateway`, `Mobile` oraz `packages/*`. Wspólny toolchain używa Oxlint `1.80.0`, Oxfmt `0.65.0` oraz skryptów root `bun run lint`, `bun run format`, `bun run format:check`, `bun run typecheck`, `bun run build` i `bun run test`. Oxlint działa obecnie bez trybu type-aware; pełny typecheck wykonuje osobno TypeScript 7. `oxlint-tsgolint` nie jest zainstalowany. Bezpośrednie zależności są przypięte dokładnie, wrapper Bun/SFW odrzuca publikacje młodsze niż 24 godziny, a operacje na zależnościach JavaScript są chronione przez lokalny Socket Firewall (`sfw`) i skrypty `bun run deps:*`.
 
 Migracja lokalnych wrapperów z Radix UI do shadcn/ui `base-nova` na Base UI została
 zakończona w [Fazie 8A](frontend-ui-migration.md). Radix nie występuje już w zależnościach
-ani źródłach, a [kontrakt design systemu](phase-8-design-system.md) i `pnpm check:source`
+ani źródłach, a [kontrakt design systemu](phase-8-design-system.md) i `bun run check:source`
 chronią tę granicę przed regresją.
 
 ### Struktura aplikacji
@@ -268,7 +270,7 @@ Mapowanie statusu biznesowego oraz polskich etykiet UI znajduje się w
 
 - Better Auth `1.6.27`
 - Hono `4.13.2` z `@hono/node-server` `2.1.0`
-- Node 26.8.1; TypeScript jest kompilowany przez `pnpm build` do JavaScript w `dist`
+- Bun 1.4.2; TypeScript jest kompilowany przez `bun run build` do JavaScript w `dist`
 - PostgreSQL przez `pg`
 
 Authorization nie ma już zależności od Express, `cors`, `@types/express` ani `@types/cors`.
@@ -316,7 +318,7 @@ Serwis działa na `PORT` z `.env`.
 ### Stack
 
 - NestJS 12.0.1 z `@nestjs/platform-express` i Express 5 jako adapterem HTTP
-- Node 26.8.1 jako runtime startowy
+- Bun 1.4.2 jako runtime startowy
 - TypeScript 7/TSGO, Zod/Standard Schema i OpenAPI
 - `pg` przez PgBouncer/TLS, provider-neutralny S3 i RabbitMQ/AMQPS
 
@@ -404,7 +406,7 @@ podłączyć AWS S3, Cloudflare R2 lub innego providera zgodnego z S3 wyłączni
 
 ### Stack
 
-- `llm_gateway`: Hono + Node 26 + TypeScript;
+- `llm_gateway`: Hono + Bun 1.4.2 + TypeScript;
 - runtime: Docker Model Runner 1.2.6 z llama.cpp;
 - model: `ai/gemma3-qat:1B-Q4_K_M`, digest
   `sha256:9f84c113e1f1085bddaffad1acb07c90e59487f0c7e25028f1811e71efba9599`;

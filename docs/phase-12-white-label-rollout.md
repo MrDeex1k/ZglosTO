@@ -17,10 +17,10 @@ jedno miasto; zmiana konfiguracji wymaga nowego builda i kontrolowanego wdrożen
 ## Walidacja i build
 
 ```bash
-pnpm config:metadata config/white-label/<city>.yaml fields
-pnpm test:white-label-builds
-CI=true pnpm check
-pnpm build:production -- --version <git-tag> --config config/white-label/<city>.yaml
+bun run config:metadata config/white-label/<city>.yaml fields
+bun run test:white-label-builds
+CI=true bun run check
+bun run build:production --version <git-tag> --config config/white-label/<city>.yaml
 ```
 
 Manifest builda musi wskazywać dokładny Git revision, checksum konfiguracji i osiem
@@ -37,8 +37,8 @@ oraz checksum White-Label.
    pgBackRest.
 5. Skonfigurować zaszyfrowaną kopię poza hostem; lokalny backup na tym samym SSD nie spełnia
    wymagań disaster recovery.
-6. Uruchomić `PHASE12_HOST_KIND=ubuntu-production pnpm phase12:host`,
-   `pnpm phase12:edge`, walidację produkcyjnego Compose i dopiero potem wdrożenie.
+6. Uruchomić `PHASE12_HOST_KIND=ubuntu-production bun run phase12:host`,
+   `bun run phase12:edge`, walidację produkcyjnego Compose i dopiero potem wdrożenie.
 
 ## Odbiór funkcjonalny
 

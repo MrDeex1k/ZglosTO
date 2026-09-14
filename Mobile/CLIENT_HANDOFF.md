@@ -34,8 +34,8 @@ Object Storage, kont, sekretów ani runtime aplikacji.
 Każdy wariant musi przejść:
 
 ```bash
-pnpm check:mobile-client-configs
-pnpm test:white-label-builds
+bun run check:mobile-client-configs
+bun run test:white-label-builds
 ```
 
 ## Środowiska i sekrety

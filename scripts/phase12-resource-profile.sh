@@ -70,7 +70,7 @@ cleanup() {
 drain_media_jobs() {
   local active_jobs
   for _attempt in $(seq 1 60); do
-    compose exec -T backend node --input-type=module -e \
+    compose exec -T backend bun --input-type=module -e \
       "import { NestFactory } from '@nestjs/core'; import { AppModule } from './dist/nest/app.module.js'; import { OutboxPublisherService } from './dist/nest/modules/jobs/outbox-publisher.service.js'; const app = await NestFactory.createApplicationContext(AppModule, { logger: false }); await app.get(OutboxPublisherService).tickOnce(); await app.close();"
     active_jobs="$(
       compose exec -T database sh -c \
@@ -101,7 +101,7 @@ monitor_arguments=(
 if [ "$PROFILE" = 'minimal' ]; then
   monitor_arguments+=(--include-name docker-model-runner)
 fi
-node "${monitor_arguments[@]}" &
+bun "${monitor_arguments[@]}" &
 MONITOR_PID=$!
 
 if [ "$PROFILE" = 'observability' ]; then
@@ -109,7 +109,7 @@ if [ "$PROFILE" = 'observability' ]; then
     PHASE12_OBSERVABILITY_PROJECT="$PROJECT_NAME" \
     PHASE12_OBSERVABILITY_HTTP_PORT="$HTTP_PORT" \
     PHASE12_EVIDENCE_FILE="$ARTIFACT_DIR/observability-local.json" \
-    node "$ROOT_DIR/scripts/phase12-observability-drill.ts"
+    bun "$ROOT_DIR/scripts/phase12-observability-drill.ts"
 
   stop_monitor
   trap - EXIT INT TERM
@@ -127,18 +127,18 @@ INTEGRATION_PROJECT_NAME="$PROJECT_NAME" \
 PHASE12_BASE_URL="http://127.0.0.1:$HTTP_PORT" \
   PHASE12_LOAD_SCENARIO=public-read \
   PHASE12_EVIDENCE_FILE="$ARTIFACT_DIR/load-public-read.json" \
-  node "$ROOT_DIR/scripts/phase12-load-test.ts"
+  bun "$ROOT_DIR/scripts/phase12-load-test.ts"
 
 PHASE12_BASE_URL="http://127.0.0.1:$HTTP_PORT" \
   PHASE12_LOAD_SCENARIO=incident-write \
   PHASE12_EVIDENCE_FILE="$ARTIFACT_DIR/load-incident-write.json" \
-  node "$ROOT_DIR/scripts/phase12-load-test.ts"
+  bun "$ROOT_DIR/scripts/phase12-load-test.ts"
 
 drain_media_jobs
 
 if [ "$PROFILE" = 'minimal' ]; then
   PHASE12_EVIDENCE_FILE="$ARTIFACT_DIR/dmr.json" \
-    node "$ROOT_DIR/scripts/phase12-dmr-test.ts"
+    bun "$ROOT_DIR/scripts/phase12-dmr-test.ts"
 fi
 
 sleep "${PHASE12_RESOURCE_SETTLE_SECONDS:-10}"

@@ -74,7 +74,7 @@ require_command() {
 
 check_environment() {
   require_command node
-  require_command pnpm
+  require_command bun
   require_command docker
   require_command curl
   require_command openssl
@@ -90,9 +90,9 @@ check_environment() {
     if (major < 26 || (major === 26 && minor < 5)) process.exit(1);
   ' || fail 'Node.js 26.5 or newer is required'
 
-  expected_pnpm=$(node -p 'JSON.parse(require("node:fs").readFileSync("package.json", "utf8")).packageManager.split("@")[1]')
-  actual_pnpm=$(pnpm --version)
-  [ "$actual_pnpm" = "$expected_pnpm" ] || fail "PNPM $expected_pnpm is required, found $actual_pnpm"
+  expected_bun=$(bun -p 'JSON.parse(require("node:fs").readFileSync("package.json", "utf8")).packageManager.split("@")[1]')
+  actual_bun=$(bun --version)
+  [ "$actual_bun" = "$expected_bun" ] || fail "Bun $expected_bun is required, found $actual_bun"
 
   java_version=$(java -version 2>&1 | sed -n '1s/.*version "\([0-9]*\).*/\1/p')
   [ "$java_version" = '17' ] || fail "Java 17 is required, found ${java_version:-unknown}"
@@ -147,7 +147,7 @@ case "$ACTION" in
     EXPO_PUBLIC_APP_ENV=development \
       EXPO_PUBLIC_ALLOW_HTTP_ORIGIN=true \
       EXPO_PUBLIC_API_ORIGIN="http://127.0.0.1:$HTTP_PORT" \
-      pnpm --dir Mobile ios
+      bun run --cwd Mobile ios
     ;;
   android)
     require_command adb
@@ -155,7 +155,7 @@ case "$ACTION" in
     EXPO_PUBLIC_APP_ENV=development \
       EXPO_PUBLIC_ALLOW_HTTP_ORIGIN=true \
       EXPO_PUBLIC_API_ORIGIN="http://10.0.2.2:$HTTP_PORT" \
-      pnpm --dir Mobile android
+      bun run --cwd Mobile android
     ;;
   down)
     resolve_docker_context

@@ -79,8 +79,8 @@ NetworkPolicy dopuszcza porty `6379` i `6380`, a niestandardowy port lub CIDR wy
 komponentem RustFS i dokładnie jednym profilem obserwowalności.
 
 ```bash
-pnpm check:redis
-pnpm check:redis-resilience
+bun run check:redis
+bun run check:redis-resilience
 ```
 
 Probe lokalnego Redisa uwierzytelniają się URL-em z `zglosto-redis-credentials`; użytkownik
@@ -236,7 +236,7 @@ kind load docker-image zglosto/backend:zglosto-2026-07-18-step9
 ## 2) Konfiguracja (Secrets i ConfigMaps)
 
 - `config/white-label/zglosto.yaml` pozostaje źródłem prawdy miasta. Po zmianie wykonaj
-  `pnpm config:k8s:sync`; `pnpm check` wykrywa nieaktualną kopię.
+  `bun run config:k8s:sync`; `bun run check` wykrywa nieaktualną kopię.
 - `k8s/base/config/runtime.env` zawiera wyłącznie publiczną konfigurację runtime.
 - Kustomize generuje obie ConfigMapy jako immutable z hashem treści w nazwie.
 - Przed wdrożeniem utwórz wszystkie zasoby opisane bez wartości w
@@ -248,7 +248,7 @@ kind load docker-image zglosto/backend:zglosto-2026-07-18-step9
 Sprawdzenie kontraktu:
 
 ```bash
-pnpm check:cluster-config
+bun run check:cluster-config
 ```
 
 ## 3) Szybkie wdrożenie (skrypt)
@@ -330,7 +330,7 @@ storage albo zewnętrznych PostgreSQL, RabbitMQ i Object Storage.
 Kontrakt sprawdza:
 
 ```bash
-pnpm check:cluster-stateful
+bun run check:cluster-stateful
 ```
 
 ## 4b) Obserwowalność
@@ -356,7 +356,7 @@ kubectl -n zglosto port-forward service/grafana 3001:3000
 Walidacja wszystkich kombinacji:
 
 ```bash
-pnpm check:observability
+bun run check:observability
 ```
 
 ## 5) Sprawdzanie statusu i debug

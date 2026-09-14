@@ -185,7 +185,7 @@ services:
       pgbouncer:
         condition: service_healthy
     healthcheck:
-      test: ['CMD', 'node', 'dist/src/healthcheck.js']
+      test: ['CMD', 'bun', 'dist/src/healthcheck.js']
       interval: 5s
       timeout: 5s
       retries: 10
@@ -284,7 +284,7 @@ services:
       test:
         [
           'CMD',
-          'node',
+          'bun',
           '-e',
           "fetch('http://127.0.0.1:3000/health/ready').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
         ]
@@ -302,7 +302,7 @@ services:
       dockerfile: backend/Dockerfile
       args:
         WHITE_LABEL_CONFIG_FILE: ${WHITE_LABEL_CONFIG_FILE:-config/white-label/zglosto.yaml}
-    command: [node, --import, '@zglosto/observability/register', dist/nest/media-worker/main.js]
+    command: [bun, --preload, '@zglosto/observability/register', dist/nest/media-worker/main.js]
     restart: unless-stopped
     environment:
       OBSERVABILITY_MODE: ${OBSERVABILITY_MODE:-disabled}
@@ -353,7 +353,7 @@ services:
       rabbitmq:
         condition: service_healthy
     healthcheck:
-      test: ['CMD', 'node', 'dist/nest/media-worker/healthcheck.js']
+      test: ['CMD', 'bun', 'dist/nest/media-worker/healthcheck.js']
       interval: 5s
       timeout: 3s
       retries: 10
@@ -401,7 +401,7 @@ services:
       - ./.certs/service/llm-gateway-healthcheck-client.key:/run/secrets/service/llm-gateway-healthcheck-client.key:ro
       - ./.certs/service/llm-hmac-key:/run/secrets/llm-auth/hmac-key:ro
     healthcheck:
-      test: ['CMD', 'node', 'dist/src/healthcheck.js']
+      test: ['CMD', 'bun', 'dist/src/healthcheck.js']
       interval: 5s
       timeout: 3s
       retries: 10

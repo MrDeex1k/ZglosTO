@@ -1,0 +1,7 @@
+# Tooling must not inherit container settings from the root .env.
+env = false
+
+[install]
+linker = "hoisted"
+minimumReleaseAge = 86400
+saveExact = true

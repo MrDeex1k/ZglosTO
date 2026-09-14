@@ -1,61 +1,43 @@
 # Polityka zależności
 
-## Reguły
+Projekt używa Bun 1.4.2 jako menedżera pakietów. Bezpośrednie zależności mają dokładne wersje. Nowe wersje bezpośrednie i tranzytywne obowiązuje kwarantanna 24 godzin, bez wyjątków.
 
-Projekt stosuje dwie równoległe zasady:
-
-1. bezpośrednie zależności aplikacyjne i developerskie są przypięte do dokładnych wersji;
-2. wersja może wejść do aktualizacji dopiero co najmniej 24 godziny po publikacji w rejestrze.
-
-Nie ma wyjątków omijających kwarantannę.
-
-## JavaScript i TypeScript
-
-`pnpm-workspace.yaml` ustawia:
-
-```yaml
-minimumReleaseAge: 1440
-minimumReleaseAgeStrict: true
-minimumReleaseAgeIgnoreMissingTime: false
-```
-
-Reguła obejmuje zależności bezpośrednie i tranzytywne. Brak czasu publikacji w metadanych rejestru powoduje błąd zamiast cichego pominięcia kontroli. Wszystkie specyfikatory w `dependencies` i `devDependencies` są dokładnymi wersjami, bez `^`, `~`, `>=` ani `*`.
-
-`minimumReleaseAge` jest podawane w minutach, dlatego `1440` oznacza 24 godziny.
-Aktualizację wykonujemy wersją PNPM zapisaną w `packageManager`, a następnie obowiązkowo uruchamiamy instalację z lockfile, lint, typecheck, testy i build.
-
-## Socket Firewall
-
-Socket Firewall (`sfw`) jest przypięty w głównych `devDependencies` i chroni operacje PNPM przed pakietami ocenionymi przez Socket jako ryzykowne. Projekt udostępnia trzy skrypty:
+## Instalacja i aktualizacja
 
 ```bash
-pnpm deps:install
-pnpm deps:add -- <pakiet>
-pnpm deps:update
+# Pierwsza instalacja sprawdzonego lockfile, również bootstrap SFW:
+bun install --frozen-lockfile
+# Kolejne instalacje przez Socket Firewall:
+bun run deps:install
+bun run deps:add nazwa-pakietu@wersja --workspace backend
+bun run deps:add nazwa-pakietu@wersja --dev
+bun run deps:update
+# Aktualizacja tylko jednego workspace:
+bun run deps:update --workspace Mobile
 ```
 
-Skrypty uruchamiają odpowiednio `sfw pnpm install`, `sfw pnpm add --save-exact` i
-`sfw pnpm update --recursive --latest`. Aktualizacja obejmuje wszystkie pakiety workspace,
-łącznie z dozwolonymi zmianami wersji głównej, a dodawane zależności są od razu przypinane
-do dokładnej wersji.
-Nie należy używać zwykłego `pnpm add` ani `pnpm update`, ponieważ omija to kontrolę SFW.
-Na świeżym klonie pierwsze `pnpm install --frozen-lockfile` jedynie odtwarza przypięty lockfile
-i instaluje lokalną binarkę SFW; kolejne operacje na zależnościach wykonujemy przez powyższe skrypty.
+`package.json` zawiera workspaces, overrides i jawne trustedDependencies: `@nestjs/core`, `esbuild`, `protobufjs`. `@scarf/scarf` nie jest zaufany. `bunfig.toml` wymusza hoisted linker, dokładne wersje i `minimumReleaseAge = 86400` (sekundy).
 
-SFW i 24-godzinna kwarantanna pełnią różne funkcje: SFW ocenia ryzyko pakietu, natomiast
-PNPM egzekwuje minimalny wiek publikacji. Instalacja musi przejść obie kontrole.
+Sam Bun akceptuje brak daty publikacji, dlatego add/update muszą przechodzić przez `scripts/dependencies.ts`. Wrapper tworzy kandydata manifestów i lockfile w katalogu tymczasowym przez SFW, bez instalacji i lifecycle scripts. Porównuje wszystkie wersje oraz integralności, również tranzytywne, i sprawdza pełne metadane npm. Brak lub błędna data, wiek poniżej 24 godzin, deprecated, niedostępny rejestr oraz nieobsługiwane źródło zależności blokują zmianę. Dopiero po kontroli całego grafu zapisuje manifesty i lockfile oraz wykonuje frozen install przez SFW. Błąd instalacji pozostawia sprawdzony kandydat do diagnozy i ponowienia przez `deps:install`.
+
+Nie używamy bezpośrednio `bun add` ani `bun update`. SFW ocenia ryzyko pakietu, a wrapper egzekwuje kwarantannę; obie kontrole są wymagane. Zamrożona instalacja odtwarza zatwierdzony graf, nie dobiera nowych wersji. Po aktualizacji uruchamiamy `bun run check` i audyt wydaniowy.
 
 ## Audyt wydaniowy
 
-Surowy `pnpm audit --prod` pozostaje źródłem danych. Bramka `pnpm audit:release` odczytuje
-pełny JSON audytu i blokuje każde advisory produkcyjne niezależnie od poziomu. Po aktualizacji
-Expo/Metro z 2026-09-02 wcześniejszy wyjątek dla `image-size@1.2.1` nie jest już potrzebny;
-jego dokument pozostaje wyłącznie historycznym zapisem decyzji dla kandydata 1.0.0.
+`bun run audit:release` wywołuje `bun audit --prod --json`. Akceptuje wyłącznie poprawny, pusty obiekt i kod wyjścia 0. Każde advisory, błąd rejestru, brak odpowiedzi lub niepoprawny JSON blokuje wydanie. Nie ma wyjątków zależnych od severity. Historyczna akceptacja ryzyka image-size pozostaje wyłącznie zapisem poprzedniego wydania.
 
-Python, UV i osobny zestaw zależności `llm_service` zostały usunięte w Fazie 7 po przejściu
-na Docker Model Runner. Obecnie wszystkie zależności aplikacyjne repozytorium podlegają jednej
-polityce PNPM + SFW.
+## Runtime
 
-## Obsługa wydań wycofanych
+Od fazy 4 Bun 1.4.2 wykonuje usługi, skrypty repo, kompilatory, Vite, Vitest, Knip, Oxlint/Oxfmt oraz wrapper SFW i hooki Git. CLI uruchamiamy przez `bun run --bun <narzędzie>`, a Turbo bez globalnego `--bun`, przez jego plik wejściowy. Dzięki temu wymuszenie Bun nie przechodzi do procesów Expo.
 
-Pakiet spełniający próg wieku nadal nie jest wybierany, jeśli rejestr oznacza go jako deprecated lub uszkodzony. Podczas wcześniejszej aktualizacji, gdy obowiązywał próg 48 godzin, PNPM 11.12.0 i 11.13.0 były oznaczone jako uszkodzone, a poprawka 11.13.1 nie spełniała jeszcze ówczesnej kwarantanny. Po przejściu na próg 24 godzin manager aktualizowano wyłącznie do niewycofanych wydań; obecnie jest to `11.25.0`.
+Node >=26.8.1 pozostaje wymagany dla Expo/Metro, Expo Doctor i natywnego toolchainu Mobile. Testy Vitest i typecheck Mobile wykonuje Bun; aplikacja na urządzeniu nadal działa na Hermes. `node:*`, `@types/node` i `NODE_ENV` są kontraktami kompatybilnych API i nie oznaczają uruchomienia Node.
+
+`env = false` w głównym `bunfig.toml` wyłącza automatyczne wczytywanie `.env` przez runtime i runner Bun. Narzędzia nie dziedziczą przypadkowo ustawień kontenerów. Przekazuj konfigurację jawnie przez środowisko lub `--env-file`; Compose oraz Expo zachowują własne mechanizmy konfiguracji. [Bun: env](https://bun.sh/docs/runtime/bunfig#env).
+
+Knip ma jawne wpisy dla CLI wywoływanych przez `--bun` lub plik wejściowy (`@commitlint/cli`, `husky`, `oxfmt`, `oxlint`, `turbo`, `sfw`), których użycia nie rozpoznaje parser komend. Nie wyłączono kontroli pozostałych zależności.
+
+Operacje `deps:install`, `deps:add` i `deps:update` używają wspólnej wyłącznej blokady
+`.state/dependency-operation.lock`, utrzymywanej od odczytu manifestów do końca instalacji.
+Druga operacja kończy się błędem bez zmian. Po przerwaniu procesu blokada może pozostać:
+usuń ten katalog dopiero po potwierdzeniu, że wrapper i procesy instalatora już nie działają.
+Kontrola ręcznych zmian manifestów przed zapisem nadal obowiązuje.

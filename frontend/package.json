@@ -5,11 +5,11 @@
   "license": "SEE LICENSE IN ../LICENSE",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "test": "vitest run --config vitest.config.ts",
-    "typecheck": "tsc -b",
-    "preview": "vite preview"
+    "dev": "bun run --bun vite",
+    "build": "bun run --bun tsc -b && bun run --bun vite build",
+    "test": "bun run --bun vitest run --config vitest.config.ts",
+    "typecheck": "bun run --bun tsc -b",
+    "preview": "bun run --bun vite preview"
   },
   "dependencies": {
     "@base-ui/react": "1.7.0",

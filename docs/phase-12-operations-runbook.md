@@ -5,25 +5,25 @@
 Kontrole statyczne i odczyt hosta:
 
 ```bash
-pnpm phase12:static
-PHASE12_HOST_KIND=local-development pnpm phase12:host
-pnpm phase12:dmr
+bun run phase12:static
+PHASE12_HOST_KIND=local-development bun run phase12:host
+bun run phase12:dmr
 ```
 
 Prawdziwy DNS, zaufany certyfikat publiczny, HSTS i publiczne sondy sprawdza:
 
 ```bash
-PHASE12_PUBLIC_BASE_URL=https://zglosto.example.org pnpm phase12:edge
+PHASE12_PUBLIC_BASE_URL=https://zglosto.example.org bun run phase12:edge
 ```
 
 Testy integracyjne usuwają wyłącznie izolowane projekty i wolumeny o nazwach Fazy 12,
 ale celowo niszczą dane wewnątrz nich. Wymagają jawnej zgody:
 
 ```bash
-PHASE12_ALLOW_DESTRUCTIVE=1 pnpm phase12:integration:minimal
-PHASE12_ALLOW_DESTRUCTIVE=1 pnpm phase12:integration:recommended
-PHASE12_ALLOW_DESTRUCTIVE=1 pnpm phase12:load
-PHASE12_ALLOW_DESTRUCTIVE=1 pnpm phase12:observability
+PHASE12_ALLOW_DESTRUCTIVE=1 bun run phase12:integration:minimal
+PHASE12_ALLOW_DESTRUCTIVE=1 bun run phase12:integration:recommended
+PHASE12_ALLOW_DESTRUCTIVE=1 bun run phase12:load
+PHASE12_ALLOW_DESTRUCTIVE=1 bun run phase12:observability
 ```
 
 Lokalny pomiar zasobów uruchamia te same izolowane scenariusze, ale dodatkowo próbkuje
@@ -31,9 +31,9 @@ Lokalny pomiar zasobów uruchamia te same izolowane scenariusze, ale dodatkowo p
 wykluczają testowy `model_runner_stub`:
 
 ```bash
-PHASE12_ALLOW_DESTRUCTIVE=1 pnpm phase12:resources:minimal
-PHASE12_ALLOW_DESTRUCTIVE=1 pnpm phase12:resources:recommended
-PHASE12_ALLOW_DESTRUCTIVE=1 pnpm phase12:resources:observability
+PHASE12_ALLOW_DESTRUCTIVE=1 bun run phase12:resources:minimal
+PHASE12_ALLOW_DESTRUCTIVE=1 bun run phase12:resources:recommended
+PHASE12_ALLOW_DESTRUCTIVE=1 bun run phase12:resources:observability
 ```
 
 Raporty trafiają do `.state/phase-12/resources/`. Są podstawą wstępnego sizingu, ale wynik
@@ -48,7 +48,7 @@ Aktualny wynik, wymagania per konfiguracja oraz reguły interpretacji zawiera
 Godzinny soak wykonuje się przeciwko już działającemu wdrożeniu akceptacyjnemu:
 
 ```bash
-PHASE12_BASE_URL=https://zglosto.example.org pnpm phase12:soak
+PHASE12_BASE_URL=https://zglosto.example.org bun run phase12:soak
 ```
 
 Dowody trafiają do prywatnego `.state/phase-12/<UTC>/`. Nie zawierają sekretów i nie są
@@ -67,14 +67,14 @@ PHASE12_EVIDENCE_FILE=/var/lib/zglosto-compose/evidence/host.json \
 Następnie, na czystym zatwierdzonym tagu:
 
 ```bash
-pnpm build:production -- --version <tag>
+bun run build:production --version <tag>
 PRODUCTION_ENV_FILE=/etc/zglosto/production.env \
   ./scripts/production-compose.sh validate
 
 PHASE12_ALLOW_DESTRUCTIVE=1 \
 PHASE12_HOST_KIND=ubuntu-production \
 PRODUCTION_GATE_RESTORE=1 \
-  pnpm phase12:production
+  bun run phase12:production
 ```
 
 Ostatnie polecenie może wykonać restore i wolno je uruchamiać wyłącznie na stagingu albo

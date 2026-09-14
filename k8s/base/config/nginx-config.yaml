@@ -89,7 +89,14 @@ data:
             proxy_set_header Cookie $http_cookie;
         }
 
+        location @llm_health_unavailable {
+            return 503;
+        }
+
         location = /llm/health {
+            # A scale-to-zero Service may reject or time out connections depending on kube-proxy.
+            proxy_intercept_errors on;
+            error_page 502 504 =503 @llm_health_unavailable;
             proxy_pass https://llm-gateway:8130/health;
             proxy_ssl_trusted_certificate /run/secrets/service/ca.crt;
             proxy_ssl_certificate /run/secrets/nginx/tls.crt;

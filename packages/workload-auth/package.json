@@ -14,9 +14,9 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "test": "vitest run src",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "build": "bun run --bun tsc -p tsconfig.build.json",
+    "test": "bun run --bun vitest run src",
+    "typecheck": "bun run --bun tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
     "@types/node": "26.4.0",

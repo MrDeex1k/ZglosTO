@@ -1,0 +1,32 @@
+# Local integration-only sink. No telemetry leaves this isolated Compose project.
+services:
+  authorization:
+    environment: &integration-otel
+      OBSERVABILITY_MODE: local
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_DEPLOYMENT_ENVIRONMENT: integration
+      OTEL_SERVICE_VERSION: bun-phase3
+      OTEL_SERVICE_NAME: authorization
+  backend:
+    environment:
+      <<: *integration-otel
+      OTEL_SERVICE_NAME: backend
+  media_worker:
+    environment:
+      <<: *integration-otel
+      OTEL_SERVICE_NAME: media_worker
+  llm_gateway:
+    environment:
+      <<: *integration-otel
+      OTEL_SERVICE_NAME: llm_gateway
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.159.0
+    command: [--config=/etc/otelcol-contrib/integration.yaml]
+    volumes:
+      - ./tests/integration/otel-collector.yaml:/etc/otelcol-contrib/integration.yaml:ro
+    networks: [internal-net]
+    read_only: true
+    user: 10001:10001
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]

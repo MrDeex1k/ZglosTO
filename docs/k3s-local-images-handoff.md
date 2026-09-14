@@ -9,7 +9,7 @@ publicznego registry.
 
 ## Wariant pojedynczego hosta
 
-Na checkoutcie dokładnego tagu budujemy natywnie obrazy przez `pnpm build:production`.
+Na checkoutcie dokładnego tagu budujemy natywnie obrazy przez `bun run build:production`.
 Po przejściu walidacji referencje z `images.env` można przekazać do containerd K3s:
 
 ```bash

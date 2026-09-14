@@ -5,7 +5,7 @@
 Ten dokument jest źródłem prawdy o obecnym kontrakcie HTTP, sesji, rol, statusow, zdjec i LLM przed migracjami opisanymi w [planie modernizacji](release.md). Status decyzji wpływających na kontrakty znajduje się w [rejestrze decyzji](architecture-decisions.md).
 
 Baseline powstal jako pierwszy krok modernizacji i jest aktualizowany po zmianach kontraktów.
-PNPM workspace, `packages/contracts`, White-Label i Object Storage są już wdrożone. Dokument
+Bun workspace, `packages/contracts`, White-Label i Object Storage są już wdrożone. Dokument
 nadal chroni wspólny język i granice po migracjach do Hono, NestJS, TanStack Start i
 `llm_gateway`.
 
@@ -28,14 +28,14 @@ Dokument obejmuje:
 
 ## Obecne uslugi
 
-| Usluga              | Obecny katalog       | Obecny runtime                   | Odpowiedzialnosc               |
-| ------------------- | -------------------- | -------------------------------- | ------------------------------ |
-| `frontend`          | `frontend/`          | TanStack Start SPA + React       | UI i wywolania API             |
-| `backend`           | `backend/`           | Node 26.8.1 + NestJS             | API incydentow, admina i sluzb |
-| `authorization`     | `authorization/`     | Node 26.8.1 + Hono + Better Auth | auth, sesje i role             |
-| `llm_gateway`       | `llm_gateway/`       | Node 26 + Hono + TypeScript      | granica klasyfikacji LLM       |
-| Docker Model Runner | poza kodem aplikacji | llama.cpp + Gemma 3 1B QAT       | opcjonalny runtime modelu      |
-| `database`          | `database/`          | PostgreSQL                       | dane domenowe i auth           |
+| Usluga              | Obecny katalog       | Obecny runtime                 | Odpowiedzialnosc               |
+| ------------------- | -------------------- | ------------------------------ | ------------------------------ |
+| `frontend`          | `frontend/`          | TanStack Start SPA + React     | UI i wywolania API             |
+| `backend`           | `backend/`           | Bun 1.4.2 + NestJS             | API incydentow, admina i sluzb |
+| `authorization`     | `authorization/`     | Bun 1.4.2 + Hono + Better Auth | auth, sesje i role             |
+| `llm_gateway`       | `llm_gateway/`       | Bun 1.4.2 + Hono + TypeScript  | granica klasyfikacji LLM       |
+| Docker Model Runner | poza kodem aplikacji | llama.cpp + Gemma 3 1B QAT     | opcjonalny runtime modelu      |
+| `database`          | `database/`          | PostgreSQL                     | dane domenowe i auth           |
 
 Kontrakt liveness/readiness wszystkich uslug opisuje dokument [Healthchecki Fazy 0](healthchecks.md).
 

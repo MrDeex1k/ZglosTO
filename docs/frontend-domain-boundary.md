@@ -40,7 +40,7 @@ kontrolowane miejsce na przyszły przypadek.
 
 ## Egzekwowanie
 
-Skrypt `scripts/check-frontend-boundary.sh` jest częścią `pnpm check:source` i blokuje:
+Skrypt `scripts/check-frontend-boundary.sh` jest częścią `bun run check:source` i blokuje:
 
 1. zależności frontendowe będące sterownikami bazy, ORM, SDK storage lub klientami brokera;
 2. zależności frontendu od pakietów implementacyjnych innych usług;

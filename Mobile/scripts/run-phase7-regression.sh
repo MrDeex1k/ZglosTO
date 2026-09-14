@@ -19,7 +19,7 @@ artifacts_dir="${PHASE7_ARTIFACTS_DIR:-$project_dir/output/agent-device/phase7}"
 dev_client_url="${EXPO_DEV_CLIENT_URL:-exp+zglosto://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081}"
 
 if [ ! -f "$credentials_file" ]; then
-  echo "Missing ignored demo credentials. Run pnpm mobile:demo:up first." >&2
+  echo "Missing ignored demo credentials. Run bun run mobile:demo:up first." >&2
   exit 1
 fi
 

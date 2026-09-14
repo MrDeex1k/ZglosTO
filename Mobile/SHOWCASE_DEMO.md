@@ -6,10 +6,10 @@ Korzysta wyłącznie z lokalnego środowiska oraz syntetycznych kont i danych.
 ## Przygotowanie
 
 ```bash
-pnpm mobile:demo:check
-pnpm mobile:demo:up
-pnpm mobile:demo:ios
-# albo: pnpm mobile:demo:android
+bun run mobile:demo:check
+bun run mobile:demo:up
+bun run mobile:demo:ios
+# albo: bun run mobile:demo:android
 ```
 
 Losowe hasła są zapisywane z prawami `0600` w ignorowanym
@@ -29,7 +29,7 @@ Losowe hasła są zapisywane z prawami `0600` w ignorowanym
 5. Zaloguj konto służby. Pokaż kolejkę przypisaną do `roads`, liczniki, filtry i szczegóły.
 6. Zaloguj konto administratora. Mobile powinien pokazać wyłącznie komunikat o wymaganym
    komputerze oraz przycisk wylogowania — bez danych i bez linku do WEB.
-7. Zakończ przez `pnpm mobile:demo:clean`, jeśli środowisko nie jest już potrzebne.
+7. Zakończ przez `bun run mobile:demo:clean`, jeśli środowisko nie jest już potrzebne.
 
 ## Zakres danych
 

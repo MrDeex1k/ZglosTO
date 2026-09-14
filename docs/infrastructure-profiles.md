@@ -14,7 +14,7 @@
 - Standardowe profile mają minimum dwie repliki auth i preferowane rozłożenie replik
   backendu, auth, frontendu, Nginx i PgBouncera między węzłami.
 
-Nie zmieniono limitów pamięci/CPU ani powtórnej instalacji pnpm podczas buildów. Te zmiany
+Nie zmieniono limitów pamięci/CPU ani powtórnej instalacji bun run podczas buildów. Te zmiany
 wymagają pomiarów na docelowym hoście oraz potwierdzenia zachowania zależności workspace.
 Backup Compose nadal wymaga okna utrzymaniowego — skrócenie go wymaga spójnego snapshotu
 bazy i wersjonowanego magazynu obiektów, a nie pozostawienia procesów zapisujących w ruchu.
@@ -154,7 +154,7 @@ stosuj kopię datastore i tokena po zatrzymaniu usługi według dokumentacji K3s
 
 ## Testy
 
-`pnpm test:infrastructure` sprawdza rzeczywiste rendery Kustomize oraz izolowane scenariusze
+`bun run test:infrastructure` sprawdza rzeczywiste rendery Kustomize oraz izolowane scenariusze
 skryptów z atrapą Docker: sukces, błąd backupu, nieudany audyt restore i wymuszone zabicie
 workera. Testy nie zastępują rzeczywistego backup/restore na kontenerach.
 `scripts/test-cluster-profile.sh` instaluje Traefik dla Kind i sprawdza również routing przez

@@ -55,7 +55,7 @@ function backendQuery(url: string): unknown {
     `process.stdout.write(JSON.stringify(await response.json()));`,
   ].join(' ');
   return JSON.parse(
-    compose(['exec', '-T', 'backend', 'node', '--input-type=module', '--eval', source], true),
+    compose(['exec', '-T', 'backend', 'bun', '--input-type=module', '--eval', source], true),
   ) as unknown;
 }
 

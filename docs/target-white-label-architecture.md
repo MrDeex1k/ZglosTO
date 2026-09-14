@@ -16,20 +16,20 @@ Kod aplikacji nie powinien znac konkretnej nazwy miasta ani stalej listy sluzb. 
 
 ## Docelowe uslugi
 
-| Usluga            | Technologia                             | Rola                                                 |
-| ----------------- | --------------------------------------- | ---------------------------------------------------- |
-| `frontend`        | TanStack Start, React, TypeScript, PNPM | Interfejs mieszkanca, sluzb i admina                 |
-| `authorization`   | Hono, Node 26, TypeScript, Better Auth  | Auth, sesje, role, integracja z tabela uzytkownikow  |
-| `backend`         | NestJS, platform-express, Node 26, TS   | Glowne API domenowe i orkiestracja przypadkow uzycia |
-| `media_worker`    | NestJS standalone, TypeScript, Sharp    | Asynchroniczna walidacja i konwersja zdjęć do WebP   |
-| `llm_gateway`     | Hono, Node 26, TypeScript               | Adapter miedzy NestJS a runtime'em modelu            |
-| `model_runner`    | Docker Model Runner                     | Opcjonalny runtime modelu wlaczany flaga/profilami   |
-| `postgres`        | PostgreSQL                              | Dane domenowe, auth i metadane                       |
-| `pgbouncer`       | PgBouncer                               | Pooling polaczen do PostgreSQL                       |
-| `rabbitmq`        | RabbitMQ                                | Trwałe kolejki zadań mediów i operacji LLM           |
-| `object_storage`  | S3-compatible                           | Prywatne zdjęcia i inne pliki                        |
-| `rustfs`          | RustFS                                  | Opcjonalny lokalny provider Object Storage           |
-| `nginx` / ingress | Nginx / Ingress Controller              | Publiczne wejscie HTTP/TLS                           |
+| Usluga            | Technologia                              | Rola                                                 |
+| ----------------- | ---------------------------------------- | ---------------------------------------------------- |
+| `frontend`        | TanStack Start, React, TypeScript, Bun   | Interfejs mieszkanca, sluzb i admina                 |
+| `authorization`   | Hono, Bun 1.4.2, TypeScript, Better Auth | Auth, sesje, role, integracja z tabela uzytkownikow  |
+| `backend`         | NestJS, platform-express, Bun 1.4.2, TS  | Glowne API domenowe i orkiestracja przypadkow uzycia |
+| `media_worker`    | NestJS standalone, TypeScript, Sharp     | Asynchroniczna walidacja i konwersja zdjęć do WebP   |
+| `llm_gateway`     | Hono, Bun 1.4.2, TypeScript              | Adapter miedzy NestJS a runtime'em modelu            |
+| `model_runner`    | Docker Model Runner                      | Opcjonalny runtime modelu wlaczany flaga/profilami   |
+| `postgres`        | PostgreSQL                               | Dane domenowe, auth i metadane                       |
+| `pgbouncer`       | PgBouncer                                | Pooling polaczen do PostgreSQL                       |
+| `rabbitmq`        | RabbitMQ                                 | Trwałe kolejki zadań mediów i operacji LLM           |
+| `object_storage`  | S3-compatible                            | Prywatne zdjęcia i inne pliki                        |
+| `rustfs`          | RustFS                                   | Opcjonalny lokalny provider Object Storage           |
+| `nginx` / ingress | Nginx / Ingress Controller               | Publiczne wejscie HTTP/TLS                           |
 
 Backend NestJS zachowuje oficjalny adapter `@nestjs/platform-express` jako element docelowego
 stacku. Nie planujemy migracji na `@nestjs/platform-fastify`. Usuwany w Fazie 6 „stary
@@ -334,7 +334,7 @@ limiter pozostaje aktywny, odczyt wraca do PostgreSQL, a readiness raportuje sta
 
 ## Kolejnosc zaleznosci
 
-1. PNPM workspace i wspolne typy.
+1. Bun workspace i wspolne typy.
 2. White-Label config.
 3. PgBouncer, provider-neutralny Object Storage i lokalny wariant RustFS.
 4. Hono auth.

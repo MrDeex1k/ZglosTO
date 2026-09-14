@@ -47,6 +47,10 @@ else
   exit 1
 fi
 
+if [ "${INTEGRATION_OBSERVABILITY:-0}" = "1" ]; then
+  COMPOSE+=(--file "$ROOT_DIR/docker-compose.integration.observability.yml")
+fi
+
 compose() {
   "${COMPOSE[@]}" "$@"
 }
@@ -96,7 +100,7 @@ trap 'exit 143' TERM
 cd "$ROOT_DIR"
 
 command -v docker >/dev/null 2>&1 || { log 'ERROR: docker is not installed'; exit 1; }
-command -v node >/dev/null 2>&1 || { log 'ERROR: node is not installed'; exit 1; }
+command -v bun >/dev/null 2>&1 || { log 'ERROR: bun is not installed'; exit 1; }
 command -v openssl >/dev/null 2>&1 || { log 'ERROR: openssl is not installed'; exit 1; }
 command -v curl >/dev/null 2>&1 || { log 'ERROR: curl is not installed'; exit 1; }
 
@@ -105,7 +109,7 @@ log "Generating isolated development certificate hierarchy"
 
 log "Validating Compose configuration"
 env S3_ENDPOINT=https://object-storage.example.invalid S3_AUTO_CREATE_BUCKET=false \
-  "${BASE_COMPOSE[@]}" config --format json | node -e '
+  "${BASE_COMPOSE[@]}" config --format json | bun -e '
     let input = "";
     process.stdin.setEncoding("utf8");
     process.stdin.on("data", (chunk) => { input += chunk; });
@@ -138,7 +142,7 @@ if [ "$REDIS_MODE" = "local" ]; then
     local expected_status=$3
     local expected_redis=$4
     EXPECTED_SERVICE="$service" EXPECTED_STATUS="$expected_status" EXPECTED_REDIS="$expected_redis" \
-      node -e '
+      bun -e '
         let input = "";
         process.stdin.setEncoding("utf8");
         process.stdin.on("data", (chunk) => { input += chunk; });
@@ -179,7 +183,7 @@ if [ "$REDIS_MODE" = "local" ]; then
   assert_readiness_state \
     "$(curl -fsS "http://127.0.0.1:$HTTP_PORT/api/health/ready")" backend degraded down
   assert_readiness_state "$(authorization_readiness)" authorization degraded down
-  compose exec -T backend node -e \
+  compose exec -T backend bun -e \
     "fetch('http://127.0.0.1:3000/mieszkaniec/incydenty/glowna').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
 
   compose up --detach --wait --wait-timeout "$WAIT_TIMEOUT" redis >/dev/null
@@ -218,13 +222,13 @@ fi
 
 log "Verifying the PgBouncer application boundary"
 for service in authorization backend media_worker; do
-  compose exec -T "$service" node -e \
+  compose exec -T "$service" bun -e \
     "const fs = require('node:fs'); const url = new URL(process.env.DATABASE_URL); if (url.hostname !== 'pgbouncer') process.exit(1); if (Object.hasOwn(process.env, 'DATABASE_DIRECT_URL')) process.exit(2); if (!fs.statSync(process.env.DATABASE_TLS_CA_PATH).isFile()) process.exit(3); if (fs.existsSync('/run/secrets/database/pgbouncer-server.key') || fs.existsSync('/run/secrets/database/postgres-server.key')) process.exit(4)"
 done
 
 log "Verifying the standalone media_worker boundary"
-compose exec -T media_worker node dist/nest/media-worker/healthcheck.js
-compose exec -T media_worker node -e \
+compose exec -T media_worker bun dist/nest/media-worker/healthcheck.js
+compose exec -T media_worker bun -e \
   "if (process.env.SERVICE_NAME !== 'media_worker') process.exit(1); if (!Object.hasOwn(process.env, 'S3_ENDPOINT')) process.exit(2); if (Object.hasOwn(process.env, 'AUTH_SERVICE_URL')) process.exit(3); if (new URL(process.env.DATABASE_URL).hostname !== 'pgbouncer') process.exit(4); if (new URL(process.env.RABBITMQ_URL).protocol !== 'amqps:') process.exit(5); if (Object.keys(process.env).some((name) => name.startsWith('RUSTFS_'))) process.exit(6);"
 
 log "Verifying TLS 1.3 on both database transport segments"
@@ -280,11 +284,11 @@ compose exec -T database sh -c '
 '
 
 log "Verifying the Backend mTLS client boundary"
-compose exec -T backend node -e \
+compose exec -T backend bun -e \
   "const fs = require('node:fs'); const { X509Certificate } = require('node:crypto'); const url = new URL(process.env.AUTH_SERVICE_URL); if (url.protocol !== 'https:' || url.hostname !== 'authorization' || url.port !== '9956') process.exit(1); for (const name of ['AUTH_SERVICE_CA_PATH', 'AUTH_SERVICE_CERT_PATH', 'AUTH_SERVICE_KEY_PATH']) { if (!fs.statSync(process.env[name]).isFile()) process.exit(2); } const certificate = new X509Certificate(fs.readFileSync(process.env.AUTH_SERVICE_CERT_PATH)); if (certificate.subjectAltName !== 'URI:spiffe://zglosto.local/workload/backend') process.exit(3); if (fs.existsSync('/run/secrets/service/nginx-client.key') || fs.existsSync('/run/secrets/service/authorization-server.key')) process.exit(4);"
 
 log "Verifying the LLM gateway mTLS and HMAC boundary"
-compose exec -T backend node --input-type=module -e \
+compose exec -T backend bun --input-type=module -e \
   "import fs from 'node:fs'; import https from 'node:https'; import { X509Certificate } from 'node:crypto'; const url = new URL(process.env.LLM_GATEWAY_URL); if (url.protocol !== 'https:' || url.hostname !== 'llm_gateway') process.exit(1); for (const name of ['LLM_GATEWAY_CA_PATH', 'LLM_GATEWAY_CERT_PATH', 'LLM_GATEWAY_KEY_PATH', 'LLM_GATEWAY_HMAC_KEY_FILE']) { if (!fs.statSync(process.env[name]).isFile()) process.exit(2); } const certificate = new X509Certificate(fs.readFileSync(process.env.LLM_GATEWAY_CERT_PATH)); if (certificate.subjectAltName !== 'URI:spiffe://zglosto.local/workload/backend') process.exit(3); const invoke = (authenticated) => new Promise((resolve, reject) => { const request = https.request(new URL('/classify-incident', url), { ca: fs.readFileSync(process.env.LLM_GATEWAY_CA_PATH), cert: authenticated ? fs.readFileSync(process.env.LLM_GATEWAY_CERT_PATH) : undefined, headers: { 'content-type': 'application/json' }, key: authenticated ? fs.readFileSync(process.env.LLM_GATEWAY_KEY_PATH) : undefined, method: 'QUERY', minVersion: 'TLSv1.3', servername: process.env.LLM_GATEWAY_SERVER_NAME }, (response) => { response.resume(); response.on('end', () => resolve(response.statusCode)); }); request.on('error', reject); request.end('{}'); }); let rejected = false; try { await invoke(false); } catch { rejected = true; } if (!rejected) process.exit(4); if (await invoke(true) !== 401) process.exit(5);"
 
 log "Verifying the Nginx mTLS client boundary"
@@ -292,7 +296,7 @@ compose exec -T nginx sh -c \
   "test -f /run/secrets/service/ca.crt && test -f /run/secrets/service/nginx-client.crt && test -f /run/secrets/service/nginx-client.key && test ! -e /run/secrets/service/backend-client.key && test ! -e /run/secrets/service/authorization-server.key && nginx -T 2>&1 | grep -q 'proxy_pass https://authorization:9956/api/auth/' && nginx -T 2>&1 | grep -q 'proxy_pass https://llm_gateway:8130/health'"
 
 log "Verifying the Authorization mTLS-only healthcheck boundary"
-compose exec -T authorization node -e \
+compose exec -T authorization bun -e \
   "const fs = require('node:fs'); const { X509Certificate } = require('node:crypto'); const certificate = new X509Certificate(fs.readFileSync(process.env.AUTHORIZATION_HEALTHCHECK_CERT_PATH)); if (certificate.subjectAltName !== 'URI:spiffe://zglosto.local/workload/authorization-healthcheck') process.exit(1); if (fs.existsSync('/run/secrets/service/backend-client.key') || fs.existsSync('/run/secrets/service/nginx-client.key')) process.exit(2);"
 
 log "Verifying pgBackRest stanza, WAL archive and initial full backup"
@@ -303,7 +307,7 @@ compose exec -T database sh -c \
   >/dev/null
 compose exec -T database sh -c \
   'gosu postgres pgbackrest --stanza=zglosto_db info --output=json' \
-  | node -e '
+  | bun -e '
       let input = "";
       process.stdin.setEncoding("utf8");
       process.stdin.on("data", (chunk) => { input += chunk; });
@@ -317,9 +321,9 @@ compose exec -T database sh -c \
     '
 
 log "Verifying the neutral S3 Object Storage boundary"
-compose exec -T backend node -e \
+compose exec -T backend bun -e \
   "if (new URL(process.env.S3_ENDPOINT).hostname !== 'rustfs') process.exit(1); if (Object.keys(process.env).some((name) => name.startsWith('RUSTFS_'))) process.exit(2)"
-compose exec -T backend node dist/storage/verify-storage.js
+compose exec -T backend bun dist/storage/verify-storage.js
 
 log "Reapplying migrations to verify idempotence"
 for migration in "$ROOT_DIR"/database/migrations/*.sql; do
@@ -361,13 +365,13 @@ compose exec -T database sh -c \
 
 log "Running Phase 0 API scenarios"
 INTEGRATION_BASE_URL="http://127.0.0.1:$HTTP_PORT" \
-  node "$ROOT_DIR/tests/integration/phase0.integration.ts"
+  bun "$ROOT_DIR/tests/integration/phase0.integration.ts"
 
 log "Verifying the active 22-route NestJS contract, structured errors and OpenAPI through Nginx"
 INTEGRATION_BACKEND_RUNTIME=nest \
 INTEGRATION_PUBLIC_API_PREFIX=/api \
 INTEGRATION_BASE_URL="http://127.0.0.1:$HTTP_PORT" \
-  node "$ROOT_DIR/tests/integration/backend-http-contract.integration.ts"
+  bun "$ROOT_DIR/tests/integration/backend-http-contract.integration.ts"
 
 log "Waiting for the isolated Better Auth rate-limit window between test suites"
 sleep 11
@@ -376,12 +380,12 @@ log "Running frozen Phase 5 authorization contract"
 INTEGRATION_BASE_URL="http://127.0.0.1:$HTTP_PORT" \
 INTEGRATION_AUTHORIZATION_URL="https://127.0.0.1:$AUTHORIZATION_MTLS_PORT" \
 INTEGRATION_CERTIFICATES_DIRECTORY="$ROOT_DIR/.certs" \
-  node "$ROOT_DIR/tests/integration/authorization-contract.integration.ts"
+  bun "$ROOT_DIR/tests/integration/authorization-contract.integration.ts"
 
 log "Verifying the Authorization mTLS listener and workload identities"
 INTEGRATION_AUTHORIZATION_MTLS_PORT="$AUTHORIZATION_MTLS_PORT" \
 INTEGRATION_CERTIFICATES_DIRECTORY="$ROOT_DIR/.certs" \
-  node "$ROOT_DIR/tests/integration/authorization-mtls.integration.ts"
+  bun "$ROOT_DIR/tests/integration/authorization-mtls.integration.ts"
 
 log "Verifying transactional media jobs and outbox payloads"
 compose exec -T database sh -c \
@@ -389,7 +393,7 @@ compose exec -T database sh -c \
   < "$ROOT_DIR/tests/integration/media-outbox.sql" >/dev/null
 
 publish_outbox_once() {
-  compose exec -T backend node --input-type=module -e \
+  compose exec -T backend bun --input-type=module -e \
     "import { NestFactory } from '@nestjs/core'; import { AppModule } from './dist/nest/app.module.js'; import { OutboxPublisherService } from './dist/nest/modules/jobs/outbox-publisher.service.js'; const app = await NestFactory.createApplicationContext(AppModule, { logger: false }); await app.get(OutboxPublisherService).tickOnce(); await app.close();"
 }
 
@@ -405,7 +409,7 @@ log "RabbitMQ durable quorum topology is present"
 ready_queue_depth="0"
 for _ in $(seq 1 10); do
   ready_queue_depth="$(compose exec -T rabbitmq rabbitmqctl -q -p zglosto list_queues name messages_ready \
-    --formatter=json | node -e 'let input=""; process.stdin.on("data", chunk => input += chunk); process.stdin.on("end", () => { const queue = JSON.parse(input).find(({name}) => name === "zglosto.media.process.v1"); process.stdout.write(String(queue?.messages_ready ?? -1)); });')"
+    --formatter=json | bun -e 'let input=""; process.stdin.on("data", chunk => input += chunk); process.stdin.on("end", () => { const queue = JSON.parse(input).find(({name}) => name === "zglosto.media.process.v1"); process.stdout.write(String(queue?.messages_ready ?? -1)); });')"
   [ "$ready_queue_depth" = "6" ] && break
   sleep 1
 done
@@ -416,7 +420,7 @@ fi
 log "Starting media_worker and draining the queued backlog"
 compose up --detach --wait --wait-timeout "$WAIT_TIMEOUT" media_worker >/dev/null
 consumer_prefetch="$(compose exec -T rabbitmq rabbitmqctl -q -p zglosto list_consumers queue_name prefetch_count \
-  --formatter=json | node -e 'let input=""; process.stdin.on("data", chunk => input += chunk); process.stdin.on("end", () => { const consumer = JSON.parse(input).find(({queue_name: queueName}) => queueName === "zglosto.media.process.v1"); process.stdout.write(String(consumer?.prefetch_count ?? -1)); });')"
+  --formatter=json | bun -e 'let input=""; process.stdin.on("data", chunk => input += chunk); process.stdin.on("end", () => { const consumer = JSON.parse(input).find(({queue_name: queueName}) => queueName === "zglosto.media.process.v1"); process.stdout.write(String(consumer?.prefetch_count ?? -1)); });')"
 if [ "$consumer_prefetch" != "1" ]; then
   log "ERROR: media_worker consumer prefetch is not bounded to 1: $consumer_prefetch"
   exit 1
@@ -444,7 +448,7 @@ compose exec -T \
   -e PROCESSED_CHECKSUM="$processed_checksum" \
   -e PROCESSED_WIDTH="$processed_width" \
   -e PROCESSED_HEIGHT="$processed_height" \
-  media_worker node --input-type=module -e \
+  media_worker bun --input-type=module -e \
   "import { createHash } from 'node:crypto'; import sharp from 'sharp'; import { validateObjectStorageEnvironment } from './dist/config/env.js'; import { S3ObjectStorage } from './dist/storage/s3-object-storage.js'; const storage = new S3ObjectStorage(validateObjectStorageEnvironment()); await storage.initialize(); const object = await storage.getObject(process.env.PROCESSED_KEY); const metadata = await sharp(object.body).metadata(); const checksum = createHash('sha256').update(object.body).digest('hex'); if (object.contentType !== 'image/webp' || checksum !== process.env.PROCESSED_CHECKSUM || object.checksumSha256 !== checksum) process.exit(1); if (metadata.format !== 'webp' || String(metadata.width) !== process.env.PROCESSED_WIDTH || String(metadata.height) !== process.env.PROCESSED_HEIGHT || metadata.width > 2000 || metadata.height > 2000) process.exit(2); if (metadata.exif || metadata.icc || metadata.xmp) process.exit(3); if (await storage.objectExists(process.env.ORIGINAL_KEY)) process.exit(4); await storage.close();"
 
 log "Verifying media retry, terminal DLQ and idempotent receipt"
@@ -467,7 +471,7 @@ fi
 dlq_messages="0"
 for _ in $(seq 1 10); do
   dlq_messages="$(compose exec -T rabbitmq rabbitmqctl -q -p zglosto list_queues name messages \
-    --formatter=json | node -e 'let input=""; process.stdin.on("data", chunk => input += chunk); process.stdin.on("end", () => { const queue = JSON.parse(input).find(({name}) => name === "zglosto.media.process.dlq.v1"); process.stdout.write(String(queue?.messages ?? -1)); });')"
+    --formatter=json | bun -e 'let input=""; process.stdin.on("data", chunk => input += chunk); process.stdin.on("end", () => { const queue = JSON.parse(input).find(({name}) => name === "zglosto.media.process.dlq.v1"); process.stdout.write(String(queue?.messages ?? -1)); });')"
   [ "$dlq_messages" = "1" ] && break
   sleep 1
 done
@@ -486,12 +490,12 @@ compose exec -T database sh -c \
   'psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" -c "UPDATE outbox_events SET status = '\''pending'\'', published_at = NULL, available_at = CURRENT_TIMESTAMP WHERE id = (SELECT id FROM outbox_events WHERE status = '\''published'\'' ORDER BY created_at LIMIT 1)"' >/dev/null
 compose stop rabbitmq >/dev/null
 for _ in $(seq 1 20); do
-  if ! compose exec -T media_worker node dist/nest/media-worker/healthcheck.js >/dev/null 2>&1; then
+  if ! compose exec -T media_worker bun dist/nest/media-worker/healthcheck.js >/dev/null 2>&1; then
     break
   fi
   sleep 1
 done
-if compose exec -T media_worker node dist/nest/media-worker/healthcheck.js >/dev/null 2>&1; then
+if compose exec -T media_worker bun dist/nest/media-worker/healthcheck.js >/dev/null 2>&1; then
   log "ERROR: media_worker remained ready without RabbitMQ"
   exit 1
 fi
@@ -500,12 +504,12 @@ compose exec -T database sh -c \
   'test "$(psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" -tAc "SELECT count(*) FROM outbox_events WHERE status = '\''failed'\'' AND last_error_code = '\''broker_publish_failed'\''")" = "1"'
 compose up --detach --wait --wait-timeout "$WAIT_TIMEOUT" rabbitmq >/dev/null
 for _ in $(seq 1 30); do
-  if compose exec -T media_worker node dist/nest/media-worker/healthcheck.js >/dev/null 2>&1; then
+  if compose exec -T media_worker bun dist/nest/media-worker/healthcheck.js >/dev/null 2>&1; then
     break
   fi
   sleep 1
 done
-compose exec -T media_worker node dist/nest/media-worker/healthcheck.js
+compose exec -T media_worker bun dist/nest/media-worker/healthcheck.js
 publish_outbox_once
 compose exec -T database sh -c \
   'test "$(psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" -tAc "SELECT count(*) FROM outbox_events WHERE status NOT IN ('\''published'\'', '\''discarded'\'') OR (status = '\''published'\'' AND published_at IS NULL)")" = "0"'
@@ -530,7 +534,7 @@ object_key_to_restore="$(compose exec -T database sh -c \
 [ -n "$object_key_to_restore" ]
 
 log "Simulating loss of database rows and an Object Storage object"
-compose exec -T -e "RESTORE_TEST_OBJECT_KEY=$object_key_to_restore" backend node --input-type=module -e \
+compose exec -T -e "RESTORE_TEST_OBJECT_KEY=$object_key_to_restore" backend bun --input-type=module -e \
   "import { validateBackendEnvironment } from './dist/config/env.js'; import { S3ObjectStorage } from './dist/storage/s3-object-storage.js'; const storage = new S3ObjectStorage(validateBackendEnvironment().objectStorage); await storage.deleteObject(process.env.RESTORE_TEST_OBJECT_KEY);"
 compose exec -T database sh -c \
   'psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" -c "TRUNCATE incydenty CASCADE"' >/dev/null
@@ -541,7 +545,7 @@ log "Restoring PostgreSQL and Object Storage, then checking referential consiste
 incident_count_after_restore="$(compose exec -T database sh -c \
   'psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" -tAc "SELECT count(*) FROM incydenty"')"
 [ "$incident_count_after_restore" = "$incident_count_before_restore" ]
-compose exec -T -e "RESTORE_TEST_OBJECT_KEY=$object_key_to_restore" backend node --input-type=module -e \
+compose exec -T -e "RESTORE_TEST_OBJECT_KEY=$object_key_to_restore" backend bun --input-type=module -e \
   "import { validateBackendEnvironment } from './dist/config/env.js'; import { S3ObjectStorage } from './dist/storage/s3-object-storage.js'; const storage = new S3ObjectStorage(validateBackendEnvironment().objectStorage); if (!(await storage.objectExists(process.env.RESTORE_TEST_OBJECT_KEY))) process.exit(1);"
 
 log "Verifying graceful NestJS shutdown after removing the legacy Express runtime"
@@ -552,3 +556,10 @@ test "$(docker inspect --format '{{.State.ExitCode}}' "$backend_container_id")" 
 compose up --detach --no-deps --wait --wait-timeout "$WAIT_TIMEOUT" backend >/dev/null
 test "$(curl -sS -o /dev/null -w '%{http_code}' "http://127.0.0.1:$HTTP_PORT/api/protected")" = "404"
 test "$(curl -sS -o /dev/null -w '%{http_code}' "http://127.0.0.1:$HTTP_PORT/api/openapi.json")" = "200"
+
+if [ "${INTEGRATION_OBSERVABILITY:-0}" = "1" ]; then
+  log "Flushing service telemetry and checking cross-service traces"
+  compose stop --timeout 30 backend authorization media_worker llm_gateway >/dev/null
+  compose logs --no-color otel-collector | bun "$ROOT_DIR/scripts/check-integration-telemetry.ts"
+  compose up --detach --wait --wait-timeout "$WAIT_TIMEOUT" backend authorization media_worker llm_gateway >/dev/null
+fi

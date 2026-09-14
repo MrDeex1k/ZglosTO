@@ -29,7 +29,7 @@ function run(command: string, arguments_: string[], cwd: string): void {
     fail(`${command} ${arguments_.join(' ')} exited with ${String(result.status)}`);
 }
 
-if (!existsSync(manifestPath)) fail(`missing ${manifestPath}; run pnpm release:manifest first`);
+if (!existsSync(manifestPath)) fail(`missing ${manifestPath}; run bun run release:manifest first`);
 const paths = readFileSync(manifestPath, 'utf8')
   .split('\n')
   .filter((path: string) => path.length > 0);
@@ -72,12 +72,9 @@ try {
     candidate,
   );
 
-  const packageManagerEntrypoint = process.env.npm_execpath;
-  const executable = packageManagerEntrypoint === undefined ? 'pnpm' : process.execPath;
-  const prefix = packageManagerEntrypoint === undefined ? [] : [packageManagerEntrypoint];
-  run(executable, [...prefix, 'install', '--offline', '--frozen-lockfile'], candidate);
-  run(executable, [...prefix, 'check'], candidate);
-  run(executable, [...prefix, 'audit:release'], candidate);
+  run('bun', ['install', '--offline', '--frozen-lockfile'], candidate);
+  run('bun', ['run', 'check'], candidate);
+  run('bun', ['run', 'audit:release'], candidate);
   process.stdout.write(
     `[isolated-release] PASS: ${String(paths.length)} manifest files verified in a clean Git repository at ${candidate}.\n`,
   );

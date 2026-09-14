@@ -31,7 +31,7 @@ Do walidacji narzędziowej wielu plików, bez aktywowania konfiguracji procesu, 
 Metadane potrzebne do wersjonowanego buildu i rollout'u zwraca typowane CLI:
 
 ```bash
-pnpm config:metadata config/white-label/zglosto.yaml json
+bun run config:metadata config/white-label/zglosto.yaml json
 ```
 
 Wynik zawiera `cityKey`, `configVersion`, checksum SHA-256 i znormalizowana sciezke. Skrypty

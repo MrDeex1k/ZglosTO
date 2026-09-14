@@ -5,9 +5,9 @@ set -Eeuo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-pnpm --silent --filter @zglosto/contracts build >/dev/null
-pnpm --silent --filter @zglosto/white-label-config build >/dev/null
-node scripts/check-mobile-client-configs.mjs
+bun run --silent --filter @zglosto/contracts build >/dev/null
+bun run --silent --filter @zglosto/white-label-config build >/dev/null
+bun scripts/check-mobile-client-configs.mjs
 
 CONFIG_PATHS=("$ROOT_DIR"/config/white-label/test-*.yaml)
 if [ "${#CONFIG_PATHS[@]}" -lt 2 ]; then
@@ -16,11 +16,11 @@ if [ "${#CONFIG_PATHS[@]}" -lt 2 ]; then
 fi
 
 for config_path in "${CONFIG_PATHS[@]}"; do
-    metadata=$(pnpm --silent --filter @zglosto/white-label-config metadata "$config_path" fields)
+    metadata=$(bun packages/white-label-config/dist/cli.js "$config_path" fields)
     IFS=$'\t' read -r city_key config_version checksum validated_path <<< "$metadata"
 
     echo "[white-label] Building frontend for $city_key ($config_version) from $validated_path"
-    WHITE_LABEL_CONFIG="$config_path" pnpm --silent --filter frontend-zglosto build >/dev/null
+    WHITE_LABEL_CONFIG="$config_path" bun run --silent --filter frontend-zglosto build >/dev/null
 
     readiness_file="$ROOT_DIR/frontend/dist/client/health/ready.json"
     if [ ! -s "$readiness_file" ]; then

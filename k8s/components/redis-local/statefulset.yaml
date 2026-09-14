@@ -65,7 +65,7 @@ spec:
               command:
                 - sh
                 - -ec
-                - redis-cli --no-auth-warning -u "$(cat /run/secrets/redis/url)" --raw PING | grep -qx PONG
+                - redis-cli --no-auth-warning -u "$(cat /run/secrets/redis/url)" -h 127.0.0.1 --raw PING | grep -qx PONG
             initialDelaySeconds: 10
             periodSeconds: 10
             timeoutSeconds: 3
@@ -74,7 +74,7 @@ spec:
               command:
                 - sh
                 - -ec
-                - redis-cli --no-auth-warning -u "$(cat /run/secrets/redis/url)" --raw PING | grep -qx PONG
+                - redis-cli --no-auth-warning -u "$(cat /run/secrets/redis/url)" -h 127.0.0.1 --raw PING | grep -qx PONG
             initialDelaySeconds: 3
             periodSeconds: 5
             timeoutSeconds: 3

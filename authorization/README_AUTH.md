@@ -14,7 +14,7 @@ authorization/
 │   ├── app.ts - fabryka aplikacji Hono, routing i middleware
 │   ├── auth.ts - konfiguracja i hooki Better Auth
 │   └── mtls-server.ts - wewnętrzny listener mTLS i polityka workloadów
-├── server.ts - uruchomienie aplikacji przez adapter Hono dla Node
+├── server.ts - uruchomienie aplikacji przez adapter Hono z mTLS na Bun
 ├── package.json - zależności projektu
 └── README_AUTH.md - dokumentacja
 ```
@@ -42,19 +42,19 @@ Origin aplikacji natywnej `zglosto://` pozostaje obsługiwany.
 ### Uruchomienie
 
 ```bash
-pnpm install --frozen-lockfile
-pnpm --filter authorization-zglosto build
-pnpm --filter authorization-zglosto start
+bun install --frozen-lockfile
+bun run --filter authorization-zglosto build
+bun run --filter authorization-zglosto start
 ```
 
-W trybie developerskim najpierw wykonaj `pnpm certs:dev`, a następnie użyj
-`pnpm dev:authorization` z katalogu głównego. Proces uruchamia wyłącznie listener mTLS na
+W trybie developerskim najpierw wykonaj `bun run certs:dev`, a następnie użyj
+`bun run dev:authorization` z katalogu głównego. Proces uruchamia wyłącznie listener mTLS na
 `AUTHORIZATION_MTLS_PORT` (domyślnie **9956**); listener HTTP nie istnieje.
 
 ### Zamrożony kontrakt migracyjny
 
 Test `tests/integration/authorization-contract.integration.ts`, uruchamiany przez
-`pnpm test:integration`, zamroził kontrakt Express i obecnie przechodzi na implementacji Hono.
+`bun run test:integration`, zamroził kontrakt Express i obecnie przechodzi na implementacji Hono.
 Testuje publiczne trasy Better Auth przez Nginx oraz bezpośredni `/api/verify-session`,
 healthchecki, CORS, cookie, role i wylogowanie bez zmiany payloadów i semantyki sesji.
 
