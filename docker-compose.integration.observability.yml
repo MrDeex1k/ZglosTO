@@ -21,7 +21,7 @@ services:
       <<: *integration-otel
       OTEL_SERVICE_NAME: llm_gateway
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.159.0
+    image: otel/opentelemetry-collector-contrib:0.161.0
     command: [--config=/etc/otelcol-contrib/integration.yaml]
     volumes:
       - ./tests/integration/otel-collector.yaml:/etc/otelcol-contrib/integration.yaml:ro

@@ -44,7 +44,7 @@ for (const workspace of ['.', ...workspaceDirectories]) {
   }
 }
 for (const [workspace, react, typescript] of [
-  ['frontend', '19.2.8', '7.0.2'],
+  ['frontend', '19.3.0', '7.0.2'],
   ['Mobile', '19.2.3', '6.0.3'],
 ]) {
   const local = createRequire(resolve(workspace, 'package.json'));
@@ -55,7 +55,7 @@ for (const [workspace, react, typescript] of [
 const rules = new Map([
   ['query-string', ['decode-uri-component', '0.5.0']],
   ['xcode', ['uuid', '11.1.1']],
-  ['xmlbuilder2', ['js-yaml', '4.3.1']],
+  ['xmlbuilder2', ['js-yaml', '4.3.2']],
 ]);
 const seen = new Set<string>();
 const checked = new Set<string>();
@@ -100,5 +100,5 @@ for (const workspace of ['frontend', 'Mobile', 'backend', 'authorization', 'llm_
   inspectModules(join(root, workspace, 'node_modules'));
 assert.equal(checked.size, rules.size);
 console.log(
-  'Bun workspaces: one manager/lockfile, separate React/TypeScript versions and all scoped overrides verified.',
+  'Bun workspaces: one manager/lockfile, workspace React/TypeScript versions and scoped overrides verified.',
 );

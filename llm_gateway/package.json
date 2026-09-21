@@ -20,11 +20,11 @@
     "@zglosto/contracts": "workspace:*",
     "@zglosto/observability": "workspace:*",
     "@zglosto/workload-auth": "workspace:*",
-    "hono": "4.13.5",
-    "zod": "4.5.4"
+    "hono": "4.13.8",
+    "zod": "4.6.5"
   },
   "devDependencies": {
-    "@types/node": "26.4.0",
+    "@types/node": "26.6.2",
     "typescript": "7.0.2",
     "vitest": "4.1.11"
   },

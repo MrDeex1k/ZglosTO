@@ -6,6 +6,7 @@
     "perf": "warn"
   },
   "plugins": ["react", "typescript", "oxc", "import", "jsx-a11y", "promise", "node"],
+  "jsPlugins": ["@shadcn/lint"],
   "env": {
     "browser": true,
     "node": true,
@@ -19,6 +20,20 @@
     "jsx-a11y/anchor-has-content": "warn",
     "jsx-a11y/label-has-associated-control": "warn"
   },
+  "overrides": [
+    {
+      "files": ["frontend/src/**/*.{ts,tsx}"],
+      "rules": {
+        "shadcn/no-restyle": ["warn", { "allow": ["layout"] }]
+      }
+    },
+    {
+      "files": ["frontend/src/components/ui/**/*.{ts,tsx}"],
+      "rules": {
+        "shadcn/no-restyle": "off"
+      }
+    }
+  ],
   "ignorePatterns": [
     "**/dist/**",
     "**/routeTree.gen.ts",

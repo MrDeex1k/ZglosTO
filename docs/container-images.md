@@ -2,30 +2,30 @@
 
 ## Aktualny baseline
 
-Od 2026-09-02 projekt używa następujących przypiętych obrazów:
+Od 2026-09-21 projekt używa następujących przypiętych obrazów:
 
 | Obszar                                          | Obraz                                                                                          |
 | ----------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| minimalny runtime usług Bun                     | `alpine:3.24.1` + binarny Bun 1.4.2                                                            |
-| publiczny Nginx i runtime statycznego frontendu | `nginx:1.31.4-alpine3.24-slim`                                                                 |
+| minimalny runtime usług Bun                     | `alpine:3.24.2` + binarny Bun 1.4.2                                                            |
+| publiczny Nginx i runtime statycznego frontendu | `nginx:1.31.6-alpine3.24-slim`                                                                 |
 | opcjonalny model DMR                            | `ai/gemma3-qat:1B-Q4_K_M`                                                                      |
 | baza własnego obrazu database                   | `postgres:18.6-alpine3.24`                                                                     |
 | własny obraz poolera                            | `pgbouncer/Dockerfile` bazujący na `edoburu/pgbouncer:v1.25.2-p0`                              |
-| trwały broker bez panelu management             | `rabbitmq:4.3.5-alpine`                                                                        |
+| trwały broker bez panelu management             | `rabbitmq:4.3.6-alpine`                                                                        |
 | opcjonalny lokalny Redis                        | `redis:8.10.1-alpine3.23`                                                                      |
-| lokalny Object Storage zgodny z S3              | `rustfs/rustfs:1.0.0-rc.5`                                                                     |
-| OpenTelemetry Collector                         | `otel/opentelemetry-collector-contrib:0.159.0`                                                 |
+| lokalny Object Storage zgodny z S3              | `rustfs/rustfs:1.0.0`                                                                          |
+| OpenTelemetry Collector                         | `otel/opentelemetry-collector-contrib:0.161.0`                                                 |
 | Prometheus                                      | `prom/prometheus:v3.14.0`                                                                      |
-| Loki                                            | `grafana/loki:3.7.7`                                                                           |
+| Loki                                            | `grafana/loki:3.7.8`                                                                           |
 | Tempo                                           | `grafana/tempo:3.0.3`                                                                          |
-| Alertmanager                                    | `prom/alertmanager:v0.34.0`                                                                    |
-| Grafana                                         | `grafana/grafana:13.2.1`                                                                       |
-| węzeł testowego klastra Kind                    | `kindest/node:v1.35.8@sha256:07b2536e30b803ed61d1677a79df6115f798ce64c80f9e22f6ed45afd09323c0` |
-| serwer testowego klastra K3s                    | `rancher/k3s:v1.36.4-k3s1`                                                                     |
+| Alertmanager                                    | `prom/alertmanager:v0.34.1`                                                                    |
+| Grafana                                         | `grafana/grafana:13.2.2`                                                                       |
+| węzeł testowego klastra Kind                    | `kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5` |
+| serwer testowego klastra K3s                    | `rancher/k3s:v1.37.0-k3s1`                                                                     |
 
 Wersje są przypięte jawnie, aby kolejne buildy nie zmieniały runtime'u wyłącznie przez przesunięcie ruchomego tagu bazowego.
 
-RustFS `1.0.0-rc.5` jest przypiętym obrazem wieloarchitekturowym. Działa jako użytkownik
+RustFS `1.0.0` jest przypiętym obrazem wieloarchitekturowym. Konfiguracja uruchamia go jako użytkownika
 `10001`, zapisuje do wolumenu `/data`, nie publikuje portów `9000/9001` na hoście i jest
 sprawdzany przez `/health/ready`. Produkcyjny klaster oraz PVC pozostają zakresem Fazy 9.
 
@@ -37,7 +37,7 @@ oryginalny entrypoint bez `su-exec`; dzięki temu
 PgBouncer może zakończyć TLS 1.3 bez zapisywania klucza w obrazie. Nie korzystamy z ruchomego
 `latest`.
 
-RabbitMQ `4.3.5` jest aktualnym przypiętym obrazem. Projektowy obraz
+RabbitMQ `4.3.6` jest aktualnym przypiętym obrazem. Projektowy obraz
 kopiuje konfigurację TLS i healthcheck, wyłącza listener plaintext `5672`, nie uruchamia
 pluginu ani listenera management i utrzymuje dane w osobnym wolumenie. Plugin Prometheus
 pozostaje dostępny wyłącznie w sieci prywatnej.

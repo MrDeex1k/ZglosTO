@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.12
 
-ARG RABBITMQ_IMAGE=rabbitmq:4.3.5-alpine
+ARG RABBITMQ_IMAGE=rabbitmq:4.3.6-alpine
 
 FROM ${RABBITMQ_IMAGE}
 
