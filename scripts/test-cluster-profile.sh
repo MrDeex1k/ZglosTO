@@ -5,9 +5,9 @@ PROFILE=${1:-}
 TAG=${IMAGE_TAG:-bun-acceptance}
 KEEP_CLUSTER=${KEEP_CLUSTER:-0}
 KIND_VERSION=${KIND_VERSION:-v0.32.0}
-KIND_NODE_IMAGE=${KIND_NODE_IMAGE:-kindest/node:v1.35.8@sha256:07b2536e30b803ed61d1677a79df6115f798ce64c80f9e22f6ed45afd09323c0}
+KIND_NODE_IMAGE=${KIND_NODE_IMAGE:-kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5}
 K3D_VERSION=${K3D_VERSION:-v5.9.0}
-K3S_IMAGE=${K3S_IMAGE:-rancher/k3s:v1.36.4-k3s1}
+K3S_IMAGE=${K3S_IMAGE:-rancher/k3s:v1.37.0-k3s1}
 CERT_MANAGER_VERSION=${CERT_MANAGER_VERSION:-v1.21.0}
 RELOADER_CHART_VERSION=${RELOADER_CHART_VERSION:-2.2.14}
 KEDA_CHART_VERSION=${KEDA_CHART_VERSION:-2.20.0}
@@ -98,7 +98,7 @@ images=(
     "zglosto/llm-gateway:$TAG"
     "zglosto/frontend:$TAG"
     "zglosto/nginx:$TAG"
-    "rustfs/rustfs:1.0.0-rc.5"
+    "rustfs/rustfs:1.0.0"
     "redis:8.10.1-alpine3.23"
 )
 

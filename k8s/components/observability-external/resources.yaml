@@ -74,7 +74,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: otel-collector
-          image: otel/opentelemetry-collector-contrib:0.159.0
+          image: otel/opentelemetry-collector-contrib:0.161.0
           args: [--config=/etc/otelcol-contrib/config.yaml]
           env:
             - { name: OTEL_EXTERNAL_AUTH_HEADER_NAME, value: Authorization }

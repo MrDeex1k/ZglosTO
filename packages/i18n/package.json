@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@zglosto/contracts": "workspace:*",
-    "i18next": "26.4.1"
+    "i18next": "26.4.2"
   },
   "devDependencies": {
     "typescript": "7.0.2",

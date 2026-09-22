@@ -115,7 +115,7 @@
   "externalComponents": [
     {
       "id": "rustfs",
-      "image": "rustfs/rustfs:1.0.0-rc.5",
+      "image": "rustfs/rustfs:1.0.0",
       "module": "objectStorage",
       "mode": "local",
       "includedByDefault": true
@@ -129,7 +129,7 @@
     },
     {
       "id": "otel_collector",
-      "image": "otel/opentelemetry-collector-contrib:0.159.0",
+      "image": "otel/opentelemetry-collector-contrib:0.161.0",
       "module": "observability",
       "mode": "local-or-external",
       "includedByDefault": false
@@ -143,7 +143,7 @@
     },
     {
       "id": "loki",
-      "image": "grafana/loki:3.7.7",
+      "image": "grafana/loki:3.7.8",
       "module": "observability",
       "mode": "local",
       "includedByDefault": false
@@ -157,14 +157,14 @@
     },
     {
       "id": "alertmanager",
-      "image": "prom/alertmanager:v0.34.0",
+      "image": "prom/alertmanager:v0.34.1",
       "module": "observability",
       "mode": "local",
       "includedByDefault": false
     },
     {
       "id": "grafana",
-      "image": "grafana/grafana:13.2.1",
+      "image": "grafana/grafana:13.2.2",
       "module": "observability",
       "mode": "local",
       "includedByDefault": false

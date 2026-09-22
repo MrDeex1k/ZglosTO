@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.12
 
-ARG NGINX_IMAGE=nginx:1.31.4-alpine3.24-slim
+ARG NGINX_IMAGE=nginx:1.31.6-alpine3.24-slim
 
 FROM oven/bun:1.4.2-alpine@sha256:d888c0ae6c86d7866ff10c5aafdd9077b36aee6455b33dd270fb93c0dd5cef6f AS bun
 
