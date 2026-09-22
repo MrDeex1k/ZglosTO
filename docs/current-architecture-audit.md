@@ -198,6 +198,14 @@ modernizacji. W development Vite udostępnia te same prefiksy i proxy do lokalny
 
 Jedynym package managerem JavaScript/TypeScript jest Bun `1.4.2`, z jednym `bun.lock` w katalogu głównym i workspace obejmującym `frontend`, `backend`, `authorization`, `llm_gateway`, `Mobile` oraz `packages/*`. Wspólny toolchain używa Oxlint `1.80.0`, Oxfmt `0.65.0` oraz skryptów root `bun run lint`, `bun run format`, `bun run format:check`, `bun run typecheck`, `bun run build` i `bun run test`. Oxlint działa obecnie bez trybu type-aware; pełny typecheck wykonuje osobno TypeScript 7. `oxlint-tsgolint` nie jest zainstalowany. Bezpośrednie zależności są przypięte dokładnie, wrapper Bun/SFW odrzuca publikacje młodsze niż 24 godziny, a operacje na zależnościach JavaScript są chronione przez lokalny Socket Firewall (`sfw`) i skrypty `bun run deps:*`.
 
+Workspace `docs-site` jest również częścią monorepo: Nimbus i Astro generują statyczne
+`/docs`, dołączane do obrazu frontendu i obsługiwane przez Nginx. Dokumentacja nie wymaga
+osobnej usługi runtime. Publikowane źródła wybiera `docs-site/content-map.mjs` z `docs/`
+oraz jawnie dopuszczonych instrukcji `Mobile/`; pozostałe materiały pozostają w repozytorium.
+Bun uruchamia generator, testy i build. TS7 sprawdza kod TypeScript, a izolowany TS6
+obsługuje API Astro/Volar dla szablonów. Mobile zachowuje osobny pin TS6.
+Wersje i wyjątki opisuje [polityka zależności](dependency-policy.md).
+
 Migracja lokalnych wrapperów z Radix UI do shadcn/ui `base-nova` na Base UI została
 zakończona w [Fazie 8A](frontend-ui-migration.md). Radix nie występuje już w zależnościach
 ani źródłach, a [kontrakt design systemu](phase-8-design-system.md) i `bun run check:source`

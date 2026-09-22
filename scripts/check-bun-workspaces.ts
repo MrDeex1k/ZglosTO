@@ -46,12 +46,16 @@ for (const workspace of ['.', ...workspaceDirectories]) {
 for (const [workspace, react, typescript] of [
   ['frontend', '19.3.0', '7.0.2'],
   ['Mobile', '19.2.3', '6.0.3'],
+  ['docs-site', '19.2.8', '7.0.2'],
 ]) {
   const local = createRequire(resolve(workspace, 'package.json'));
   assert.equal(local('react/package.json').version, react);
   assert.equal(local('typescript/package.json').version, typescript);
   assert.equal(local('@babel/core/package.json').version, '7.29.7');
 }
+const docsRequire = createRequire(resolve('docs-site/package.json'));
+assert.equal(docsRequire('typescript-astro/package.json').version, '6.0.3');
+assert.equal(typeof docsRequire('typescript-astro').createProgram, 'function');
 const rules = new Map([
   ['query-string', ['decode-uri-component', '0.5.0']],
   ['xcode', ['uuid', '11.1.1']],
@@ -96,7 +100,14 @@ function inspectModules(directory: string): void {
   }
 }
 inspectModules(join(root, 'node_modules'));
-for (const workspace of ['frontend', 'Mobile', 'backend', 'authorization', 'llm_gateway'])
+for (const workspace of [
+  'frontend',
+  'Mobile',
+  'backend',
+  'authorization',
+  'llm_gateway',
+  'docs-site',
+])
   inspectModules(join(root, workspace, 'node_modules'));
 assert.equal(checked.size, rules.size);
 console.log(

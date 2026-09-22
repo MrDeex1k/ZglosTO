@@ -51,6 +51,10 @@ usługi i odrzuca klucze sugerujące sekret. Nie są to konfiguracje prawdziwych
 
 ## Granica odpowiedzialności
 
+Po przygotowaniu wariantu przejdź do [instrukcji buildów](../docs/mobile-build.md).
+Rozdziela ona eksport JS, kompilację development clienta i dystrybucję podpisywaną
+przez klienta. Kryteria końcowe opisuje [przekazanie aplikacji](CLIENT_HANDOFF.md).
+
 Konfiguracja White-Label steruje publiczną tożsamością i katalogiem usług. Nie steruje
 rolami użytkowników, sekretami, połączeniami z bazą, retencją, signingiem, kontami sklepów
 ani polityką bezpieczeństwa. Te elementy należą do wdrożenia i wspólnych dokumentów w

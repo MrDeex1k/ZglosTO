@@ -1,5 +1,8 @@
 # Profile Docker, Kubernetes i K3s
 
+Jeżeli dopiero wybierasz środowisko, zacznij od [porównania wdrożeń](deployment-selection.md).
+Poniżej znajdują się szczegóły techniczne profili, migracji i odtwarzania klastra.
+
 ## Wprowadzone zmiany
 
 - Konteksty obrazów backendu i gatewaya zawierają `@zglosto/workload-auth`.
@@ -14,8 +17,8 @@
 - Standardowe profile mają minimum dwie repliki auth i preferowane rozłożenie replik
   backendu, auth, frontendu, Nginx i PgBouncera między węzłami.
 
-Nie zmieniono limitów pamięci/CPU ani powtórnej instalacji bun run podczas buildów. Te zmiany
-wymagają pomiarów na docelowym hoście oraz potwierdzenia zachowania zależności workspace.
+Limity pamięci/CPU wymagają pomiarów na docelowym hoście. Buildy używają Bun i jednego
+`bun.lock`; zgodność zależności workspace sprawdza `bun run check:workspaces`.
 Backup Compose nadal wymaga okna utrzymaniowego — skrócenie go wymaga spójnego snapshotu
 bazy i wersjonowanego magazynu obiektów, a nie pozostawienia procesów zapisujących w ruchu.
 
@@ -54,9 +57,9 @@ sprawdza zgodność liczby replik z limiterem. Tryb lokalny wymaga `REDIS_MODE=l
 
 ```bash
 # Tylko walidacja, bez kontaktu z klastrem:
-node scripts/check-cluster-production.ts k8s/overlays/kubernetes-redis-external
-node scripts/check-cluster-production.ts k8s/overlays/k3s-single-node
-node scripts/check-cluster-production.ts k8s/overlays/k3s-ha --ha
+bun scripts/check-cluster-production.ts k8s/overlays/kubernetes-redis-external
+bun scripts/check-cluster-production.ts k8s/overlays/k3s-single-node
+bun scripts/check-cluster-production.ts k8s/overlays/k3s-ha --ha
 
 # Wdrożenie po podmianie domeny/endpointów i przygotowaniu obrazów oraz sekretów:
 CLUSTER_PROFILE=kubernetes REDIS_MODE=external ./deploy.sh zglosto RELEASE

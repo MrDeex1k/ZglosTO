@@ -28,6 +28,21 @@ Nie używamy bezpośrednio `bun add` ani `bun update`. SFW ocenia ryzyko pakietu
 
 ## Runtime
 
+### TypeScript: domyślnie TS7, wyjątki narzędziowe
+
+Root i dokumentacja używają TypeScript 7.0.2. W dokumentacji TS7 sprawdza pliki `.ts`
+i `.tsx`, a osobny proces Astro/Volar używa aliasu `typescript-astro` (TS6.0.3), ponieważ
+wymaga starszego programistycznego API kompilatora. Pełne sprawdzenie uruchamia
+`bun run check:docs`; nie zastępuj go surowym `astro check`.
+
+Mobile zachowuje istniejący pin TS6.0.3; ta aktualizacja dokumentacji nie zmienia jego
+toolchainu. Wersje i separację zależności sprawdza `bun run check:workspaces`.
+Szczegóły izolacji Astro oraz warunki usunięcia wyjątku opisuje
+[README dokumentacji](../docs-site/README.md). Zmiana kompilatora wymaga przejścia
+testów odpowiedniego workspace, nie tylko zmiany numeru zależności.
+
+### Bun i Expo/Metro
+
 Od fazy 4 Bun 1.4.2 wykonuje usługi, skrypty repo, kompilatory, Vite, Vitest, Knip, Oxlint/Oxfmt oraz wrapper SFW i hooki Git. CLI uruchamiamy przez `bun run --bun <narzędzie>`, a Turbo bez globalnego `--bun`, przez jego plik wejściowy. Dzięki temu wymuszenie Bun nie przechodzi do procesów Expo.
 
 Node >=26.8.1 pozostaje wymagany dla Expo/Metro, Expo Doctor i natywnego toolchainu Mobile. Testy Vitest i typecheck Mobile wykonuje Bun; aplikacja na urządzeniu nadal działa na Hermes. `node:*`, `@types/node` i `NODE_ENV` są kontraktami kompatybilnych API i nie oznaczają uruchomienia Node.

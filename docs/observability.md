@@ -73,7 +73,7 @@ Prometheus przechowuje wyłącznie numeryczne szeregi czasowe. W szczególności
 - czas obróbki Sharp, liczbę wyników oraz zużycie CPU i pamięci `media_worker`;
 - stan outboxa i opóźnienie publikacji;
 - wykorzystanie puli PgBouncera i oczekujących klientów;
-- PostgreSQL, Object Storage/RustFS i runtime Node.js;
+- PostgreSQL, Object Storage/RustFS i runtime Bun;
 - stan i odrzucenia pipeline'ów samego OpenTelemetry Collectora.
 
 Adres e-mail, `userId`, `incidentId`, `correlationId`, `traceId`, object key i pełna ścieżka
@@ -103,7 +103,8 @@ Kolejność wdrożenia i test nieblokującej awarii opisuje
 
 Wdrożono współdzielony pakiet `@zglosto/observability`, inicjalizowany przed modułami
 aplikacji w `authorization`, `backend`, `media_worker` i `llm_gateway`. Zapewnia on
-automatyczną instrumentację Node.js, OTLP/HTTP dla logów, metryk i śladów, własne metryki
+instrumentację przez kompatybilne API pakietów OpenTelemetry Node.js uruchamianych pod Bun,
+OTLP/HTTP dla logów, metryk i śladów, własne metryki
 RED i operacyjne oraz propagację W3C Trace Context przez HTTP i envelope RabbitMQ.
 Instrumentacja jest bezpiecznym dodatkiem: błędny albo niedostępny Collector nie blokuje
 startu usługi ani przepływu produktu.

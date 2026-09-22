@@ -9,20 +9,19 @@ oraz najczęstsze problemy.
 
 Do uruchomienia pełnego WEB/API przez Docker Compose potrzebujesz:
 
-- Node.js w wersji <code>>=26.8.1</code> dla Expo/Metro i natywnego toolchainu Mobile;
 - Bun <code>1.4.2</code>;
 - Docker Engine;
 - <code>openssl</code> i <code>curl</code>.
 
 Do uruchomienia klienta Mobile dodatkowo potrzebujesz:
 
+- Node.js w wersji <code>>=26.8.1</code> dla Expo/Metro i natywnego toolchainu;
 - Xcode i iOS Simulator dla iOS;
 - Java 17, Android SDK i Android Emulator dla Androida.
 
 Sprawdź wersje przed pierwszym startem:
 
 ```bash
-node --version
 bun --version
 docker compose version
 openssl version
@@ -34,7 +33,7 @@ Wykonaj polecenia z katalogu głównego repozytorium:
 
 ```bash
 # 1. Utwórz lokalny plik konfiguracji — pozostaje poza Git
-cp .env.example .env
+test -f .env || cp .env.example .env
 
 # 2. Zainstaluj zależności i wygeneruj ignorowane certyfikaty developerskie
 bun install --frozen-lockfile && bun run certs:dev
@@ -46,6 +45,7 @@ docker compose up -d --build
 Po starcie otwórz:
 
 - WEB: [http://localhost:1235](http://localhost:1235);
+- dokumentacja: [http://localhost:1235/docs/](http://localhost:1235/docs/);
 - health Nginx: [http://localhost:1235/health](http://localhost:1235/health);
 - health API: [http://localhost:1235/api/health](http://localhost:1235/api/health);
 - health LLM gateway: [http://localhost:1235/llm/health](http://localhost:1235/llm/health).
@@ -194,8 +194,9 @@ curl --fail http://localhost:1235/llm/health
 ```
 
 Model jest pomocniczy. Niedostępność, timeout albo niepoprawna odpowiedź modelu nie
-powinna blokować zapisania zgłoszenia — backend zapisuje je z fallbackiem do ręcznej
-weryfikacji. Szczegóły i ograniczenia opisuje
+powinna blokować zapisania zgłoszenia. Wybrana służba pozostaje adresatem; jeśli jej nie
+wskazano, używany jest fallback miasta. Klasyfikacja może jedynie wskazać potrzebę
+telefonu na 112. Szczegóły opisuje [przyjęcie zgłoszenia](incident-acceptance.md), a konfigurację modelu
 [docs/docker-model-runner.md](docker-model-runner.md).
 
 ### Redis
@@ -260,6 +261,16 @@ bun run dev:authorization
 Każdy proces działa w osobnym terminalu. Do szybkiego przeglądu całego produktu zalecany
 jest jednak bazowy Compose, ponieważ odwzorowuje routing same-origin przez Nginx i
 uruchamia komplet zależności infrastrukturalnych.
+
+Dokumentację rozwijaj w osobnym terminalu przez `bun run dev:docs`. Jest dostępna pod
+[http://localhost:4322/docs/](http://localhost:4322/docs/); serwer developerski frontendu
+przekazuje tam również ścieżkę `/docs`. Po zmianie źródeł Markdown uruchom ponownie
+`bun run dev:docs`, aby odświeżyć wygenerowane artykuły. Wyszukiwanie sprawdzaj na buildzie:
+
+```bash
+bun run build:docs
+bun run --filter docs-site preview --host 127.0.0.1 --port 4322
+```
 
 Najważniejsze polecenia repozytorium:
 
@@ -394,4 +405,4 @@ wygaśnięcie cache albo odtwórz wyłącznie kontener Nginx projektu demo.
 
 Przed pierwszą instalacją Bun usuń wygenerowane katalogi `node_modules` w root i workspace albo przenieś je poza repozytorium. Nie mieszaj instalacji pnpm z Bun. Następnie wykonaj `bun install --frozen-lockfile` i `bun run check`. Pin to Bun 1.4.2; Node >=26.8.1 pozostaje wymagany dla toolchainu Expo. Usługi, skrypty, build web, testy i typecheck wykonuje Bun. Polecenie `bun run test` uruchamia Vitest pod Bun; `bun test` jest używany wyłącznie dla wskazanych testów infrastruktury i polityki zależności. Główny bunfig wyłącza automatyczne ładowanie `.env`; konfigurację narzędzi przekazuj jawnie.
 
-Backend NestJS w trybie dev jest kompilowany przez `tsc --watch`, a Bun obserwuje wynikowe `dist`. Zachowuje to metadane dekoratorów potrzebne dependency injection. Authorization i gateway wykonują TypeScript bezpośrednio przez Bun. Testy Vitest i pozostałe narzędzia są przenoszone osobno w fazie 4.
+Backend NestJS w trybie dev jest kompilowany przez `tsc --watch`, a Bun obserwuje wynikowe `dist`. Zachowuje to metadane dekoratorów potrzebne dependency injection. Authorization i gateway wykonują TypeScript bezpośrednio przez Bun. Testy Vitest i pozostałe narzędzia również wykonuje Bun.

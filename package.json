@@ -4,6 +4,7 @@
   "private": true,
   "license": "SEE LICENSE IN LICENSE",
   "workspaces": [
+    "docs-site",
     "frontend",
     "backend",
     "authorization",
@@ -13,9 +14,12 @@
   ],
   "type": "module",
   "scripts": {
+    "dev:docs": "bun run --filter docs-site dev",
+    "build:docs": "bun run --filter docs-site build",
+    "check:docs": "bun run --filter docs-site check",
     "build": "bun ./node_modules/turbo/bin/turbo run build",
     "build:production": "./scripts/production-build.sh build",
-    "check": "bun run check:source && bun run check:dead-code && bun run format:check && bun run lint && bun run typecheck && bun run test && bun run test:white-label-builds && bun run build",
+    "check": "bun run check:docs && bun run check:source && bun run check:dead-code && bun run format:check && bun run lint && bun run typecheck && bun run test && bun run test:white-label-builds && bun run build",
     "certs:dev": "./scripts/generate-dev-certificates.sh",
     "check:source": "./scripts/check-typescript-source.sh && ./scripts/check-single-city-architecture.sh && bun scripts/check-public-repository.ts && bun scripts/check-mobile-build-assets.ts && bun scripts/sync-k8s-white-label.ts --check && bun scripts/check-deployment-baseline.ts && bun scripts/check-image-contract.ts && bun test ./scripts/test-infrastructure.ts --timeout 30000 && bun scripts/check-production-source-build.ts && bun scripts/check-cluster-configuration.ts && bun scripts/check-cluster-stateful-services.ts && bun scripts/check-cluster-workloads-security.ts && bun scripts/check-observability-profiles.ts && bun scripts/check-cluster-autoscaling.ts && bun scripts/check-redis-profiles.ts && bun scripts/check-redis-resilience.ts && bun scripts/check-production-compose.ts .env.production.example --images-env deploy/compose/images.env.example --matrix && bun scripts/test-production-compose-policy.ts && bun scripts/check-phase-12.ts && ./scripts/check-frontend-boundary.sh && ./scripts/test-frontend-boundary-policy.sh && ./scripts/check-frontend-design-system.sh && ./scripts/test-frontend-design-system-policy.sh && bun run test:dependency-policy && bun run check:workspaces && bun run test:bun-deployment-policy",
     "check:cluster-config": "bun scripts/check-cluster-configuration.ts",
