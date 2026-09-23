@@ -74,6 +74,9 @@ licencjodawcą. Podatności należy zgłaszać wyłącznie prywatnym kanałem z 
 
 ## Droga od źródeł do instancji klienta
 
+Polecenia i granice procesu opisuje [build Mobile dla klienta](../docs/mobile-build.md).
+Eksport JavaScript nie jest podpisanym plikiem instalacyjnym.
+
 Przed betą lub wdrożeniem należy:
 
 1. wskazać właścicieli produktu, bezpieczeństwa, infrastruktury i publikacji;

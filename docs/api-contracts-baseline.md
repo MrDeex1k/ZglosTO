@@ -1,4 +1,4 @@
-# Baseline kontraktow API i sesji
+# Kontrakty API i sesji
 
 ## Cel
 
@@ -9,8 +9,8 @@ Bun workspace, `packages/contracts`, White-Label i Object Storage są już wdro�
 nadal chroni wspólny język i granice po migracjach do Hono, NestJS, TanStack Start i
 `llm_gateway`.
 
-Pełna, wykonywalna inwentaryzacja metod, ścieżek, statusów i dostępu dla 20 tras aktywnego
-backendu NestJS znajduje się w [kontrakcie HTTP backendu Fazy 6](phase-6-backend-http-contract.md).
+Pełna, wykonywalna inwentaryzacja metod, ścieżek, statusów i dostępu aktywnego
+backendu NestJS znajduje się w [kontrakcie HTTP w kodzie](../backend/contracts/http-contract.ts).
 Ten dokument pozostaje źródłem szczegółowych modeli domenowych i semantyki odpowiedzi.
 
 ## Zakres
@@ -23,7 +23,7 @@ Dokument obejmuje:
 - obecny kontrakt backend -> `llm_gateway`;
 - role, statusy i typy sluzb;
 - format zdjec;
-- kontrakt sesji dla web i przyszlego React Native;
+- kontrakt sesji dla web i wdrożonego klienta React Native;
 - docelowy kierunek dla `packages/contracts`.
 
 ## Obecne uslugi
@@ -82,7 +82,7 @@ Obecny mechanizm:
 1. Backend przekazuje pelny naglowek `Cookie` do `GET ${AUTH_SERVICE_URL}/api/verify-session`.
 2. Authorization waliduje sesje przez Better Auth i zwraca `session` oraz rozszerzonego `user`.
 3. Backend sprawdza `user.uprawnienia` przeciw dozwolonym rolom i zwraca `403` przy niewlasciwej roli.
-4. Ten sam kontrakt obsluguje automatyczne cookie przegladarki oraz jawny naglowek `Cookie` przyszlego klienta Expo.
+4. Ten sam kontrakt obsługuje automatyczne cookie przeglądarki oraz jawny nagłówek `Cookie` klienta Expo.
 
 To jest krytyczny kontrakt migracji auth na Hono. Od kroku 1 Fazy 5 jest wykonywalnie
 zamrożony w `tests/integration/authorization-contract.integration.ts`, a po krokach 2-4
@@ -112,11 +112,11 @@ Dodatkowe pole:
 W bazie pole nazywa się `service_key`. Role `mieszkaniec` i `admin` zawsze otrzymują
 `serviceKey: null`; Authorization nie propaguje klucza nieaktywnej usługi.
 
-## Auth i React Native - kontrakt docelowy
+## Auth i React Native - stan obecny
 
-Better Auth pozostaje zrodlem prawdy dla sesji, uzytkownikow i rol rowniez dla przyszlej aplikacji React Native + Expo.
+Better Auth jest źródłem prawdy dla sesji, użytkowników i ról aplikacji React Native + Expo.
 
-Docelowy kontrakt:
+Wdrożony kontrakt:
 
 - web:
   - standardowe cookie Better Auth;
@@ -129,12 +129,14 @@ Docelowy kontrakt:
   - backend nie waliduje cookie samodzielnie, tylko przekazuje naglowki do `authorization`;
   - role i service keys dalej pochodza z auth/domain DB.
 
-Docelowy auth service powinien obslugiwac dwa transporty tej samej sesji:
+Authorization obsługuje dwa transporty tej samej sesji:
 
 - automatyczne cookie przegladarki dla web;
 - cookie przechowywane bezpiecznie i jawnie wysylane w naglowku przez Expo dla mobile.
 
-Bearer plugin Better Auth pozostaje mozliwym rozszerzeniem, ale nie jest czescia bazowego kontraktu. Przy implementacji klienta mobilnego trzeba ponownie potwierdzic API aktualnej wersji Better Auth i `@better-auth/expo`.
+Bearer plugin nie jest częścią bazowego kontraktu. Implementacje znajdują się w
+[`auth-client.ts`](../Mobile/src/auth/auth-client.ts) i
+[`authenticated-fetch.ts`](../Mobile/src/api/authenticated-fetch.ts).
 
 ## Backend API - stan obecny
 
@@ -156,7 +158,7 @@ Bearer plugin Better Auth pozostaje mozliwym rozszerzeniem, ale nie jest czescia
   "latitude": "number | null",
   "longitude": "number | null",
   "typ_sluzby": "string | optional",
-  "zdjecie_incydentu_zglaszanego": "base64 string | optional"
+  "zdjecie_incydentu_zglaszanego_upload_id": "UUID zakończonego uploadu | null | optional"
 }
 ```
 
@@ -189,6 +191,10 @@ Wymagana rola: `sluzby`.
 | `POST`  | `/sluzby/incydenty/:id/zdjecie_rozwiazane` | zapis zdjecia rozwiazania                |
 
 Służba listuje i modyfikuje wyłącznie incydenty zgodne z własnym `serviceKey`; próba zmiany incydentu innej służby zwraca `404` bez ujawniania jego istnienia.
+
+Mutacje statusu, weryfikacji i przypisania służby wymagają `If-Match: "incident-N"`,
+gdzie `N` to ostatnia odczytana `revision`. Stara rewizja daje `409`, a brak lub błędny
+nagłówek `400`. Po konflikcie klient odświeża dane zamiast ponawiać zapis w ciemno.
 
 ### Chronione endpointy admina
 
@@ -274,7 +280,13 @@ rewalidacji.
 
 Obecnie:
 
-- frontend wysyla base64 string bez prefiksu `data:*;base64,`;
+- klient inicjuje upload przez `POST /api/mieszkaniec/obrazy/uploads` lub, dla zdjęcia
+  rozwiązania, `POST /api/sluzby/incydenty/:id/obrazy/uploads`;
+- inicjacja przyjmuje `checksumSha256`, `mimeType` i `sizeBytes`, zwraca podpisany
+  `uploadUrl`, metodę `PUT`, wymagane nagłówki, `expiresAt` i `uploadId`;
+- klient wysyła bajty pod podpisany URL bez zmiany hosta i nagłówków; przy tworzeniu
+  zgłoszenia przekazuje otrzymany identyfikator jako `zdjecie_incydentu_zglaszanego_upload_id`,
+  a przy dołączeniu zdjęcia rozwiązania jako `uploadId`;
 - backend waliduje limit 5 MiB oraz magic bytes JPEG/PNG/GIF/WebP;
 - plik trafia przez `ObjectStorage` do aktywnego prywatnego bucketu S3-compatible;
 - PostgreSQL przechowuje wyłącznie referencje, metadane i stan przetwarzania;
@@ -407,87 +419,11 @@ i parserów odpowiedzi HTTP. Frontend oraz authorization korzystają z niego prz
 workspace. Struktura modułów i zasady użycia znajdują się w
 [`packages/contracts/README.md`](../packages/contracts/README.md).
 
-Minimalna zawartosc:
-
-```ts
-export type UserRole = 'mieszkaniec' | 'sluzby' | 'admin';
-
-export type IncidentStatusCode = 'reported' | 'in_progress' | 'resolved';
-
-export interface CityConfig {
-  city: {
-    key: string;
-    displayName: { 'pl-PL': string; en: string };
-    defaultLocale: 'pl-PL' | 'en';
-    supportedLocales: Array<'pl-PL' | 'en'>;
-    timezone: 'Europe/Warsaw';
-  };
-  branding: {
-    logoPath: string;
-    emblemAlt: { 'pl-PL': string; en: string };
-    faviconPath: string;
-    colors: { primary: string; secondary: string; accent: string };
-  };
-  contact: {
-    email: string;
-    phone: string | null;
-    website: string | null;
-    address: { 'pl-PL': string; en: string };
-    officeHours: { 'pl-PL': string; en: string } | null;
-  };
-  localContent: {
-    siteTitle: { 'pl-PL': string; en: string };
-    siteDescription: { 'pl-PL': string; en: string };
-    footerText: { 'pl-PL': string; en: string };
-    legalNotice: { 'pl-PL': string; en: string };
-    reportAddressPlaceholder: { 'pl-PL': string; en: string };
-  };
-  services: CityService[];
-  map: {
-    provider: 'osm' | 'maplibre' | 'google';
-    center: { lat: number; lng: number } | null;
-    zoom: number | null;
-  } | null;
-}
-
-export interface CityService {
-  key: string;
-  label: string;
-  enabled: boolean;
-  description: string | null;
-  color: string | null;
-  icon: string | null;
-}
-
-export interface AuthSessionUser {
-  id: string;
-  email: string;
-  name: string | null;
-  role: UserRole;
-  serviceKey: string | null;
-}
-
-export interface LlmClassificationRequest {
-  description: string;
-  address: string | null;
-  city: string | null;
-}
-
-export interface LlmClassificationResponse {
-  classification: 'municipal' | 'emergency' | 'unknown';
-  serviceKey: string | null;
-  confidence: number | null;
-  reason: 'timeout' | 'disabled' | 'unavailable' | 'invalid_response' | null;
-  modelAvailable: boolean;
-  source: 'model' | 'fallback';
-}
-```
-
-Docelowe kontrakty pakietu nie używają pól opcjonalnych ani `undefined`. Obecny transport
-Express nadal akceptuje część starszych payloadów z pominiętymi polami; adapter migracyjny ma
-normalizować taki brak do `null` przed wejściem do logiki domenowej. Pełne zasady oraz
-inwentaryzacja migracji są opisane w
-[zakresie Fazy 1](phase-1-contracts-typescript-scope.md).
+Nie kopiuj definicji modeli z dokumentacji do aplikacji. Bieżące typy i walidatory
+importuj z `@zglosto/contracts`; źródła obejmują [sesje](../packages/contracts/src/auth.ts),
+[incydenty](../packages/contracts/src/incidents.ts), [zdjęcia](../packages/contracts/src/images.ts),
+[uploady](../packages/contracts/src/uploads.ts) oraz [White-Label](../packages/contracts/src/white-label.ts).
+To kod i testy kontraktowe określają obowiązkowe pola, wartości null i zasady walidacji.
 
 ## Status decyzji kontraktowych
 
@@ -495,7 +431,7 @@ inwentaryzacja migracji są opisane w
 2. `zaakceptowana` ([ADR-005](architecture-decisions.md)): Better Auth obsluguje web i Expo; mobile przechowuje cookies w SecureStore i jawnie wysyla naglowek `Cookie` do API.
 3. `wdrozona` ([ADR-006](architecture-decisions.md)): sesja, API i konsumenci używają wyłącznie stabilnego `serviceKey`; stara nazwa pozostaje tylko w historycznej migracji schematu.
 4. `wdrozona` ([ADR-007](architecture-decisions.md)): baza, backend, frontend i wspolny kontrakt uzywaja kodow maszynowych; polskie nazwy sa etykietami UI.
-5. `otwarta` ([ADR-008](architecture-decisions.md)): czy listy incydentow zwracaja miniatury/URL-e, czy tylko metadane zdjec?
+5. Historyczny [ADR-008](architecture-decisions.md) nadal ma oznaczenie `otwarta`; bieżąca implementacja zwraca `IncidentImageRef` z metadanymi i URL-em, bez base64 na listach.
 6. `zaakceptowana` ([ADR-009](architecture-decisions.md)): awaria LLM zapisuje `unknown` z `fallbackServiceKey`, `modelAvailable: false`, `source: fallback` i technicznym kodem przyczyny, bez blokowania zgloszenia.
 
 ## Definicja ukonczenia baseline
@@ -505,6 +441,6 @@ Baseline jest gotowy, gdy:
 - ten dokument jest aktualny wzgledem kodu;
 - `docs/current-architecture-audit.md` wskazuje na ten kontrakt;
 - [plan modernizacji](release.md) wskazuje ten dokument jako warunek Fazy 0;
-- pierwsza wersja `packages/contracts` moze zostac utworzona bez ponownego zgadywania nazw pol i typow.
+- konsumenci korzystają z istniejącego `packages/contracts`, bez ponownego definiowania modeli.
 
 Definicja jest spelniona. Zgodnosc kontraktow sesji, rol, incydentow, zdjec i LLM chroni [zestaw integracyjny Fazy 0](phase-0-integration-tests.md).

@@ -7,6 +7,15 @@
 
 !frontend/
 !frontend/**
+!docs-site/
+!docs-site/**
+!docs/
+!docs/*.md
+!Mobile/
+Mobile/**
+!Mobile/QUICK_START.md
+!Mobile/CLIENT_CONFIGURATION.md
+!Mobile/CLIENT_HANDOFF.md
 
 !packages/
 !packages/contracts/
@@ -24,6 +33,8 @@
 **/dist
 **/coverage
 **/.cache
+**/.astro
+**/.nimbus
 **/*.tsbuildinfo
 **/.env
 **/.env.*

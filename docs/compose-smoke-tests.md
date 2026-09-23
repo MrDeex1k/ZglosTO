@@ -4,13 +4,27 @@
 
 Smoke test potwierdza, ze pelny zestaw uslug Compose buduje sie, uruchamia bez restartow, osiaga wymagane healthchecki i realizuje publiczny routing same-origin. Przeplywy biznesowe pokrywa osobny [zestaw integracyjny Fazy 0](phase-0-integration-tests.md).
 
+## Pierwsza diagnoza działającej instancji
+
+1. Sprawdź publiczny Nginx, potem readiness backendu i stan kontenerów/podów zgodnie
+   z [kontraktem healthchecków](healthchecks.md). Liveness nie potwierdza gotowości bazy.
+2. Odróżnij `503` obowiązkowej zależności od `200` z `status: degraded` dla opcjonalnego
+   [Redisa](redis-operations.md). Wyłączony model LLM nie blokuje zapisu zgłoszenia.
+3. Zawęź logi do usługi i czasu błędu; skoreluj żądanie przez `correlationId`/`traceId`
+   zgodnie z [monitoringiem](observability.md). Nie publikuj cookies, sekretów ani PII.
+4. Przy błędach połączeń sprawdź DNS, ważność certyfikatów, SAN i montowanie sekretów
+   według [TLS/mTLS](transport-security.md). Nie wyłączaj walidacji certyfikatów.
+5. Dla instancji produkcyjnej używaj jej pliku ENV, manifestu obrazów i procedur z
+   [runbooka Compose](production-compose-runbook.md). Test poniżej tworzy oddzielne
+   środowisko lokalne; nie jest procedurą naprawy ani restartu produkcji.
+
 ## Uruchomienie
 
 Wymagania:
 
 - dzialajacy Docker z Docker Compose;
 - `curl` na hoscie;
-- lokalny plik `.env` wymagany przez bazowy Compose.
+- wersjonowany `.env.example` (domyślny) albo jawny `SMOKE_ENV_FILE`.
 
 Uruchomienie:
 
@@ -105,10 +119,10 @@ na obu odcinkach PgBouncera oraz odrzucenie połączeń plaintext. Pełny test i
 dodatkowo pokrywa obcą CA, błędny SAN, wygaśnięcie i niedozwolony workload. Odwołanie oraz
 rotacja certyfikatów pozostają końcową bramką Fazy 12 w docelowej infrastrukturze.
 
-Ten smoke test waliduje bazowy runtime lokalny, a nie produkcyjny profil Compose. Fazy 9 i 11
-dodadzą osobny override bez lokalnego builda, z registry/digestami, secrets, HTTPS,
-hardeningiem i automatyzacją hosta. Faza 12 uruchomi dla niego osobny smoke, restore drill,
-test upgrade/rollback oraz scenariusz utraty hosta.
+Ten smoke test waliduje bazowy runtime lokalny, a nie produkcyjny profil Compose.
+Osobna procedura produkcyjna jest już opisana w [runbooku Compose](production-compose-runbook.md).
+Smoke, restore drill, upgrade/rollback i scenariusz utraty hosta wymagają odbioru dla
+konkretnej instancji klienta. Dokumentację `/docs` sprawdzaj dodatkowo zgodnie z tym runbookiem.
 
 ## Granica
 

@@ -85,6 +85,7 @@ export default defineConfig(({ command, isPreview }) => ({
   },
   server: {
     proxy: {
+      '/docs': { target: 'http://127.0.0.1:4322', changeOrigin: false },
       // Keep the Better Auth path unchanged.
       '/api/auth': authorizationProxy(command, Boolean(isPreview)),
       // The backend mounts routes without the public `/api` prefix.

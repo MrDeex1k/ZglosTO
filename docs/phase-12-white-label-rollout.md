@@ -3,6 +3,9 @@
 Ta procedura certyfikuje nową, pojedynczą instalację miejską. Jedno wdrożenie obsługuje
 jedno miasto; zmiana konfiguracji wymaga nowego builda i kontrolowanego wdrożenia.
 
+Pierwszą konfigurację przygotuj według [przewodnika konfiguracji miasta](white-label-configuration.md).
+Poniższa checklista dotyczy odbioru instalacji, nie zastępuje instrukcji edycji YAML.
+
 ## Dane wejściowe
 
 1. Skopiować wzorcowy YAML do wersjonowanego pliku `config/white-label/<city>.yaml`.
@@ -42,7 +45,7 @@ oraz checksum White-Label.
 
 ## Odbiór funkcjonalny
 
-- UI działa w `pl-PL` i `en-US`, a przełącznik nie odsłania brakujących tłumaczeń;
+- UI działa po polsku i angielsku (`pl-PL` i `en` w YAML), a przełącznik nie odsłania brakujących tłumaczeń;
 - nazwa, logo, favicon, kolory, kontakt, mapa i lista służb pochodzą z właściwego YAML;
 - formularz zawsze pokazuje uzgodnione ostrzeżenie, że ZgłosTO nie obsługuje alarmów i w
   bezpośrednim zagrożeniu należy zadzwonić pod 112;

@@ -2,6 +2,15 @@
   "$schema": "https://turborepo.com/schema.json",
   "globalPassThroughEnv": ["CI", "NODE_ENV"],
   "tasks": {
+    "docs-site#build": {
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/docs/**/*.md"],
+      "env": ["PUBLIC_SITE_URL"],
+      "outputs": ["dist/**"]
+    },
+    "docs-site#typecheck": {
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/docs/**/*.md"],
+      "outputs": []
+    },
     "build": {
       "dependsOn": ["^build"],
       "env": [

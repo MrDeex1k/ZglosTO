@@ -6,6 +6,13 @@ release gate.
 
 ## A. Bieżące źródła prawdy
 
+Serwis `/docs` publikuje wybrane źródła bez ich duplikowania. Zakres i zasady publikacji
+opisuje [README serwisu](../docs-site/README.md), a komplet stron wybiera
+[`content-map.mjs`](../docs-site/content-map.mjs). Nawigacja rozdziela pierwsze kroki,
+korzystanie z aplikacji, wdrożenie oraz materiały dla programisty, operatora i klienta
+Mobile. [Macierz pokrycia](documentation-coverage-audit.md) zestawia ścieżki produktu ze
+stronami; archiwum faz pozostaje w repozytorium.
+
 - [README produktu](../README.md) — zakres produktu, model licencji i szybkie wejście;
 - [audyt bieżącej architektury](current-architecture-audit.md) — wdrożony runtime i granice;
 - [rejestr decyzji architektonicznych](architecture-decisions.md) — obowiązujące ADR-y;
@@ -22,11 +29,18 @@ release gate.
 
 ## B. Instrukcje klienta
 
+- [mieszkaniec WEB](using-web-resident.md), [służby WEB](using-web-service.md) i
+  [administrator WEB](using-web-admin.md) — codzienne użycie paneli i granice ról;
+- [mieszkaniec Mobile](using-mobile-resident.md) oraz
+  [służby Mobile](using-mobile-service.md) — odpowiednie przepływy na telefonie;
 - [uruchomienie lokalne](local-development.md) — pełny start Docker Compose, demo Mobile,
   profile opcjonalne, testy i troubleshooting;
+- [konfiguracja miasta](white-label-configuration.md) — YAML, branding, służby, walidacja i build;
+- [wybór wdrożenia](deployment-selection.md) — Compose, Kubernetes i K3s;
 - [przekazanie Mobile](../Mobile/CLIENT_HANDOFF.md),
   [Quick Start](../Mobile/QUICK_START.md) i
   [konfiguracja klienta](../Mobile/CLIENT_CONFIGURATION.md);
+- [build Mobile](mobile-build.md) — eksport JS, development client i dystrybucja klienta;
 - [runbook produkcyjnego Compose](production-compose-runbook.md);
 - [Kubernetes/K3s](../k8s/README_K8s.md) i
   [przekazanie lokalnych obrazów K3s](k3s-local-images-handoff.md);
@@ -43,14 +57,16 @@ opcjonalnym procesem klienta, nie częścią źródłowego wydania.
 - [TLS/mTLS](transport-security.md), [Object Storage i baza](phase-3-database-object-storage.md),
   [Redis](redis-operations.md), [observability](observability.md) i
   [media worker](media-processing-contract.md);
+- [granice frontendu i API](frontend-domain-boundary.md) oraz
+  [handoff lokalnych obrazów K3s](k3s-local-images-handoff.md);
 - [runbook certyfikacji per klient](phase-12-operations-runbook.md) i
   [plan certyfikacji](phase-12-certification-plan.md).
 
-## D. Plany zmian
+## D. Migracja na Bun
 
-- [Migracja na Bun](bun-migration-plan.md) — zaakceptowany kierunek zastąpienia Node.js
-  i pnpm, zakres Mobile/Expo, etapy wdrożenia, próby zgodności i rollback;
-  implementacja przed nami.
+- [Plan migracji na Bun](bun-migration-plan.md) — historia etapów i decyzji;
+  migracja jest wdrożona. Bieżące zasady opisuje [polityka zależności](dependency-policy.md),
+  a wyniki [raport fazy 6](bun-phase6-results.md). Node pozostaje w toolchainie Expo/Metro.
 
 ## E. Archiwum zakończonych faz
 
