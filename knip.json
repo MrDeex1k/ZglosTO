@@ -1,9 +1,16 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "ignore": ["docs-site/.astro/**"],
   "ignoreBinaries": ["kubectl", "openssl"],
   "ignoreUnresolved": ["./scripts/generate-dev-certificates.sh"],
   "workspaces": {
+    "docs-site": {
+      "entry": [
+        "src/components/ui/**/index.ts",
+        "src/components/ui/**/*.client.ts",
+        "scripts/*.mjs"
+      ],
+      "ignoreDependencies": ["@iconify-json/ph", "pagefind"]
+    },
     ".": {
       "entry": [
         "scripts/production-build.ts",

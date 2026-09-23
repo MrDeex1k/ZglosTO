@@ -99,7 +99,7 @@ images=(
     "zglosto/frontend:$TAG"
     "zglosto/nginx:$TAG"
     "rustfs/rustfs:1.0.0"
-    "redis:8.10.1-alpine3.23"
+    "redis:8.10.2-alpine3.23"
 )
 
 if [ "$PROFILE" = "kubernetes" ]; then

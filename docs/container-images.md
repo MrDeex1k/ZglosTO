@@ -12,7 +12,7 @@ Od 2026-09-21 projekt używa następujących przypiętych obrazów:
 | baza własnego obrazu database                   | `postgres:18.6-alpine3.24`                                                                     |
 | własny obraz poolera                            | `pgbouncer/Dockerfile` bazujący na `edoburu/pgbouncer:v1.25.2-p0`                              |
 | trwały broker bez panelu management             | `rabbitmq:4.3.6-alpine`                                                                        |
-| opcjonalny lokalny Redis                        | `redis:8.10.1-alpine3.23`                                                                      |
+| opcjonalny lokalny Redis                        | `redis:8.10.2-alpine3.23`                                                                      |
 | lokalny Object Storage zgodny z S3              | `rustfs/rustfs:1.0.0`                                                                          |
 | OpenTelemetry Collector                         | `otel/opentelemetry-collector-contrib:0.161.0`                                                 |
 | Prometheus                                      | `prom/prometheus:v3.14.0`                                                                      |

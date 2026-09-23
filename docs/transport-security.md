@@ -124,7 +124,7 @@ certyfikatu dla `database`, dopuszcza zdalne reguły `hostssl` z SCRAM i odrzuca
 
 ## REST, RPC i LLM
 
-Backend -> authorization oraz backend -> przyszły `llm_gateway` pozostają REST/JSON z
+Backend -> authorization oraz backend -> `llm_gateway` pozostają REST/JSON z
 kontraktami Zod. Koszt inference modelu dominuje koszt serializacji JSON, a Docker Model Runner
 udostępnia API zgodne z OpenAI przez HTTP. gRPC można ponownie ocenić wyłącznie po pomiarach,
 jeżeli pojawi się intensywny streaming, bardzo duża liczba małych wywołań albo wymagani będą

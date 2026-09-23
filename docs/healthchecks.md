@@ -1,4 +1,4 @@
-# Healthchecki Fazy 0
+# Healthchecki i gotowość usług
 
 ## Cel
 
@@ -14,7 +14,7 @@ Healthchecki rozrozniaja proces, ktory zyje, od uslugi gotowej do obslugi ruchu.
 | `database`      | proces PostgreSQL  | TLS `SELECT 1`              | TLS `SELECT 1`              | Używa `DATABASE_DIRECT_URL`, `verify-full`, Database CA i DNS `database`.                                          |
 | `pgbouncer`     | proces PgBouncer   | TLS `SELECT 1`              | TLS `SELECT 1`              | Klient weryfikuje pooler, a pooler weryfikuje PostgreSQL; oba odcinki wymagają TLS 1.3 i SCRAM.                    |
 | `rabbitmq`      | diagnostics ping   | AMQPS/TLS handshake         | ping + zweryfikowany TLS    | Listener AMQP plaintext jest wyłączony; probe weryfikuje Service CA i DNS `rabbitmq`.                              |
-| `media_worker`  | proces Node        | PostgreSQL + RabbitMQ + S3  | prywatny artefakt plikowy   | Brak HTTP; artefakt zawiera PID, a zależności są sprawdzane przez TLS 1.3, AMQPS i neutralną sondę Object Storage. |
+| `media_worker`  | proces Bun         | PostgreSQL + RabbitMQ + S3  | prywatny artefakt plikowy   | Brak HTTP; artefakt zawiera PID, a zależności są sprawdzane przez TLS 1.3, AMQPS i neutralną sondę Object Storage. |
 | `rustfs`        | `GET /health/live` | `GET /health/ready`         | `GET /health/ready`         | Opcjonalny lokalny override S3-compatible pozostaje dostępny wyłącznie w sieci wewnętrznej.                        |
 | `llm_gateway`   | `GET /health/live` | `GET /health/ready`         | `GET /health/live`          | Liveness gatewaya nie zależy od modelu; readiness inferencji zwraca `503`, gdy aktywny runtime jest niedostępny.   |
 | `nginx`         | `GET /health`      | `GET /api/auth/get-session` | `GET /api/auth/get-session` | Sprawdza proces proxy oraz jego rzeczywisty kanał mTLS do Authorization.                                           |

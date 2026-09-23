@@ -50,7 +50,7 @@
     "@better-auth/expo": "1.7.5",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/netinfo": "12.0.1",
-    "@tanstack/react-query": "5.103.1",
+    "@tanstack/react-query": "5.103.2",
     "@zglosto/contracts": "workspace:*",
     "@zglosto/i18n": "workspace:*",
     "better-auth": "1.7.5",
@@ -72,7 +72,7 @@
     "nativewind": "4.2.7",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "react-i18next": "17.0.14",
+    "react-i18next": "17.0.15",
     "react-native": "0.86.3",
     "react-native-css-interop": "0.2.7",
     "react-native-gesture-handler": "2.32.0",
@@ -92,7 +92,7 @@
     "expo-doctor": "1.20.4",
     "tailwindcss": "3.4.19",
     "typescript": "6.0.3",
-    "vitest": "4.1.11"
+    "vitest": "5.0.1"
   },
   "engines": {
     "node": ">=26.8.1"
