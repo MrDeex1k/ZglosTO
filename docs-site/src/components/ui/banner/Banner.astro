@@ -4,6 +4,7 @@
  * show a close button that persists to localStorage.
  */
 import Icon from "@cloudflare/nimbus-docs/components/Icon.astro";
+import { renderMarkdown } from "@cloudflare/nimbus-docs/markdown";
 import { cn } from "@/lib/cn";
 import type { HTMLAttributes } from "astro/types";
 
@@ -15,13 +16,6 @@ interface Props extends HTMLAttributes<"div"> {
 
 const { content, variant = "note", dismissible, class: className, ...attrs } = Astro.props;
 
-function sanitizeBannerHtml(value: string): string {
-  return value
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-    .replace(/\s+on[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
-    .replace(/\s+(href|src)\s*=\s*(["'])\s*javascript:[\s\S]*?\2/gi, "");
-}
-
 const config: Record<string, { color: string; tint: string }> = {
   note: { color: "var(--nb-info)", tint: "var(--nb-info-muted)" },
   tip: { color: "var(--nb-success)", tint: "var(--nb-success-muted)" },
@@ -30,7 +24,7 @@ const config: Record<string, { color: string; tint: string }> = {
 };
 
 const c = config[variant] ?? config.note;
-const safeContent = sanitizeBannerHtml(content);
+const safeContent = renderMarkdown(content);
 ---
 
 <div

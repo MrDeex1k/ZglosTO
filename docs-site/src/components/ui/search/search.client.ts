@@ -178,12 +178,6 @@ export function initSearch(config: SearchConfig): SearchInstance {
     } else if (event.key === 'ArrowUp') {
       event.preventDefault();
       updateActive(activeIndex - 1);
-    } else if (event.key === 'Home') {
-      event.preventDefault();
-      updateActive(0);
-    } else if (event.key === 'End') {
-      event.preventDefault();
-      updateActive(options.length - 1);
     } else if (event.key === 'Enter' && activeIndex >= 0) {
       event.preventDefault();
       options[activeIndex]?.querySelector<HTMLAnchorElement>('a')?.click();
@@ -191,7 +185,7 @@ export function initSearch(config: SearchConfig): SearchInstance {
   }
 
   input.addEventListener('input', handleInput);
-  input.closest('dialog')?.addEventListener('keydown', handleKeydown);
+  input.addEventListener('keydown', handleKeydown);
 
   return {
     async reset() {
@@ -209,7 +203,7 @@ export function initSearch(config: SearchConfig): SearchInstance {
       activeController?.abort();
       if (debounceTimer) clearTimeout(debounceTimer);
       input.removeEventListener('input', handleInput);
-      input.closest('dialog')?.removeEventListener('keydown', handleKeydown);
+      input.removeEventListener('keydown', handleKeydown);
     },
   };
 }

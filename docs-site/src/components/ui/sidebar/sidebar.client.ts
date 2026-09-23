@@ -133,9 +133,42 @@ function initPersistence(root: HTMLElement): (() => void) | null {
   // The scrollable container is the closest <aside> or the root itself.
   const scrollHost: HTMLElement = root.closest('aside') ?? root;
   const hash = root.dataset.nbSidebarHash ?? '';
+  const groups = Array.from(root.querySelectorAll<HTMLElement>('[data-nb-sidebar-group]'));
+
+  try {
+    const stored = JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? 'null') as SidebarState | null;
+    if (
+      stored?.hash === hash &&
+      Array.isArray(stored.open) &&
+      stored.open.length === groups.length
+    ) {
+      groups.forEach((group, index) => {
+        const savedOpen = stored.open[index];
+        if (typeof savedOpen !== 'boolean') return;
+        const open = savedOpen || Boolean(group.querySelector('[aria-current="page"]'));
+        const trigger = group.querySelector<HTMLElement>('[data-nb-collapsible-trigger]');
+        if (!trigger) return;
+        group.dataset.nbDefaultOpen = String(open);
+        if (trigger.hasAttribute('aria-controls')) {
+          if ((trigger.dataset.nbState === 'open') !== open) trigger.click();
+        } else {
+          const content = group.querySelector<HTMLElement>('[data-nb-collapsible-content]');
+          const state = open ? 'open' : 'closed';
+          trigger.dataset.nbState = state;
+          trigger.setAttribute('aria-expanded', String(open));
+          if (content) {
+            content.dataset.nbState = state;
+            content.toggleAttribute('inert', !open);
+          }
+        }
+      });
+      if (Number.isFinite(stored.scroll)) scrollHost.scrollTop = Math.max(0, stored.scroll);
+    }
+  } catch {
+    // Storage can be unavailable or contain stale data.
+  }
 
   function readState(): SidebarState {
-    const groups = root.querySelectorAll<HTMLElement>('[data-nb-sidebar-group]');
     const open: boolean[] = [];
     groups.forEach((group) => {
       const trigger = group.querySelector<HTMLElement>('[data-nb-collapsible-trigger]');
@@ -152,7 +185,9 @@ function initPersistence(root: HTMLElement): (() => void) | null {
 
   // Observe state changes on each group's trigger.
   const observer = new MutationObserver(save);
-  root.querySelectorAll<HTMLElement>('[data-nb-collapsible-trigger]').forEach((trigger) => {
+  groups.forEach((group) => {
+    const trigger = group.querySelector<HTMLElement>('[data-nb-collapsible-trigger]');
+    if (!trigger) return;
     observer.observe(trigger, {
       attributes: true,
       attributeFilter: ['data-nb-state'],
@@ -198,9 +233,14 @@ function initPersistence(root: HTMLElement): (() => void) | null {
     ) {
       return;
     }
-    const desktopInput = document.querySelector<HTMLInputElement>(
-      '[data-nb-sidebar-persist] ~ * [data-nb-sidebar-filter-input], [data-nb-desktop-sidebar] [data-nb-sidebar-filter-input]',
-    );
+    const desktopRoot = document.querySelector<HTMLElement>('[data-nb-sidebar-persist]');
+    const desktopInput =
+      desktopRoot?.parentElement?.querySelector<HTMLInputElement>(
+        '[data-nb-sidebar-filter-input]',
+      ) ??
+      document.querySelector<HTMLInputElement>(
+        '[data-nb-desktop-sidebar] [data-nb-sidebar-filter-input]',
+      );
     if (!desktopInput) return;
     e.preventDefault();
     desktopInput.focus();

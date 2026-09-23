@@ -44,7 +44,7 @@
   --nb-border: #d9e2ef;
   --nb-border-strong: #b8c7da;
   --nb-selected: #dbeafe;
-  --nb-ring: color-mix(in oklch, var(--nb-primary) 35%, transparent);
+  --nb-ring: var(--nb-primary);
 
   /* Status colors — paired (saturated for text/border + muted for bg) */
   --nb-info: #0057b8;
@@ -121,7 +121,7 @@
   --nb-border: #263449;
   --nb-border-strong: #3b4b63;
   --nb-selected: #1d4ed8;
-  --nb-ring: color-mix(in oklch, var(--nb-primary) 40%, transparent);
+  --nb-ring: var(--nb-primary);
 
   --nb-info: oklch(0.75 0.12 255);
   --nb-info-foreground: oklch(0.75 0.12 255);

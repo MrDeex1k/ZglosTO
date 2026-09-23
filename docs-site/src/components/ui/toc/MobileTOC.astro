@@ -41,7 +41,7 @@ const hasHeadings = headings.length > 0;
         <option value="_top">Na tej stronie</option>
         {headings.map((heading) => (
           <option value={heading.slug}>
-            {`${" ".repeat(Math.max(0, heading.depth - 2))}${heading.text}`}
+            {`${"\u00A0\u00A0".repeat(Math.max(0, heading.depth - 2))}${heading.text}`}
           </option>
         ))}
       </select>

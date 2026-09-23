@@ -30,13 +30,17 @@ function initPageActions(root: HTMLElement): () => void {
 
   async function handleCopyPage() {
     try {
-      const res = await fetch(mdUrl!);
-      if (!res.ok) {
-        showState('error');
-        return;
+      if (typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
+        const markdown = fetch(mdUrl!).then(async (res) => {
+          if (!res.ok) throw new Error('Markdown unavailable');
+          return new Blob([await res.text()], { type: 'text/plain' });
+        });
+        await navigator.clipboard.write([new ClipboardItem({ 'text/plain': markdown })]);
+      } else {
+        const res = await fetch(mdUrl!);
+        if (!res.ok) throw new Error('Markdown unavailable');
+        await navigator.clipboard.writeText(await res.text());
       }
-      const text = await res.text();
-      await navigator.clipboard.writeText(text);
       showState('copied');
     } catch {
       showState('error');

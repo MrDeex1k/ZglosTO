@@ -10,8 +10,7 @@ let counter = 0;
 function initTabContainer(container: HTMLElement): () => void {
   const id = `nb-tabs-${counter++}`;
   const syncKey = container.dataset.nbSyncKey;
-  const tablist = container.querySelector<HTMLElement>('[role=tablist]');
-  const indicator = container.querySelector<HTMLElement>('[data-nb-tabs-indicator]');
+  const autoList = container.querySelector<HTMLElement>(':scope > [data-nb-tabs-auto]');
 
   // Scope to this container so a nested <Tabs>'s triggers don't flip the
   // parent into manual mode (or vice-versa), independent of mount order.
@@ -19,6 +18,11 @@ function initTabContainer(container: HTMLElement): () => void {
     (t) => (t as HTMLElement).closest('[data-nb-tabs]') === container,
   );
   const synthesize = existingTriggers.length === 0;
+  if (!synthesize) autoList?.remove();
+  const tablist = synthesize
+    ? autoList
+    : (existingTriggers[0] as HTMLElement).closest<HTMLElement>('[role=tablist]');
+  const indicator = tablist?.querySelector<HTMLElement>('[data-nb-tabs-indicator]') ?? null;
 
   if (synthesize && tablist) {
     // Only this container's own panels — exclude a nested <Tabs>'s panels,
