@@ -99,6 +99,9 @@ Linki Markdown w interfejsie są same-origin. `PUBLIC_SITE_URL` określa absolut
 dla metadanych, sitemap i indeksów AI; domyślnie jest to `http://localhost:1235`.
 Nie ustawiaj tam sekretów. Przy samodzielnym buildzie produkcyjnym przekaż domenę instancji;
 Dockerfile frontendu przyjmuje `--build-arg PUBLIC_SITE_URL=https://domena-aplikacji`.
+Standardowy `bun run build:production` wymaga ustawienia `PUBLIC_SITE_URL` na origin
+konkretnej instancji (np. `https://twoja-domena.pl`) i przekazuje go do obrazu frontendu.
+Bez tego build kończy się błędem, zamiast publikować metadane z adresem localhost.
 
 Konfiguracja Nginx obsługuje `/docs` → `/docs/`, podstrony, statyczne zasoby i prawdziwe 404. Nieistniejący dokument nie zwraca shella aplikacji. Stash pierwotnego PoC pozostaje
 w Git jako kopia bezpieczeństwa; pliki `.astro`, `.nimbus` i `dist` nie są źródłami.

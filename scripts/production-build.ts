@@ -494,11 +494,36 @@ function relativeToRoot(path: string): string {
   return relative(rootDirectory, path);
 }
 
+function publicSiteUrl(): string {
+  const value = process.env.PUBLIC_SITE_URL?.trim();
+  if (!value) {
+    return fail('PUBLIC_SITE_URL must be set to this client instance origin before building');
+  }
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return fail('PUBLIC_SITE_URL must be a valid HTTP(S) origin');
+  }
+  if (
+    !['http:', 'https:'].includes(url.protocol) ||
+    url.username ||
+    url.password ||
+    url.pathname !== '/' ||
+    url.search ||
+    url.hash
+  ) {
+    return fail('PUBLIC_SITE_URL must be an HTTP(S) origin without a path or credentials');
+  }
+  return url.origin;
+}
+
 function buildArtifact(
   artifact: Artifact,
   reference: string,
   platform: string,
   configPath: string,
+  siteUrl: string,
 ): number {
   const context = resolveRepositoryPath(artifact.context, `${artifact.id}.context`);
   const dockerfile = resolveRepositoryPath(
@@ -519,6 +544,9 @@ function buildArtifact(
   ];
   if (artifact.whiteLabel) {
     commandArguments.push('--build-arg', `WHITE_LABEL_CONFIG_FILE=${configPath}`);
+  }
+  if (artifact.id === 'frontend') {
+    commandArguments.push('--build-arg', `PUBLIC_SITE_URL=${siteUrl}`);
   }
   commandArguments.push(context);
 
@@ -610,6 +638,7 @@ function main(): void {
       `${host.docker.NCPU} CPUs, ${(host.docker.MemTotal / 1_073_741_824).toFixed(1)} GiB RAM.`,
   );
   if (options.command === 'validate') return;
+  const siteUrl = publicSiteUrl();
 
   const candidateDirectory = join(stateDirectory, 'candidate');
   rmSync(candidateDirectory, { force: true, recursive: true });
@@ -637,7 +666,13 @@ function main(): void {
     for (const artifact of contract.artifacts) {
       const reference = `${artifact.repository}:${tag}`;
       console.log(`\nBuilding ${artifact.id} as ${reference}`);
-      const buildDurationSeconds = buildArtifact(artifact, reference, platform, options.configPath);
+      const buildDurationSeconds = buildArtifact(
+        artifact,
+        reference,
+        platform,
+        options.configPath,
+        siteUrl,
+      );
       if (buildDurationSeconds > artifact.maximumBuildSeconds) {
         fail(
           `${artifact.id} build took ${String(buildDurationSeconds)} s, above its ` +

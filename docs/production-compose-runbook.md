@@ -246,11 +246,11 @@ Ta kontrola wymaga lokalnego `docs-site/dist` z tego samego wydania; najpierw wy
 `bun run check:docs`. Nie zmienia danych aplikacji. Zwykły `production-compose.sh smoke`
 nie sprawdza `/docs` ani działania formularzy.
 
-`PUBLIC_SITE_URL` odpowiada za absolutne adresy sitemap i indeksów AI. Dockerfile
-frontendu przyjmuje ten argument, ale obecny `production-build.ts` go nie przekazuje.
-Standardowy pipeline korzysta więc z domyślnego adresu metadanych dokumentacji;
-same-origin `/docs` działa niezależnie. Przed publiczną publikacją metadanych trzeba
-uzupełnić to przekazanie w pipeline, nie podmieniać ręcznie promowanego obrazu.
+`PUBLIC_SITE_URL` odpowiada za absolutne adresy sitemap i indeksów AI. Przed
+`bun run build:production` ustaw origin konkretnej instancji, np.
+`export PUBLIC_SITE_URL=https://twoja-domena.pl`. Pipeline przekazuje go do obrazu
+frontendu i odmawia buildu bez tej wartości; nie podmieniaj ręcznie promowanego obrazu.
+Linki w interfejsie `/docs` pozostają same-origin.
 
 ## Start po restarcie hosta
 

@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, posix, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { pages, repository } from '../content-map.mjs';
@@ -52,12 +52,25 @@ export function renderDocument(markdown, page, order) {
   return `---\ntitle: ${JSON.stringify(page.title)}\ndescription: ${JSON.stringify(page.description)}\nsidebar:\n  order: ${order}\n---\n\n${body}`;
 }
 
+export async function removeStaleGeneratedPages(directory, documents = pages) {
+  await mkdir(directory, { recursive: true });
+  const expected = new Set(documents.map((page) => `${page.slug}.md`));
+  const entries = await readdir(directory, { withFileTypes: true });
+  await Promise.all(
+    entries
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.md') && !expected.has(entry.name))
+      .map((entry) => rm(resolve(directory, entry.name))),
+  );
+}
+
 export async function syncContent() {
   const site = fileURLToPath(new URL('../', import.meta.url));
   const repo = resolve(site, '..');
+  const docsDirectory = resolve(site, 'src/content/docs');
+  await removeStaleGeneratedPages(docsDirectory);
   for (const [order, page] of pages.entries()) {
     const markdown = await readFile(resolve(repo, page.source), 'utf8');
-    const destination = resolve(site, 'src/content/docs', `${page.slug}.md`);
+    const destination = resolve(docsDirectory, `${page.slug}.md`);
     await mkdir(dirname(destination), { recursive: true });
     const rendered = renderDocument(markdown, page, order);
     const existing = await readFile(destination, 'utf8').catch(() => null);
