@@ -10,7 +10,7 @@ export function documentLink(href, source, documents = pages) {
   if (target.startsWith('../')) throw new Error(`Link outside repository: ${source}: ${href}`);
   const page = documents.find((entry) => entry.source === target);
   return page
-    ? `/docs/${page.slug}/${suffix}`
+    ? `/${page.slug}/${suffix}`
     : `${repository}${target.split('/').map(encodeURIComponent).join('/')}${suffix}`;
 }
 

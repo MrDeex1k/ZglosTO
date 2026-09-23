@@ -46,7 +46,7 @@ for (const workspace of ['.', ...workspaceDirectories]) {
 for (const [workspace, react, typescript] of [
   ['frontend', '19.3.0', '7.0.2'],
   ['Mobile', '19.2.3', '6.0.3'],
-  ['docs-site', '19.2.8', '7.0.2'],
+  ['docs-site', '19.3.0', '7.0.2'],
 ]) {
   const local = createRequire(resolve(workspace, 'package.json'));
   assert.equal(local('react/package.json').version, react);

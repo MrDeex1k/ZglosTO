@@ -95,13 +95,16 @@ const llmsUrl = Astro.site
       title={title}
       description={description}
       noindex={noindex}
-      markdownUrl={markdownUrl}
+      markdownUrl={undefined}
       socialImage={socialImage}
       lastUpdated={lastUpdated}
       head={pageHead}
       collection={collection}
       entryId={entryId}
     />
+    {markdownUrl && !isHiddenVersion && (
+      <link rel="alternate" type="text/markdown" href={markdownUrl} />
+    )}
     <ClientRouter />
   </head>
   <body class="min-h-screen bg-background text-foreground antialiased">

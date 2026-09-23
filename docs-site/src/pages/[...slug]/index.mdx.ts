@@ -1,67 +1,30 @@
-/**
- * Per-page `/<slug>/index.mdx` — the raw authored source for every
- * indexable entry of the primary `docs` collection that has a string body.
- *
- * Twin grammar: `index.md` is the downleveled render for reading,
- * `index.mdx` is the source — imports, JSX, and directives intact. The
- * body is served verbatim; only the canonical frontmatter block (shared
- * with the `.md` twin) is framework-shaped.
- *
- * Non-primary collections (`api`, `blog`, …) follow the same sibling-route
- * convention as `index.md.ts`: their `.mdx` alternates live at
- * `pages/<collection>/[...slug]/index.mdx.ts`.
- */
-
-import { getIndexedEntries, type IndexedEntry } from '@cloudflare/nimbus-docs';
-import { config } from 'virtual:nimbus/config';
+import {
+  getMarkdownPayload,
+  getMarkdownStaticPaths,
+  type MarkdownEndpointReference,
+} from '@cloudflare/nimbus-docs/agent-endpoints';
 
 export const prerender = true;
 
-const PRIMARY_COLLECTION = 'docs';
-const withBase = (path: string) =>
-  path.startsWith('/') && !path.startsWith(import.meta.env.BASE_URL)
-    ? `${import.meta.env.BASE_URL}${path.slice(1)}`
-    : path;
-const absoluteUrl = (path: string) => new URL(withBase(path), config.site).href;
-
-interface SlugProps {
-  item: IndexedEntry;
+interface SlugContext {
+  params: { slug?: string };
+  props: { reference?: MarkdownEndpointReference };
+  request: Request;
 }
 
-export async function getStaticPaths() {
-  const indexed = await getIndexedEntries();
-  return indexed
-    .filter((item) => item.collection === PRIMARY_COLLECTION && item.sourceUrl !== undefined)
-    .map((item) => ({
-      // Same root-index shape as the `.md` twin: `entry.id === "index"`
-      // emits at `/index.mdx`, everything else at `/<entry.id>/index.mdx`.
-      params: {
-        slug: item.entry.id === 'index' ? undefined : item.entry.id,
-      },
-      props: { item } as SlugProps,
-    }));
-}
+export const getStaticPaths = () =>
+  getMarkdownStaticPaths({ collection: 'docs', surface: 'source' });
 
-export async function GET({ props }: { props: SlugProps }) {
-  const { item } = props;
-  const { entry, title, description, version } = item;
-  const data = (entry.data ?? {}) as Record<string, unknown>;
-  const rawImage = data.socialImage;
-  const socialImage =
-    typeof rawImage === 'string' && rawImage.length > 0 ? rawImage : config.socialImage;
-
-  const body = [
-    '---',
-    `title: ${JSON.stringify(title)}`,
-    ...(description ? [`description: ${JSON.stringify(description)}`] : []),
-    ...(socialImage ? [`image: ${JSON.stringify(absoluteUrl(socialImage))}`] : []),
-    ...(version ? [`version: ${JSON.stringify(version)}`] : []),
-    '---',
-    '',
-    entry.body ?? '',
-  ].join('\n');
-
-  return new Response(body, {
-    headers: { 'Content-Type': 'text/markdown; charset=utf-8' },
+export async function GET({ params, props, request }: SlugContext) {
+  const payload = await getMarkdownPayload({
+    collection: 'docs',
+    surface: 'source',
+    slug: params.slug,
+    reference: props.reference,
+    context: { request },
+  });
+  if (!payload) return new Response('Not found', { status: 404 });
+  return new Response(payload.body, {
+    headers: { 'Content-Type': payload.mediaType },
   });
 }

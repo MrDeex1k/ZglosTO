@@ -5,11 +5,11 @@ import { documentLink, renderDocument } from './sync-content.mjs';
 test('published links retain anchors; unpublished sources point at GitHub', () => {
   assert.equal(
     documentLink('backup-restore.md#restore', 'docs/local-development.md'),
-    '/docs/backup/#restore',
+    '/backup/#restore',
   );
   assert.equal(
     documentLink('../Mobile/QUICK_START.md', 'docs/local-development.md'),
-    '/docs/mobile-start/',
+    '/mobile-start/',
   );
   assert.equal(
     documentLink('https://example.org/a', 'docs/local-development.md'),
@@ -18,12 +18,9 @@ test('published links retain anchors; unpublished sources point at GitHub', () =
   assert.equal(documentLink('#wymagania', 'docs/local-development.md'), '#wymagania');
   assert.equal(
     documentLink('deployment-selection.md', 'docs/white-label-configuration.md'),
-    '/docs/wdrozenie/',
+    '/wdrozenie/',
   );
-  assert.equal(
-    documentLink('white-label-configuration.md', 'docs/README.md'),
-    '/docs/konfiguracja/',
-  );
+  assert.equal(documentLink('white-label-configuration.md', 'docs/README.md'), '/konfiguracja/');
   assert.equal(
     documentLink('phase-12-white-label-rollout.md', 'docs/white-label-configuration.md'),
     'https://github.com/MrDeex1k/ZglosTO/blob/main/docs/phase-12-white-label-rollout.md',
@@ -31,11 +28,11 @@ test('published links retain anchors; unpublished sources point at GitHub', () =
   assert.throws(() => documentLink('../../outside.md', 'docs/local-development.md'));
   assert.equal(
     documentLink('CLIENT_CONFIGURATION.md', 'Mobile/CLIENT_HANDOFF.md'),
-    '/docs/mobile-konfiguracja/',
+    '/mobile-konfiguracja/',
   );
   assert.equal(
     documentLink('../docs/mobile-build.md', 'Mobile/CLIENT_HANDOFF.md'),
-    '/docs/mobile-build/',
+    '/mobile-build/',
   );
   assert.equal(
     documentLink('ARCHITECTURE.md', 'Mobile/CLIENT_HANDOFF.md'),
@@ -51,7 +48,7 @@ test('publishing removes duplicate H1, rewrites links and preserves code', () =>
     page,
     0,
   );
-  assert.ok(output.includes('[Backup](/docs/backup/)'));
+  assert.ok(output.includes('[Backup](/backup/)'));
   assert.ok(output.includes(code));
   assert.ok(output.includes('`[backup](backup-restore.md)`'));
   assert.ok(!output.includes('# Start'));

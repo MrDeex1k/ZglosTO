@@ -10,6 +10,7 @@ const documents = ['index.html', ...pages.map((page) => `${page.slug}/index.html
 let links = 0;
 for (const document of documents) {
   const html = await readFile(new URL(document, dist), 'utf8');
+  assert.ok(!html.includes('/docs/docs/'), `${document}: doubled documentation base path`);
   for (const match of html.matchAll(/(?:href|src)="(\/docs\/[^"?]*)(?:\?[^"#]*)?"/g)) {
     const [pathname, anchor] = match[1].split('#');
     let target = new URL(decodeURIComponent(pathname.slice('/docs/'.length)), dist);
