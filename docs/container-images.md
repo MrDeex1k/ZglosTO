@@ -2,15 +2,15 @@
 
 ## Aktualny baseline
 
-Od 2026-09-21 projekt używa następujących przypiętych obrazów:
+Od 2026-10-17 projekt używa następujących przypiętych obrazów:
 
 | Obszar                                          | Obraz                                                                                          |
 | ----------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| minimalny runtime usług Bun                     | `alpine:3.24.2` + binarny Bun 1.4.2                                                            |
-| publiczny Nginx i runtime statycznego frontendu | `nginx:1.31.6-alpine3.24-slim`                                                                 |
+| minimalny runtime usług Bun                     | `alpine:3.24.2` + binarny Bun 1.4.3                                                            |
+| publiczny Nginx i runtime statycznego frontendu | `nginx:1.31.7-alpine3.24-slim`                                                                 |
 | opcjonalny model DMR                            | `ai/gemma3-qat:1B-Q4_K_M`                                                                      |
 | baza własnego obrazu database                   | `postgres:18.6-alpine3.24`                                                                     |
-| własny obraz poolera                            | `pgbouncer/Dockerfile` bazujący na `edoburu/pgbouncer:v1.25.2-p0`                              |
+| własny obraz poolera                            | `pgbouncer/Dockerfile` bazujący na `edoburu/pgbouncer:v1.26.0-p0`                              |
 | trwały broker bez panelu management             | `rabbitmq:4.3.6-alpine`                                                                        |
 | opcjonalny lokalny Redis                        | `redis:8.10.2-alpine3.23`                                                                      |
 | lokalny Object Storage zgodny z S3              | `rustfs/rustfs:1.0.0`                                                                          |
@@ -52,7 +52,7 @@ Model DMR ma zweryfikowany digest
 uruchamiany wyłącznie przez opcjonalny `docker-compose.llm.yml`. Nie jest obrazem
 aplikacyjnym budowanym przez `build-images.sh`.
 
-Buildery używają Bun 1.4.2 z przypiętego digestem obrazu Alpine (musl, amd64/arm64), bez binarki Node. Bun wykonuje frozen install, CLI kompilatora, build Vite oraz skrypty stagingu. `scripts/stage-production.ts` zbiera wyłącznie produkcyjny graf workspace i ich dist do pustego katalogu. Osobna instalacja production/offline/frozen tworzy samodzielny store. Obraz zawiera ten graf w `/app`, a katalog roboczy usługi to `/app/backend`, `/app/authorization` lub `/app/llm_gateway`. Komendy `dist/...` i użytkownik non-root pozostają zachowane. Runtime Bun zastępuje Node; finalne obrazy usług nie zawierają binarki Node.
+Buildery używają Bun 1.4.3 z przypiętego digestem obrazu Alpine (musl, amd64/arm64), bez binarki Node. Bun wykonuje frozen install, CLI kompilatora, build Vite oraz skrypty stagingu. `scripts/stage-production.ts` zbiera wyłącznie produkcyjny graf workspace i ich dist do pustego katalogu. Osobna instalacja production/offline/frozen tworzy samodzielny store. Obraz zawiera ten graf w `/app`, a katalog roboczy usługi to `/app/backend`, `/app/authorization` lub `/app/llm_gateway`. Komendy `dist/...` i użytkownik non-root pozostają zachowane. Runtime Bun zastępuje Node; finalne obrazy usług nie zawierają binarki Node.
 
 Backend HTTP i `media_worker` są budowane z tego samego, niezmiennego artefaktu
 `backend/Dockerfile`, ale Compose uruchamia je jako dwa niezależne procesy i kontenery z

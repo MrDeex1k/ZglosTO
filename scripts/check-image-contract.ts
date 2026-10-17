@@ -364,7 +364,7 @@ function inspectImage(
       '-p',
       'process.versions.bun',
     ]).trim();
-    if (version !== '1.4.2') fail(`${reference} must execute Bun 1.4.2; got ${version}`);
+    if (version !== '1.4.3') fail(`${reference} must execute Bun 1.4.3; got ${version}`);
     const node = dockerOutput(context, [
       'run',
       '--rm',

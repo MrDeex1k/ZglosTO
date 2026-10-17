@@ -1,6 +1,6 @@
-# syntax=docker/dockerfile:1.12
+# syntax=docker/dockerfile:1.28.0
 
-ARG PGBOUNCER_IMAGE=edoburu/pgbouncer:v1.25.2-p0
+ARG PGBOUNCER_IMAGE=edoburu/pgbouncer:v1.26.0-p0
 
 FROM ${PGBOUNCER_IMAGE}
 

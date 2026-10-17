@@ -115,7 +115,7 @@
   "externalComponents": [
     {
       "id": "rustfs",
-      "image": "rustfs/rustfs:1.0.0",
+      "image": "rustfs/rustfs:1.0.2",
       "module": "objectStorage",
       "mode": "local",
       "includedByDefault": true
@@ -129,14 +129,14 @@
     },
     {
       "id": "otel_collector",
-      "image": "otel/opentelemetry-collector-contrib:0.161.0",
+      "image": "otel/opentelemetry-collector-contrib:0.163.1",
       "module": "observability",
       "mode": "local-or-external",
       "includedByDefault": false
     },
     {
       "id": "prometheus",
-      "image": "prom/prometheus:v3.14.0",
+      "image": "prom/prometheus:v3.15.0",
       "module": "observability",
       "mode": "local",
       "includedByDefault": false
@@ -150,7 +150,7 @@
     },
     {
       "id": "tempo",
-      "image": "grafana/tempo:3.0.3",
+      "image": "grafana/tempo:3.1.0",
       "module": "observability",
       "mode": "local",
       "includedByDefault": false
@@ -164,7 +164,7 @@
     },
     {
       "id": "grafana",
-      "image": "grafana/grafana:13.2.2",
+      "image": "grafana/grafana:13.2.4",
       "module": "observability",
       "mode": "local",
       "includedByDefault": false

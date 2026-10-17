@@ -1,8 +1,8 @@
-# syntax=docker/dockerfile:1.12
+# syntax=docker/dockerfile:1.28.0
 
 ARG RUNTIME_IMAGE=alpine:3.24.2
 
-FROM oven/bun:1.4.2-alpine@sha256:d888c0ae6c86d7866ff10c5aafdd9077b36aee6455b33dd270fb93c0dd5cef6f AS bun
+FROM oven/bun:1.4.3-alpine@sha256:629e17411f1f129dbec3af78d5af9c9f2a937435c80349437206c6b0b7422373 AS bun
 
 FROM bun AS build
 
@@ -27,12 +27,15 @@ RUN --mount=type=cache,id=zglosto-bun,target=/bun/cache \
 COPY . .
 COPY ${WHITE_LABEL_CONFIG_FILE} config/white-label/city.yaml
 
+# Swagger brings an optional build-time TypeScript peer; runtime imports are verified after removal.
 RUN --mount=type=cache,id=zglosto-bun,target=/bun/cache \
     bun run --filter @zglosto/contracts --filter @zglosto/observability --filter @zglosto/rate-limiting --filter @zglosto/transient-store --filter @zglosto/workload-auth --filter @zglosto/white-label-config --if-present build \
  && bun run --filter backend-zglosto build \
  && bun scripts/stage-production.ts backend /prod/backend \
  && cd /prod/backend \
  && bun install --production --frozen-lockfile --offline --ignore-scripts --filter backend-zglosto... \
+ && find node_modules -type l \( -name tsc -o -name tsserver \) -delete \
+ && find node_modules -type d -name typescript -prune -exec rm -rf {} \; \
  && bun /workspace/scripts/verify-production-install.ts /prod/backend backend \
  && rm bun.lock bunfig.toml \
  && find . -type f \( -name "*.map" -o -name "*.d.ts" -o -name "*.d.ts.map" \) -delete

@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.12
+# syntax=docker/dockerfile:1.28.0
 
 ARG RABBITMQ_IMAGE=rabbitmq:4.3.6-alpine
 

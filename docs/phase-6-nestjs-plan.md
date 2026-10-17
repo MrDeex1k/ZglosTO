@@ -190,7 +190,7 @@ graceful shutdown; nie było potrzeby wprowadzania adapterów zgodności.
      brakujący, błędny albo zmieniony w procesie config;
    - `GET /config/public` używa tej samej publicznej projekcji i dokładnej reprezentacji JSON
      co Express, zwraca silny ETag SHA-256, `Cache-Control: public, max-age=60,
-must-revalidate` oraz puste `304` dla exact, weak, list i wildcard `If-None-Match`;
+     must-revalidate` oraz puste `304` dla exact, weak, list i wildcard `If-None-Match`;
    - techniczny `HealthModule` składa liściowe `DatabaseModule`, `StorageModule` i
      `WhiteLabelModule`, nie zmieniając kierunku zależności modułów domenowych;
    - `GET /health/live` zachowuje odpowiedź procesu, a `GET /health` i

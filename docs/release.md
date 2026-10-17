@@ -689,7 +689,7 @@ został uruchomiony i zweryfikowany na hoście bez GPU.
 8. **Wdrożone 2026-07-21:** potwierdzono digest modelu
    `sha256:9f84c113e1f1085bddaffad1acb07c90e59487f0c7e25028f1811e71efba9599`, około
    `950.82 MiB`, kontekst `4096` i argumenty procesu `--cache-type-k q4_0
---cache-type-v q4_0`. DMR otrzymuje 5 s, backend 7 s. Test CPU zwrócił `municipal`
+   --cache-type-v q4_0`. DMR otrzymuje 5 s, backend 7 s. Test CPU zwrócił `municipal`
    w około 392 ms i `emergency` w około 296 ms; brak GPU nie blokuje działania.
 9. **Wdrożone 2026-07-21:** usunięto Python, UV, FastAPI, Transformers, osobny obraz
    `llm_service`, cache Hugging Face, zmienne/token oraz zależne zasoby Compose/K8s.

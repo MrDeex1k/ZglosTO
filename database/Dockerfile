@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.12
+# syntax=docker/dockerfile:1.28.0
 
 ARG POSTGRES_IMAGE=postgres:18.6-alpine3.24
 

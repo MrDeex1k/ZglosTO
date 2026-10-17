@@ -144,8 +144,8 @@ Odtwarzanie embedded-etcd na izolowanej infrastrukturze:
 2. Zatrzymaj K3s na serwerach. Przywróć token jako plik chroniony przed odczytem innych
    użytkowników; przejrzyj konfigurację przed użyciem na nowych hostach.
 3. Na pierwszym serwerze wykonaj `k3s server --cluster-reset
---cluster-reset-restore-path=/ABSOLUTE/PATH/TO/SNAPSHOT --etcd-s3=false
---token-file=/ABSOLUTE/PATH/TO/server-token`, zachowując właściwy `--data-dir`.
+   --cluster-reset-restore-path=/ABSOLUTE/PATH/TO/SNAPSHOT --etcd-s3=false
+   --token-file=/ABSOLUTE/PATH/TO/server-token`, zachowując właściwy `--data-dir`.
 4. Uruchom pierwszy serwer normalnie, a następnie dołącz pozostałe zgodnie z procedurą
    K3s dla odtwarzania wielu serwerów. Nie usuwaj katalogów peerów przed zweryfikowaniem kopii.
 5. Odtwórz osobno PostgreSQL i obiekty S3; snapshot etcd nie zawiera danych PVC.
