@@ -17,7 +17,7 @@ export function createNativeAppLinkConfig(host: string) {
       {
         action: 'VIEW' as const,
         autoVerify: true as const,
-        category: ['BROWSABLE', 'DEFAULT'] as ['BROWSABLE', 'DEFAULT'],
+        category: ['BROWSABLE', 'DEFAULT'],
         data: [
           { host, pathPrefix: '/open', scheme: 'https' as const },
           { host, pathPrefix: '/auth/email-verified', scheme: 'https' as const },

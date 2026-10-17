@@ -35,9 +35,10 @@ describe('deep-link intent allowlist', () => {
       status: 'authenticated' as const,
       userId: 'resident-1',
     };
-    expect(resolveAuthenticatedIntent(resident, { incidentId, target: 'resident' })).toBe(
-      `/resident/incidents/${incidentId}`,
-    );
+    expect(resolveAuthenticatedIntent(resident, { incidentId, target: 'resident' })).toEqual({
+      pathname: '/resident/incidents/[id]',
+      params: { id: incidentId },
+    });
     expect(resolveAuthenticatedIntent(resident, { incidentId, target: 'service' })).toBe(
       '/resident',
     );
@@ -52,12 +53,14 @@ describe('deep-link intent allowlist', () => {
       userId: 'user-1',
     };
 
-    expect(resolvePublicIncidentRoute({ status: 'anonymous' }, incidentId)).toBe(
-      `/incidents/${incidentId}`,
-    );
-    expect(resolvePublicIncidentRoute({ ...authenticated, role: 'resident' }, incidentId)).toBe(
-      `/incidents/${incidentId}`,
-    );
+    expect(resolvePublicIncidentRoute({ status: 'anonymous' }, incidentId)).toEqual({
+      pathname: '/incidents/[id]',
+      params: { id: incidentId },
+    });
+    expect(resolvePublicIncidentRoute({ ...authenticated, role: 'resident' }, incidentId)).toEqual({
+      pathname: '/incidents/[id]',
+      params: { id: incidentId },
+    });
     expect(
       resolvePublicIncidentRoute(
         { ...authenticated, role: 'service', serviceKey: 'roads' },

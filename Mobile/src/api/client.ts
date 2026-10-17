@@ -41,7 +41,7 @@ function withDefaultHeaders(init: RequestInit): Headers {
 }
 
 export function createApiClient({
-  fetcher = expoFetch as MobileFetch,
+  fetcher = expoFetch,
   origin,
   timeoutMs: defaultTimeoutMs = 15_000,
 }: ApiClientOptions) {

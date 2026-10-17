@@ -11,6 +11,8 @@
     ".state/phase-12/**",
     "docs-site/.astro/**",
     "docs-site/.nimbus/**",
-    "bun.lock"
+    "bun.lock",
+    "tools/oxlint/anti-slop/rules/**",
+    "tools/oxlint/anti-slop/shared/**"
   ]
 }

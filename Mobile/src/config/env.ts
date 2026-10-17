@@ -47,9 +47,8 @@ function parseBooleanFlag(value: string | undefined): boolean {
 
 function parseAppEnvironment(value: string | undefined): MobileAppEnvironment {
   const candidate = value ?? 'development';
-  if (MOBILE_APP_ENVIRONMENTS.some((environment) => environment === candidate)) {
-    return candidate as MobileAppEnvironment;
-  }
+  const supported = MOBILE_APP_ENVIRONMENTS.find((environment) => environment === candidate);
+  if (supported !== undefined) return supported;
   throw new MobileEnvironmentError(
     `EXPO_PUBLIC_APP_ENV must be one of: ${MOBILE_APP_ENVIRONMENTS.join(', ')}.`,
   );

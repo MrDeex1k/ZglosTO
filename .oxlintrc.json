@@ -6,31 +6,64 @@
     "perf": "warn"
   },
   "plugins": ["react", "typescript", "oxc", "import", "jsx-a11y", "promise", "node"],
-  "jsPlugins": ["@shadcn/lint"],
+  "jsPlugins": [
+    "@shadcn/lint",
+    {
+      "name": "anti-slop",
+      "specifier": "./tools/oxlint/anti-slop/index.ts"
+    }
+  ],
   "env": {
     "browser": true,
     "node": true,
     "es2024": true
   },
   "rules": {
-    "typescript/no-extraneous-class": ["warn", { "allowWithDecorator": true }],
+    "typescript/no-extraneous-class": [
+      "warn",
+      {
+        "allowWithDecorator": true
+      }
+    ],
     "react/react-in-jsx-scope": "off",
     "jsx-a11y/prefer-tag-over-role": "warn",
     "jsx-a11y/heading-has-content": "warn",
     "jsx-a11y/anchor-has-content": "warn",
-    "jsx-a11y/label-has-associated-control": "warn"
+    "jsx-a11y/label-has-associated-control": "warn",
+    "anti-slop/no-chained-type-assertions": "error",
+    "anti-slop/no-widen-then-assert": "error",
+    "anti-slop/no-reduce-accumulator-copy": "error",
+    "oxc/no-accumulating-spread": "error"
   },
   "overrides": [
     {
       "files": ["frontend/src/**/*.{ts,tsx}"],
       "rules": {
-        "shadcn/no-restyle": ["warn", { "allow": ["layout"] }]
+        "shadcn/no-restyle": [
+          "warn",
+          {
+            "allow": ["layout"]
+          }
+        ]
       }
     },
     {
       "files": ["frontend/src/components/ui/**/*.{ts,tsx}"],
       "rules": {
         "shadcn/no-restyle": "off"
+      }
+    },
+    {
+      "files": ["Mobile/src/**/*.{ts,tsx}", "Mobile/app.config.ts"],
+      "rules": {
+        "anti-slop/require-safety-comment-for-type-assertion": "error"
+      }
+    },
+    {
+      "files": ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}"],
+      "rules": {
+        "anti-slop/require-safety-comment-for-type-assertion": "off",
+        "anti-slop/no-chained-type-assertions": "off"
       }
     }
   ],
@@ -39,6 +72,8 @@
     "**/routeTree.gen.ts",
     ".pnpm-store/**",
     "docs-site/.astro/**",
-    "docs-site/.nimbus/**"
+    "docs-site/.nimbus/**",
+    "tools/oxlint/anti-slop/rules/**",
+    "tools/oxlint/anti-slop/shared/**"
   ]
 }

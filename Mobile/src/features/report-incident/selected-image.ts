@@ -46,9 +46,8 @@ const MIME_BY_EXTENSION: Record<string, IncidentImageMimeType> = {
 
 function resolveMimeType(asset: IncidentImageAsset): IncidentImageMimeType {
   const declared = asset.mimeType?.toLowerCase();
-  if (INCIDENT_UPLOAD_MIME_TYPES.some((mimeType) => mimeType === declared)) {
-    return declared as IncidentImageMimeType;
-  }
+  const supported = INCIDENT_UPLOAD_MIME_TYPES.find((mimeType) => mimeType === declared);
+  if (supported !== undefined) return supported;
 
   const candidateName = asset.fileName ?? asset.uri;
   const extension = candidateName.split(/[?#]/u)[0]?.split('.').pop()?.toLowerCase();

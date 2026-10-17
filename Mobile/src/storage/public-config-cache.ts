@@ -17,22 +17,21 @@ export interface KeyValueStorage {
   setItem: (key: string, value: string) => Promise<void>;
 }
 
-interface SerializedPublicConfigCache {
-  etag: string;
-  response: unknown;
-  savedAt: string;
-  version: number;
-}
-
 function parseCacheValue(value: string): PublicConfigCacheEntry | null {
-  let candidate: SerializedPublicConfigCache;
+  let candidate: unknown;
   try {
-    candidate = JSON.parse(value) as SerializedPublicConfigCache;
+    candidate = JSON.parse(value);
   } catch {
     return null;
   }
 
   if (
+    typeof candidate !== 'object' ||
+    candidate === null ||
+    !('version' in candidate) ||
+    !('etag' in candidate) ||
+    !('savedAt' in candidate) ||
+    !('response' in candidate) ||
     candidate.version !== PUBLIC_CONFIG_CACHE_VERSION ||
     typeof candidate.etag !== 'string' ||
     candidate.etag.trim() === '' ||

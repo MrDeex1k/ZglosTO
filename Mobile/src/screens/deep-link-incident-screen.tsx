@@ -1,7 +1,7 @@
-import { type Href, router } from 'expo-router';
+import { View } from '@/components/ui/native';
+import { router } from 'expo-router';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { View } from 'react-native';
 
 import { useSession } from '@/auth/session-provider';
 import { routeForSession } from '@/auth/session-model';
@@ -43,7 +43,7 @@ export function DeepLinkIncidentScreen({
       router.replace(privateIncidentRoute({ incidentId, target }));
       return;
     }
-    router.replace((routeForSession(session) ?? '/') as Href);
+    router.replace(routeForSession(session) ?? '/');
   }, [incidentId, invalid, session, target]);
 
   if (invalid) {

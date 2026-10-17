@@ -52,7 +52,9 @@ export function parseLoginIntent(value: string | string[] | undefined): Incident
 }
 
 export function privateIncidentRoute(intent: IncidentLinkIntent): Href {
-  return `/${intent.target}/incidents/${intent.incidentId}` as Href;
+  return intent.target === 'resident'
+    ? { pathname: '/resident/incidents/[id]', params: { id: intent.incidentId } }
+    : { pathname: '/service/incidents/[id]', params: { id: intent.incidentId } };
 }
 
 export function resolvePublicIncidentRoute(
@@ -62,7 +64,9 @@ export function resolvePublicIncidentRoute(
   if (session.status === 'unknown' || session.status === 'stale') return null;
   const redirect = publicRouteRedirectForSession(session);
   if (redirect !== null) return redirect;
-  return canAccessPublicIncidents(session) ? (`/incidents/${incidentId}` as Href) : '/';
+  return canAccessPublicIncidents(session)
+    ? { pathname: '/incidents/[id]', params: { id: incidentId } }
+    : '/';
 }
 
 export function resolveAuthenticatedIntent(
@@ -71,5 +75,5 @@ export function resolveAuthenticatedIntent(
 ): Href | null {
   if (session.status !== 'authenticated') return null;
   if (intent !== null && session.role === intent.target) return privateIncidentRoute(intent);
-  return (routeForSession(session) ?? '/') as Href;
+  return routeForSession(session) ?? '/';
 }

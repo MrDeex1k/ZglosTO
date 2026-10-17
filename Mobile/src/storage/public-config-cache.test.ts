@@ -34,4 +34,13 @@ describe('public config cache', () => {
     await expect(createPublicConfigCache(storage).read()).resolves.toBeNull();
     await expect(storage.getItem('ignored')).resolves.toBeNull();
   });
+
+  test.each(['null', '[]', '42', '"cache"', '{}'])(
+    'discards non-record cache input %s',
+    async (value) => {
+      const storage = createMemoryStorage(value);
+      await expect(createPublicConfigCache(storage).read()).resolves.toBeNull();
+      await expect(storage.getItem('ignored')).resolves.toBeNull();
+    },
+  );
 });
