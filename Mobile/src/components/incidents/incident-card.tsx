@@ -1,6 +1,7 @@
+import { Pressable, View } from '@/components/ui/native';
 import type { CurrentResolvedIncidentDto, PublicWhiteLabelConfig } from '@zglosto/contracts';
 import { Link } from 'expo-router';
-import { Pressable, View } from 'react-native';
+
 import { useTranslation } from 'react-i18next';
 
 import { Card } from '@/components/ui/card';

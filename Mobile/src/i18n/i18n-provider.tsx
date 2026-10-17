@@ -1,3 +1,4 @@
+import { ActivityIndicator, View } from '@/components/ui/native';
 import {
   createI18n,
   DEFAULT_LOCALE,
@@ -7,7 +8,6 @@ import {
 import { getLocales } from 'expo-localization';
 import { createContext, type PropsWithChildren, use, useEffect, useState } from 'react';
 import { I18nextProvider } from 'react-i18next';
-import { ActivityIndicator, View } from 'react-native';
 
 import { readLocalePreference, writeLocalePreference } from '@/storage/preferences';
 

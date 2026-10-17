@@ -1,7 +1,7 @@
-import { type Href, router } from 'expo-router';
+import { ScrollView } from '@/components/ui/native';
+import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView } from 'react-native';
 
 import { useSession } from '@/auth/session-provider';
 import { routeForSession } from '@/auth/session-model';
@@ -46,7 +46,7 @@ export function EmailVerificationResultScreen() {
     if (isNavigating) return;
     setIsNavigating(true);
     if (state === 'verified') {
-      router.replace((destination ?? '/login') as Href);
+      router.replace(destination ?? '/login');
       return;
     }
 

@@ -1,3 +1,16 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/preflight.css' layer(base);
+@import 'tailwindcss/utilities.css';
+@import 'nativewind/theme';
+
+@source './src';
+
+@theme {
+  --radius-card: 18px;
+  --color-canvas: #f7f8fa;
+  --color-ink: #172033;
+  --color-muted: #526078;
+  --color-border: #d9dfe8;
+  --color-success: #15803d;
+  --color-danger: #b91c1c;
+}

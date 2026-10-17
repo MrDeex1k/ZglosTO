@@ -1,5 +1,5 @@
+import { TextInput } from '@/components/ui/native';
 import { forwardRef, type ComponentProps } from 'react';
-import { TextInput } from 'react-native';
 
 import { cn } from '@/lib/cn';
 import { mobileTokens } from '@/theme/tokens';
@@ -23,7 +23,7 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
       ref={ref}
       accessibilityState={{ ...accessibilityState, disabled: editable === false }}
       className={cn(
-        'min-h-12 rounded-xl border border-border bg-white px-4 py-3 text-base leading-6 text-ink',
+        'min-h-12 rounded-xl border border-border bg-white px-4 py-3 text-base leading-[1.5] text-ink',
         className,
       )}
       editable={editable}

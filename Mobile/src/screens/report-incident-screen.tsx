@@ -1,3 +1,12 @@
+import * as Haptics from 'expo-haptics';
+import { NativeChoice } from '@/components/ui/native-choice';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  ScrollView,
+  View,
+  SafeAreaView,
+} from '@/components/ui/native';
 import { incidentSubmissionNotice } from '@zglosto/i18n';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type {
@@ -9,11 +18,10 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Platform } from 'react-native';
 
 import { createAuthenticatedFetch } from '@/api/authenticated-fetch';
-import { createApiClient, type MobileFetch } from '@/api/client';
+import { createApiClient } from '@/api/client';
 import { ApiError } from '@/api/errors';
 import { useSession } from '@/auth/session-provider';
 import { ConnectivityNotice } from '@/components/feedback/connectivity-notice';
@@ -171,9 +179,9 @@ function ReadyReportIncidentScreen({
 
   const fetcher =
     residentSession === null
-      ? (expoFetch as MobileFetch)
+      ? expoFetch
       : createAuthenticatedFetch({
-          fetcher: expoFetch as MobileFetch,
+          fetcher: expoFetch,
           getCookie: sessionContext.getCookie,
           onForbidden: sessionContext.handleForbidden,
           onUnauthorized: sessionContext.handleUnauthorized,
@@ -215,6 +223,9 @@ function ReadyReportIncidentScreen({
         signal,
       }),
     onSuccess: async () => {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
+        () => undefined,
+      );
       removeImage();
       const invalidations = [
         queryClient.invalidateQueries({
@@ -330,7 +341,7 @@ function ReadyReportIncidentScreen({
             <Text accessibilityRole="header" variant="title">
               {t(($) => $.mobile.reportIncident.title)}
             </Text>
-            <Text className="text-lg leading-7 text-muted">
+            <Text className="text-lg leading-[1.56] text-muted">
               {t(($) => $.mobile.reportIncident.description)}
             </Text>
           </View>
@@ -456,23 +467,13 @@ function IncidentServiceField({
   return (
     <View className="gap-3">
       <Label>{t(($) => $.mobile.reportIncident.serviceLabel)}</Label>
-      <View accessibilityRole="radiogroup" className="gap-3">
-        {services.map((service) => {
-          const selected = selectedKey === service.key;
-          return (
-            <Button
-              accessibilityRole="radio"
-              accessibilityState={{ checked: selected }}
-              disabled={disabled}
-              key={service.key}
-              onPress={() => onSelect(service.key)}
-              variant={selected ? 'primary' : 'secondary'}
-            >
-              {service.label}
-            </Button>
-          );
-        })}
-      </View>
+      <NativeChoice
+        disabled={disabled}
+        label={t(($) => $.mobile.reportIncident.serviceLabel)}
+        onSelect={onSelect}
+        options={services.map((service) => ({ label: service.label, value: service.key }))}
+        selected={selectedKey}
+      />
       {error === null ? null : <FormFieldError>{error}</FormFieldError>}
     </View>
   );
@@ -507,7 +508,7 @@ function ReportIncidentSuccess({
         <Text accessibilityLiveRegion="polite" accessibilityRole="header" variant="title">
           {notice.title}
         </Text>
-        <Text className="text-lg leading-7 text-muted">{notice.message}</Text>
+        <Text className="text-lg leading-[1.56] text-muted">{notice.message}</Text>
         <Card className="gap-2">
           <Text variant="caption">{t(($) => $.mobile.reportIncident.reportNumber)}</Text>
           <Text className="font-semibold">{response.incydent.id_zgloszenia}</Text>

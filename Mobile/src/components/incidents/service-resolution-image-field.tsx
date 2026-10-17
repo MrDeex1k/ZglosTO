@@ -1,8 +1,8 @@
+import { View } from '@/components/ui/native';
 import { useMutation } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { View } from 'react-native';
 
 import type { ApiClient } from '@/api/client';
 import { Button } from '@/components/ui/button';

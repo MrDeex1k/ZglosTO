@@ -1,6 +1,7 @@
+import { Pressable, View } from '@/components/ui/native';
 import type { CurrentIncidentListItemDto, IncidentStatusCode } from '@zglosto/contracts';
-import { type Href, Link } from 'expo-router';
-import { Pressable, View } from 'react-native';
+import { Link } from 'expo-router';
+
 import { useTranslation } from 'react-i18next';
 
 import { Card } from '@/components/ui/card';
@@ -22,7 +23,10 @@ export function ServiceIncidentCard({ incident }: { incident: CurrentIncidentLis
         : t(($) => $.incidents.status.resolved);
 
   return (
-    <Link asChild href={`/service/incidents/${encodeURIComponent(incident.id_zgloszenia)}` as Href}>
+    <Link
+      asChild
+      href={{ pathname: '/service/incidents/[id]', params: { id: incident.id_zgloszenia } }}
+    >
       <Pressable
         accessibilityHint={t(($) => $.mobile.service.openDetailsHint)}
         accessibilityLabel={`${incident.opis_zgloszenia}. ${statusLabel}. ${incident.adres_zgloszenia}`}

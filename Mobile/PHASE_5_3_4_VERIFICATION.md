@@ -19,7 +19,7 @@ Data weryfikacji: 2026-08-21.
 ## Zakres 5.4
 
 - zachowano przepływ `picker -> walidacja -> SHA-256 -> initiate -> presigned PUT
--> attach uploadId`;
+  -> attach uploadId`;
 - dołączenie obrazu nie następuje, jeśli PUT zakończy się błędem;
 - brak sieci zachowuje wybrany obraz i wymaga jawnego, ręcznego ponowienia;
 - upload ma postęp, ochronę przed duplikacją i `AbortController`;

@@ -1,5 +1,5 @@
+import { View } from '@/components/ui/native';
 import type { ReactNode } from 'react';
-import { View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';

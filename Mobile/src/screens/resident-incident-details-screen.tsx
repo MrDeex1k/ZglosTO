@@ -1,11 +1,12 @@
+import { ScrollView, View } from '@/components/ui/native';
 import { useQuery } from '@tanstack/react-query';
 import { fetch as expoFetch } from 'expo/fetch';
 import { router, Stack } from 'expo-router';
-import { ScrollView, View } from 'react-native';
+
 import { useTranslation } from 'react-i18next';
 
 import { createAuthenticatedFetch } from '@/api/authenticated-fetch';
-import { createApiClient, type MobileFetch } from '@/api/client';
+import { createApiClient } from '@/api/client';
 import { useSession } from '@/auth/session-provider';
 import { PrivateIncidentImage } from '@/components/incidents/private-incident-image';
 import { ConnectivityNotice } from '@/components/feedback/connectivity-notice';
@@ -57,7 +58,7 @@ function ReadyResidentIncidentDetails({
   const networkAvailability = useNetworkAvailability();
   const isOffline = networkAvailability === 'offline';
   const authenticatedFetch = createAuthenticatedFetch({
-    fetcher: expoFetch as MobileFetch,
+    fetcher: expoFetch,
     getCookie: sessionContext.getCookie,
     onForbidden: sessionContext.handleForbidden,
     onUnauthorized: sessionContext.handleUnauthorized,
@@ -136,7 +137,7 @@ function ReadyResidentIncidentDetails({
           <Text accessibilityRole="header" variant="title">
             {incident.opis_zgloszenia}
           </Text>
-          <Text className="text-lg leading-7 text-muted">{incident.adres_zgloszenia}</Text>
+          <Text className="text-lg leading-[1.56] text-muted">{incident.adres_zgloszenia}</Text>
         </View>
 
         {isOffline ? (

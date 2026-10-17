@@ -1,14 +1,14 @@
+import { ActivityIndicator, FlatList, View, SafeAreaView } from '@/components/ui/native';
 import type { CurrentIncidentListItemDto } from '@zglosto/contracts';
 import { useQuery } from '@tanstack/react-query';
 import { fetch as expoFetch } from 'expo/fetch';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, FlatList, type ListRenderItemInfo, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { type ListRenderItemInfo } from 'react-native';
 
 import { createAuthenticatedFetch } from '@/api/authenticated-fetch';
-import { createApiClient, type MobileFetch } from '@/api/client';
+import { createApiClient } from '@/api/client';
 import { canAccessRole, canAccessServiceScope } from '@/auth/route-access';
 import { useSession } from '@/auth/session-provider';
 import { ServiceIncidentCard } from '@/components/incidents/service-incident-card';
@@ -89,7 +89,7 @@ function ReadyServiceHome({
   const [isSigningOut, setIsSigningOut] = useState(false);
   const networkAvailability = useNetworkAvailability();
   const authenticatedFetch = createAuthenticatedFetch({
-    fetcher: expoFetch as MobileFetch,
+    fetcher: expoFetch,
     getCookie: sessionContext.getCookie,
     onForbidden: sessionContext.handleForbidden,
     onUnauthorized: sessionContext.handleUnauthorized,

@@ -1,6 +1,6 @@
+import { ScrollView } from '@/components/ui/native';
 import { Link } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ScrollView } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';

@@ -1,9 +1,12 @@
 # ZgłosTO Mobile
 
 Ten katalog zawiera uruchamialną aplikację natywną ZgłosTO dla iOS i Androida oraz
-dokumentację jej wdrożenia. Aplikacja korzysta z Expo SDK 57, React Native 0.86,
+dokumentację jej wdrożenia. Aplikacja korzysta z Expo SDK 58, React Native 0.88,
 Expo Router i lokalnych development buildów. Obsługuje publiczny feed, mieszkańca,
 służbę terenową oraz jawną blokadę roli administratora w Mobile 1.0.
+
+[Aktualizacja SDK 58, NativeWind 5 i natywnego interfejsu](SDK_58_MIGRATION.md)
+opisuje wersje, reguły anti-slop, wdrożone elementy i wyniki weryfikacji.
 
 ## Prezentacja
 

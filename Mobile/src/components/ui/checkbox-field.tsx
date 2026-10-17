@@ -1,5 +1,5 @@
+import { Pressable, View } from '@/components/ui/native';
 import { type ReactNode } from 'react';
-import { Pressable, View } from 'react-native';
 
 import { cn } from '@/lib/cn';
 import { FormFieldError } from '@/components/feedback/form-field-error';

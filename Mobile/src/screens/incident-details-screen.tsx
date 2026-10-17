@@ -1,7 +1,8 @@
+import { ScrollView, View } from '@/components/ui/native';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { router, Stack } from 'expo-router';
-import { Linking, Platform, ScrollView, View } from 'react-native';
+import { Linking, Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { imageTransitionDuration } from '@/accessibility/motion';
@@ -134,7 +135,7 @@ function ReadyIncidentDetailsScreen({
           <Text accessibilityRole="header" variant="title">
             {incident.opis_zgloszenia}
           </Text>
-          <Text className="text-lg leading-7 text-muted">{incident.adres_zgloszenia}</Text>
+          <Text className="text-lg leading-[1.56] text-muted">{incident.adres_zgloszenia}</Text>
         </View>
 
         {isOffline ? (

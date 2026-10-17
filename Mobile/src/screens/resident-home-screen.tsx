@@ -1,14 +1,14 @@
+import { ActivityIndicator, FlatList, View, SafeAreaView } from '@/components/ui/native';
 import type { CurrentIncidentListItemDto, PublicWhiteLabelConfig } from '@zglosto/contracts';
 import { useQuery } from '@tanstack/react-query';
 import { fetch as expoFetch } from 'expo/fetch';
-import { type Href, router } from 'expo-router';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, FlatList, type ListRenderItemInfo, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { type ListRenderItemInfo } from 'react-native';
 
 import { createAuthenticatedFetch } from '@/api/authenticated-fetch';
-import { createApiClient, type MobileFetch } from '@/api/client';
+import { createApiClient } from '@/api/client';
 import type { MobileSessionState } from '@/auth/route-access';
 import { useSession } from '@/auth/session-provider';
 import { ResidentIncidentCard } from '@/components/incidents/resident-incident-card';
@@ -80,7 +80,7 @@ function ReadyResidentHomeScreen({
   );
 
   const authenticatedFetch = createAuthenticatedFetch({
-    fetcher: expoFetch as MobileFetch,
+    fetcher: expoFetch,
     getCookie: sessionContext.getCookie,
     onForbidden: sessionContext.handleForbidden,
     onUnauthorized: sessionContext.handleUnauthorized,
@@ -160,10 +160,10 @@ function ReadyResidentHomeScreen({
           </Button>
         </Card>
       ) : null}
-      <Button onPress={() => router.push('/report/new' as Href)}>
+      <Button onPress={() => router.push('/report/new')}>
         {t(($) => $.mobile.reportIncident.openForm)}
       </Button>
-      <Button onPress={() => router.push('/account' as Href)} variant="secondary">
+      <Button onPress={() => router.push('/account')} variant="secondary">
         {t(($) => $.mobile.account.open)}
       </Button>
       <Text accessibilityRole="header" variant="heading">

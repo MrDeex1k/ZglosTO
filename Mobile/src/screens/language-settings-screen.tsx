@@ -1,9 +1,8 @@
+import { View, SafeAreaView } from '@/components/ui/native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button } from '@/components/ui/button';
+import { NativeChoice } from '@/components/ui/native-choice';
 import { Card } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { useLocale } from '@/i18n/i18n-provider';
@@ -38,25 +37,17 @@ export function LanguageSettingsScreen() {
           </Text>
         </View>
 
-        <Card accessibilityRole="radiogroup" className="gap-3">
-          <Button
-            accessibilityRole="radio"
-            accessibilityState={{ checked: locale === 'pl-PL' }}
+        <Card>
+          <NativeChoice
             disabled={state === 'saving'}
-            onPress={() => changeLocale('pl-PL')}
-            variant={locale === 'pl-PL' ? 'primary' : 'secondary'}
-          >
-            {t(($) => $.common.polish)}
-          </Button>
-          <Button
-            accessibilityRole="radio"
-            accessibilityState={{ checked: locale === 'en' }}
-            disabled={state === 'saving'}
-            onPress={() => changeLocale('en')}
-            variant={locale === 'en' ? 'primary' : 'secondary'}
-          >
-            {t(($) => $.common.english)}
-          </Button>
+            label={t(($) => $.mobile.languageSettings.title)}
+            onSelect={changeLocale}
+            options={[
+              { label: t(($) => $.common.polish), value: 'pl-PL' },
+              { label: t(($) => $.common.english), value: 'en' },
+            ]}
+            selected={locale}
+          />
         </Card>
 
         {state === 'saved' ? (

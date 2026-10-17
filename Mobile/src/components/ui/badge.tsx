@@ -1,5 +1,5 @@
+import { View } from '@/components/ui/native';
 import { type PropsWithChildren } from 'react';
-import { View } from 'react-native';
 
 import { Text } from './text';
 

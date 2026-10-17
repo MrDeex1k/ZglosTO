@@ -1,7 +1,8 @@
+import { ActivityIndicator, View } from '@/components/ui/native';
 import type { IncidentImageRef } from '@zglosto/contracts';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
-import { ActivityIndicator, View } from 'react-native';
+
 import { useTranslation } from 'react-i18next';
 
 import { imageTransitionDuration } from '@/accessibility/motion';

@@ -1,5 +1,5 @@
+import { Pressable, type View } from '@/components/ui/native';
 import { forwardRef, type ComponentProps, type ReactNode } from 'react';
-import { Pressable, type View } from 'react-native';
 
 import { cn } from '@/lib/cn';
 

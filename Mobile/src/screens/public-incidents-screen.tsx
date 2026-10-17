@@ -1,8 +1,11 @@
+import { NativeChoice } from '@/components/ui/native-choice';
+import { NavigationSurface } from '@/components/ui/navigation-surface';
+import { ActivityIndicator, FlatList, View, SafeAreaView } from '@/components/ui/native';
 import type { CurrentResolvedIncidentDto } from '@zglosto/contracts';
 import { useQuery } from '@tanstack/react-query';
-import { Redirect, type Href, router } from 'expo-router';
-import { ActivityIndicator, FlatList, type ListRenderItemInfo, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Redirect, router } from 'expo-router';
+import { type ListRenderItemInfo } from 'react-native';
+
 import { useTranslation } from 'react-i18next';
 
 import { IncidentCard } from '@/components/incidents/incident-card';
@@ -71,41 +74,30 @@ function ReadyPublicIncidentsScreen({
         <Text accessibilityRole="header" variant="title">
           {cityName}
         </Text>
-        <Text className="text-lg leading-7 text-muted">
+        <Text className="text-lg leading-[1.56] text-muted">
           {t(($) => $.mobile.publicFeed.description)}
         </Text>
       </View>
 
-      <View accessibilityRole="radiogroup" className="flex-row gap-3">
-        <Button
-          accessibilityRole="radio"
-          accessibilityState={{ checked: locale === 'pl-PL' }}
-          className="flex-1"
-          onPress={() => void setLocale('pl-PL')}
-          variant={locale === 'pl-PL' ? 'primary' : 'secondary'}
-        >
-          {t(($) => $.common.polish)}
+      <NavigationSurface>
+        <NativeChoice
+          label={t(($) => $.mobile.languageSettings.title)}
+          onSelect={(nextLocale) => void setLocale(nextLocale)}
+          options={[
+            { label: t(($) => $.common.polish), value: 'pl-PL' },
+            { label: t(($) => $.common.english), value: 'en' },
+          ]}
+          selected={locale}
+        />
+        <Button onPress={() => router.push(privateRoute ?? '/login')} variant="secondary">
+          {privateRoute === null
+            ? t(($) => $.mobile.auth.signIn)
+            : t(($) => $.mobile.auth.openDashboard)}
         </Button>
-        <Button
-          accessibilityRole="radio"
-          accessibilityState={{ checked: locale === 'en' }}
-          className="flex-1"
-          onPress={() => void setLocale('en')}
-          variant={locale === 'en' ? 'primary' : 'secondary'}
-        >
-          {t(($) => $.common.english)}
+        <Button onPress={() => router.push('/report/new')}>
+          {t(($) => $.mobile.reportIncident.openForm)}
         </Button>
-      </View>
-
-      <Button onPress={() => router.push((privateRoute ?? '/login') as Href)} variant="secondary">
-        {privateRoute === null
-          ? t(($) => $.mobile.auth.signIn)
-          : t(($) => $.mobile.auth.openDashboard)}
-      </Button>
-
-      <Button onPress={() => router.push('/report/new' as Href)}>
-        {t(($) => $.mobile.reportIncident.openForm)}
-      </Button>
+      </NavigationSurface>
 
       <Text accessibilityRole="header" variant="heading">
         {t(($) => $.mobile.publicFeed.title)}

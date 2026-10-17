@@ -1,8 +1,8 @@
-import { type Href, router, useLocalSearchParams } from 'expo-router';
+import { KeyboardAvoidingView, ScrollView, View, SafeAreaView } from '@/components/ui/native';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Platform } from 'react-native';
 
 import { useSession } from '@/auth/session-provider';
 import { routeForSession } from '@/auth/session-model';
@@ -37,7 +37,7 @@ export function LoginScreen() {
         const destination =
           resolveAuthenticatedIntent(nextSession, intent) ?? routeForSession(nextSession);
         if (destination === null) setError(t(($) => $.mobile.auth.unsupportedRole));
-        else router.replace(destination as Href);
+        else router.replace(destination);
         return undefined;
       })
       .catch(() => {
@@ -63,7 +63,7 @@ export function LoginScreen() {
             <Text accessibilityRole="header" variant="title">
               {t(($) => $.mobile.auth.title)}
             </Text>
-            <Text className="text-lg leading-7 text-muted">
+            <Text className="text-lg leading-[1.56] text-muted">
               {t(($) => $.mobile.auth.description)}
             </Text>
           </View>

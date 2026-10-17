@@ -1,4 +1,5 @@
-import { ActivityIndicator, ScrollView, View } from 'react-native';
+import { ActivityIndicator, ScrollView, View } from '@/components/ui/native';
+
 import { useTranslation } from 'react-i18next';
 
 import { StatePanel } from '@/components/feedback/state-panel';

@@ -1,9 +1,8 @@
+import { ScrollView, View, SafeAreaView } from '@/components/ui/native';
 import Constants from 'expo-constants';
-import { type Href, router } from 'expo-router';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { MobileSessionState } from '@/auth/route-access';
 import { useSession } from '@/auth/session-provider';
@@ -60,7 +59,7 @@ function ReadyResidentAccountScreen({
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={['left', 'right', 'bottom']}>
+    <SafeAreaView className="flex-1 bg-canvas" edges={['top', 'left', 'right', 'bottom']}>
       <ScrollView contentContainerClassName="mx-auto w-full max-w-xl gap-6 px-6 py-8">
         <View className="gap-3">
           <Text accessibilityRole="header" variant="title">
@@ -80,13 +79,13 @@ function ReadyResidentAccountScreen({
         </Card>
 
         <View className="gap-3">
-          <Button onPress={() => router.push('/settings/language' as Href)} variant="secondary">
+          <Button onPress={() => router.push('/settings/language')} variant="secondary">
             {t(($) => $.mobile.account.language)}
           </Button>
-          <Button onPress={() => router.push('/support/contact' as Href)} variant="secondary">
+          <Button onPress={() => router.push('/support/contact')} variant="secondary">
             {t(($) => $.mobile.account.contact)}
           </Button>
-          <Button onPress={() => router.push('/legal' as Href)} variant="secondary">
+          <Button onPress={() => router.push('/legal')} variant="secondary">
             {t(($) => $.mobile.account.legal)}
           </Button>
         </View>

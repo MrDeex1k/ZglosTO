@@ -1,8 +1,7 @@
+import { ActivityIndicator, View, SafeAreaView } from '@/components/ui/native';
 import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useSession } from '@/auth/session-provider';
 import { homeExperienceForSession } from '@/auth/route-access';
@@ -82,14 +81,14 @@ function AdminMobileUnavailableScreen() {
           <Text accessibilityRole="header" variant="title">
             {t(($) => $.mobile.adminUnavailable.title)}
           </Text>
-          <Text className="text-lg leading-7 text-muted">
+          <Text className="text-lg leading-[1.56] text-muted">
             {t(($) => $.mobile.adminUnavailable.description)}
           </Text>
         </View>
 
         <Card className="gap-2">
           <Text variant="heading">{t(($) => $.mobile.adminUnavailable.computerTitle)}</Text>
-          <Text className="leading-6 text-muted">
+          <Text className="leading-[1.5] text-muted">
             {t(($) => $.mobile.adminUnavailable.computerDescription)}
           </Text>
         </Card>

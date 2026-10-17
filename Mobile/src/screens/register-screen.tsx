@@ -1,8 +1,8 @@
-import { type Href, router } from 'expo-router';
+import { KeyboardAvoidingView, ScrollView, View, SafeAreaView } from '@/components/ui/native';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Platform } from 'react-native';
 
 import { MobileAuthOperationError } from '@/auth/errors';
 import { useSession } from '@/auth/session-provider';
@@ -77,7 +77,7 @@ export function RegisterScreen() {
     void signUpWithEmail(normalizeRegistration(value))
       .then((nextSession) => {
         const destination = routeForSession(nextSession);
-        router.replace((destination ?? '/') as Href);
+        router.replace(destination ?? '/');
         return undefined;
       })
       .catch((error: unknown) => {
@@ -103,7 +103,7 @@ export function RegisterScreen() {
             <Text accessibilityRole="header" variant="title">
               {t(($) => $.mobile.registration.title)}
             </Text>
-            <Text className="text-lg leading-7 text-muted">
+            <Text className="text-lg leading-[1.56] text-muted">
               {t(($) => $.mobile.registration.description)}
             </Text>
           </View>

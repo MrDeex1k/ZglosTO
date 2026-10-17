@@ -1,10 +1,11 @@
+import { Pressable, View } from '@/components/ui/native';
 import type {
   CurrentIncidentListItemDto,
   IncidentStatusCode,
   PublicWhiteLabelConfig,
 } from '@zglosto/contracts';
-import { type Href, Link } from 'expo-router';
-import { Pressable, View } from 'react-native';
+import { Link } from 'expo-router';
+
 import { useTranslation } from 'react-i18next';
 
 import { Card } from '@/components/ui/card';
@@ -51,7 +52,7 @@ export function ResidentIncidentCard({ config, incident }: ResidentIncidentCardP
   return (
     <Link
       asChild
-      href={`/resident/incidents/${encodeURIComponent(incident.id_zgloszenia)}` as Href}
+      href={{ pathname: '/resident/incidents/[id]', params: { id: incident.id_zgloszenia } }}
     >
       <Pressable
         accessibilityHint={t(($) => $.mobile.resident.openDetailsHint)}

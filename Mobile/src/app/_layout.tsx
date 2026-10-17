@@ -5,7 +5,7 @@ import '@/performance/runtime-clock';
 
 import { Stack } from 'expo-router/stack';
 import { useTranslation } from 'react-i18next';
-import { StatusBar } from 'react-native';
+import { Platform, StatusBar } from 'react-native';
 
 import { canAccessPublicIncidents, canAccessRole } from '@/auth/route-access';
 import { useSession } from '@/auth/session-provider';
@@ -50,7 +50,9 @@ function RootNavigator() {
           <Stack.Screen
             name="report/new"
             options={{
-              presentation: 'modal',
+              presentation: Platform.OS === 'ios' ? 'formSheet' : 'modal',
+              sheetAllowedDetents: [1],
+              sheetGrabberVisible: true,
               title: t(($) => $.mobile.reportIncident.routeTitle),
             }}
           />
