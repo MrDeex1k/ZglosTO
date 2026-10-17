@@ -52,7 +52,6 @@
     },
     "Mobile": {
       "entry": [
-        "app.config.ts",
         "metro.config.cjs",
         "plugins/**/*.cjs",
         "scripts/**/*.{mjs,ts}",
@@ -62,7 +61,7 @@
       "ignoreDependencies": [
         "expo-build-properties",
         "expo-dev-client",
-        "react-native-css-interop",
+        "expo-system-ui",
         "@babel/plugin-transform-react-jsx"
       ],
       "metro": false

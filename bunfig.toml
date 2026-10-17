@@ -3,5 +3,5 @@ env = false
 
 [install]
 linker = "hoisted"
-minimumReleaseAge = 86400
+minimumReleaseAge = 10800
 saveExact = true

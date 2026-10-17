@@ -103,7 +103,7 @@ test('K3s profiles distinguish single-node operation from recoverable HA storage
   );
 });
 
-const dockerMock = `#!/usr/bin/env node
+const dockerMock = `#!${process.execPath}
 const fs = require('node:fs');
 const args = process.argv.slice(2);
 fs.appendFileSync(process.env.MOCK_LOG, JSON.stringify(args)+'\\n');

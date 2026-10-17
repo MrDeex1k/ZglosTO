@@ -3,6 +3,8 @@ import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { existsSync, readFileSync, readdirSync, realpathSync } from 'node:fs';
 
+declare const Bun: { JSON5: { parse(text: string): { packages: Record<string, unknown> } } };
+
 const root = process.cwd();
 const manifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
 const bunVersion = readFileSync(join(root, '.bun-version'), 'utf8').trim();
@@ -34,6 +36,13 @@ for (const workspace of ['.', ...workspaceDirectories]) {
   }
   const file = join(root, workspace, 'package.json');
   const metadata = JSON.parse(readFileSync(file, 'utf8'));
+  if (metadata.devDependencies?.vitest) {
+    assert.equal(
+      createRequire(file)('vitest/package.json').version,
+      metadata.devDependencies.vitest,
+      `${workspace}: installed Vitest must match the manifest`,
+    );
+  }
   assert.ok(!('pnpm' in metadata), `${workspace}: obsolete pnpm configuration`);
   if (metadata.packageManager) assert.equal(metadata.packageManager, `bun@${bunVersion}`);
   for (const [name, command] of Object.entries(metadata.scripts ?? {})) {
@@ -44,9 +53,9 @@ for (const workspace of ['.', ...workspaceDirectories]) {
   }
 }
 for (const [workspace, react, typescript] of [
-  ['frontend', '19.3.0', '7.0.2'],
-  ['Mobile', '19.2.3', '6.0.3'],
-  ['docs-site', '19.3.0', '7.0.2'],
+  ['frontend', '19.3.1', '7.0.2'],
+  ['Mobile', '19.3.0', '6.0.3'],
+  ['docs-site', '19.3.1', '7.0.2'],
 ]) {
   const local = createRequire(resolve(workspace, 'package.json'));
   assert.equal(local('react/package.json').version, react);
@@ -109,7 +118,17 @@ for (const workspace of [
   'docs-site',
 ])
   inspectModules(join(root, workspace, 'node_modules'));
-assert.equal(checked.size, rules.size);
+const lockedPackagePaths = Object.keys(
+  Bun.JSON5.parse(readFileSync(join(root, 'bun.lock'), 'utf8')).packages,
+);
+const expectedParents = [...rules.keys()].filter((parent) =>
+  lockedPackagePaths.some((path) => path === parent || path.endsWith(`/${parent}`)),
+);
+assert.deepEqual(
+  [...checked].sort(),
+  expectedParents.sort(),
+  'Verify every installed override parent',
+);
 console.log(
   'Bun workspaces: one manager/lockfile, workspace React/TypeScript versions and scoped overrides verified.',
 );

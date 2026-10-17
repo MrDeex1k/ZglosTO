@@ -3,13 +3,13 @@ import { test } from 'node:test';
 import { changedPackages, validateRelease, assertCleanAudit } from './lib/dependency-policy.ts';
 const now = Date.parse('2026-09-12T12:00:00Z');
 const metadata = (date: unknown) => ({ time: { '1.0.0': date }, versions: { '1.0.0': {} } });
-test('release policy accepts the 24h boundary and fails closed on missing, invalid and future dates', () => {
-  validateRelease(metadata(new Date(now - 86400000).toISOString()), 'fixture', '1.0.0', now);
+test('release policy accepts the 3h boundary and fails closed on missing, invalid and future dates', () => {
+  validateRelease(metadata(new Date(now - 10800000).toISOString()), 'fixture', '1.0.0', now);
   for (const date of [
     null,
     '',
     'invalid',
-    new Date(now - 86399999).toISOString(),
+    new Date(now - 10799999).toISOString(),
     new Date(now + 1).toISOString(),
   ])
     assert.throws(() => validateRelease(metadata(date), 'fixture', '1.0.0', now));

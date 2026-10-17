@@ -1,6 +1,6 @@
 # Polityka zależności
 
-Projekt używa Bun 1.4.2 jako menedżera pakietów. Bezpośrednie zależności mają dokładne wersje. Nowe wersje bezpośrednie i tranzytywne obowiązuje kwarantanna 24 godzin, bez wyjątków.
+Projekt używa Bun 1.4.3 jako menedżera pakietów. Bezpośrednie zależności mają dokładne wersje. Nowe wersje bezpośrednie i tranzytywne obowiązuje kwarantanna 3 godzin, bez wyjątków.
 
 ## Instalacja i aktualizacja
 
@@ -16,9 +16,9 @@ bun run deps:update
 bun run deps:update --workspace Mobile
 ```
 
-`package.json` zawiera workspaces, overrides i jawne trustedDependencies: `@nestjs/core`, `esbuild`, `protobufjs`. `@scarf/scarf` nie jest zaufany. `bunfig.toml` wymusza hoisted linker, dokładne wersje i `minimumReleaseAge = 86400` (sekundy).
+`package.json` zawiera workspaces, overrides i jawne trustedDependencies: `@nestjs/core`, `esbuild`, `protobufjs`. `@scarf/scarf` nie jest zaufany. `bunfig.toml` wymusza hoisted linker, dokładne wersje i `minimumReleaseAge = 10800` (sekundy).
 
-Sam Bun akceptuje brak daty publikacji, dlatego add/update muszą przechodzić przez `scripts/dependencies.ts`. Wrapper tworzy kandydata manifestów i lockfile w katalogu tymczasowym przez SFW, bez instalacji i lifecycle scripts. Porównuje wszystkie wersje oraz integralności, również tranzytywne, i sprawdza pełne metadane npm. Brak lub błędna data, wiek poniżej 24 godzin, deprecated, niedostępny rejestr oraz nieobsługiwane źródło zależności blokują zmianę. Dopiero po kontroli całego grafu zapisuje manifesty i lockfile oraz wykonuje frozen install przez SFW. Błąd instalacji pozostawia sprawdzony kandydat do diagnozy i ponowienia przez `deps:install`.
+Sam Bun akceptuje brak daty publikacji, dlatego add/update muszą przechodzić przez `scripts/dependencies.ts`. Wrapper tworzy kandydata manifestów i lockfile w katalogu tymczasowym przez SFW, bez instalacji i lifecycle scripts. Porównuje wszystkie wersje oraz integralności, również tranzytywne, i sprawdza pełne metadane npm. Brak lub błędna data, wiek poniżej 3 godzin, deprecated, niedostępny rejestr oraz nieobsługiwane źródło zależności blokują zmianę. Dopiero po kontroli całego grafu zapisuje manifesty i lockfile oraz wykonuje frozen install przez SFW. Błąd instalacji pozostawia sprawdzony kandydat do diagnozy i ponowienia przez `deps:install`.
 
 Nie używamy bezpośrednio `bun add` ani `bun update`. SFW ocenia ryzyko pakietu, a wrapper egzekwuje kwarantannę; obie kontrole są wymagane. Zamrożona instalacja odtwarza zatwierdzony graf, nie dobiera nowych wersji. Po aktualizacji uruchamiamy `bun run check` i audyt wydaniowy.
 
@@ -35,15 +35,16 @@ i `.tsx`, a osobny proces Astro/Volar używa aliasu `typescript-astro` (TS6.0.3)
 wymaga starszego programistycznego API kompilatora. Pełne sprawdzenie uruchamia
 `bun run check:docs`; nie zastępuj go surowym `astro check`.
 
-Mobile zachowuje istniejący pin TS6.0.3; ta aktualizacja dokumentacji nie zmienia jego
-toolchainu. Wersje i separację zależności sprawdza `bun run check:workspaces`.
+Mobile używa TypeScript 6.0.3 zgodnie z macierzą Expo SDK 58. TypeScript 7.0.2
+przechodzi typecheck Mobile, ale Expo Doctor zgłasza tę główną wersję jako niezgodną.
+Wersje i separację zależności sprawdza `bun run check:workspaces`.
 Szczegóły izolacji Astro oraz warunki usunięcia wyjątku opisuje
 [README dokumentacji](../docs-site/README.md). Zmiana kompilatora wymaga przejścia
 testów odpowiedniego workspace, nie tylko zmiany numeru zależności.
 
 ### Bun i Expo/Metro
 
-Od fazy 4 Bun 1.4.2 wykonuje usługi, skrypty repo, kompilatory, Vite, Vitest, Knip, Oxlint/Oxfmt oraz wrapper SFW i hooki Git. CLI uruchamiamy przez `bun run --bun <narzędzie>`, a Turbo bez globalnego `--bun`, przez jego plik wejściowy. Dzięki temu wymuszenie Bun nie przechodzi do procesów Expo.
+Od fazy 4 Bun 1.4.3 wykonuje usługi, skrypty repo, kompilatory, Vite, Vitest, Knip, Oxlint/Oxfmt oraz wrapper SFW i hooki Git. CLI uruchamiamy przez `bun run --bun <narzędzie>`, a Turbo bez globalnego `--bun`, przez jego plik wejściowy. Dzięki temu wymuszenie Bun nie przechodzi do procesów Expo.
 
 Node >=26.8.1 pozostaje wymagany dla Expo/Metro, Expo Doctor i natywnego toolchainu Mobile. Testy Vitest i typecheck Mobile wykonuje Bun; aplikacja na urządzeniu nadal działa na Hermes. `node:*`, `@types/node` i `NODE_ENV` są kontraktami kompatybilnych API i nie oznaczają uruchomienia Node.
 

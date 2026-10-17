@@ -18,25 +18,25 @@
     "typecheck": "bun run --bun tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@better-auth/expo": "1.7.5",
-    "@hono/node-server": "2.1.1",
+    "@better-auth/expo": "1.7.10",
+    "@hono/node-server": "2.1.5",
     "@zglosto/contracts": "workspace:*",
     "@zglosto/observability": "workspace:*",
     "@zglosto/rate-limiting": "workspace:*",
     "@zglosto/transient-store": "workspace:*",
     "@zglosto/white-label-config": "workspace:*",
-    "better-auth": "1.7.5",
-    "hono": "4.13.8",
-    "pg": "8.23.0"
+    "better-auth": "1.7.10",
+    "hono": "4.13.13",
+    "pg": "8.23.1"
   },
   "devDependencies": {
-    "@types/node": "26.6.2",
+    "@types/node": "26.6.5",
     "@types/pg": "8.23.1",
     "typescript": "7.0.2",
-    "vitest": "5.0.1"
+    "vitest": "5.0.5"
   },
   "engines": {
-    "bun": "1.4.2",
+    "bun": "1.4.3",
     "node": ">=26.8.1"
   }
 }

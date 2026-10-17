@@ -3,7 +3,7 @@ export function assertPackageReleaseAge(
   packageName: string,
   version: string,
   now = Date.now(),
-  minimumAgeMs = 86_400_000,
+  minimumAgeMs = 10_800_000,
 ): void {
   if (!Number.isFinite(now) || !Number.isFinite(minimumAgeMs) || minimumAgeMs < 0) {
     throw new Error('Invalid release-age policy clock or threshold');

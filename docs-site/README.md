@@ -75,7 +75,7 @@ DOCS_TEST_ORIGIN=https://domena-aplikacji bun run --filter docs-site check:build
 Sprawdza to przekierowania, trasy stron, Markdown, plik wyszukiwarki oraz prawdziwe 404.
 Nie używaj tego wariantu jako testu serwera Astro preview, którego routing różni się od Nginx.
 
-Build, kontrolę typów i testy dokumentacji uruchamia Bun 1.4.2. Domyślnym kompilatorem
+Build, kontrolę typów i testy dokumentacji uruchamia Bun 1.4.3. Domyślnym kompilatorem
 dokumentacji jest TypeScript 7.0.2 (`typecheck:ts`). Wyjątkiem jest `typecheck:astro`:
 osobny proces używa API `AstroCheck` z `@astrojs/language-server` i aliasu
 `typescript-astro` przypiętego do TS6.0.3. Volar także importuje kompilator bezpośrednio,
