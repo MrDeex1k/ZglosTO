@@ -35,6 +35,8 @@ const adminSession: VerifiedAuthSession = {
   session: { id: 'admin-session' },
 };
 
+let processingStatus = 'ready';
+let processedMimeType: string | null = 'image/webp';
 let imageKind: 'report' | 'resolution' = 'resolution';
 let incidentStatus: 'reported' | 'resolved' = 'resolved';
 const databaseQuery = vi.fn(async () => ({
@@ -44,8 +46,9 @@ const databaseQuery = vi.fn(async () => ({
       checksum: CHECKSUM,
       incident_status: incidentStatus,
       kind: imageKind,
-      mime_type: 'image/png',
-      object_key: 'incident/resolution/original.png',
+      mime_type: processedMimeType,
+      processing_status: processingStatus,
+      object_key: 'incident/resolution/revision-1.webp',
       reporter_user_id: 'resident-1',
       service_key: 'roads',
     },
@@ -54,8 +57,8 @@ const databaseQuery = vi.fn(async () => ({
 const getObject = vi.fn(async () => ({
   body: IMAGE_BYTES,
   checksumSha256: CHECKSUM,
-  contentType: 'image/png',
-  objectKey: 'incident/resolution/original.png',
+  contentType: 'image/webp',
+  objectKey: 'incident/resolution/revision-1.webp',
   sizeBytes: IMAGE_BYTES.byteLength,
 }));
 
@@ -84,6 +87,8 @@ beforeAll(async () => {
 });
 
 beforeEach(() => {
+  processingStatus = 'ready';
+  processedMimeType = 'image/webp';
   imageKind = 'resolution';
   incidentStatus = 'resolved';
   vi.clearAllMocks();
@@ -98,14 +103,14 @@ describe('NestJS media HTTP', () => {
     const response = await fetch(`${baseUrl}/images/${IMAGE_ID}`);
 
     expect(response.status).toBe(200);
-    expect(response.headers.get('content-type')).toBe('image/png');
+    expect(response.headers.get('content-type')).toBe('image/webp');
     expect(response.headers.get('cache-control')).toBe('public, max-age=300, must-revalidate');
     expect(response.headers.get('etag')).toBe(`"sha256-${CHECKSUM}"`);
     expect(new Uint8Array(await response.arrayBuffer())).toEqual(IMAGE_BYTES);
     expect(databaseQuery).toHaveBeenCalledWith(expect.stringContaining('incident_images'), [
       IMAGE_ID,
     ]);
-    expect(getObject).toHaveBeenCalledWith('incident/resolution/original.png');
+    expect(getObject).toHaveBeenCalledWith('incident/resolution/revision-1.webp');
   });
 
   it('returns 304 without downloading the object again', async () => {
@@ -118,7 +123,7 @@ describe('NestJS media HTTP', () => {
     expect(getObject).not.toHaveBeenCalled();
   });
 
-  it('protects private originals while allowing an administrator', async () => {
+  it('protects private processed images while allowing an administrator', async () => {
     imageKind = 'report';
     incidentStatus = 'reported';
 
@@ -133,6 +138,26 @@ describe('NestJS media HTTP', () => {
     });
     expect(admin.status).toBe(200);
     expect(admin.headers.get('cache-control')).toBe('private, no-store');
+  });
+
+  it.each(['pending', 'processing', 'failed'])(
+    'never serves an unvalidated original or 304 for %s images',
+    async (status) => {
+      processingStatus = status;
+      const response = await fetch(`${baseUrl}/images/${IMAGE_ID}`, {
+        headers: { 'If-None-Match': `"sha256-${CHECKSUM}"` },
+      });
+      expect(response.status).toBe(404);
+      expect(getObject).not.toHaveBeenCalled();
+      expect(response.headers.get('etag')).not.toBe(`"sha256-${CHECKSUM}"`);
+    },
+  );
+
+  it('fails closed when a ready record lacks a sanitized WebP representation', async () => {
+    processedMimeType = null;
+    const response = await fetch(`${baseUrl}/images/${IMAGE_ID}`);
+    expect(response.status).toBe(404);
+    expect(getObject).not.toHaveBeenCalled();
   });
 
   it('keeps malformed and unknown image identifiers indistinguishable', async () => {

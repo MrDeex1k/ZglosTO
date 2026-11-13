@@ -109,3 +109,30 @@ test('binds QUERY signatures to the HTTP method', () => {
     }),
   ).toEqual({ ok: true, keyId: 'backend-v1' });
 });
+
+test('capacity pressure cannot evict a live nonce and allow a replay', () => {
+  const replayCache = new WorkloadReplayCache(1);
+  const input = {
+    body,
+    key,
+    keyId: 'backend-v1',
+    method: 'POST',
+    path: '/classify-incident',
+    timestamp: 1_000,
+  };
+  const first = new Headers(createWorkloadAuthHeaders({ ...input, nonce: 'a'.repeat(32) }, key));
+  const second = new Headers(createWorkloadAuthHeaders({ ...input, nonce: 'b'.repeat(32) }, key));
+  const verify = (headers: Headers, now: number) =>
+    verifyWorkloadAuth({
+      ...input,
+      headers,
+      now,
+      maxClockSkewSeconds: 30,
+      replayCache,
+    });
+  expect(verify(first, 1_000).ok).toBe(true);
+  expect(verify(second, 1_000)).toEqual({ ok: false, reason: 'replay' });
+  expect(verify(first, 1_030)).toEqual({ ok: false, reason: 'replay' });
+  const fresh = new Headers(createWorkloadAuthHeaders({ ...input, timestamp: 1_031 }, key));
+  expect(verify(fresh, 1_031).ok).toBe(true);
+});

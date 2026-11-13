@@ -1,0 +1,1 @@
+postgresql://zglosto_backend:fixture-only-backend-%27quote%22-backslash%5C-password@pgbouncer:6432/zglosto_db

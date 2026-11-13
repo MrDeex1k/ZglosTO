@@ -52,10 +52,22 @@ spec:
             - name: postgresql
               containerPort: 6432
           env:
-            - name: DATABASE_URL_FILE
-              value: /run/secrets/database-credentials/database-direct-url
-            - name: PGBOUNCER_CLIENT_URL_FILE
-              value: /run/secrets/database-credentials/database-url
+            - name: DATABASE_AUTH_PASSWORD_FILE
+              value: /run/secrets/database-credentials/auth-password
+            - name: DATABASE_BACKEND_PASSWORD_FILE
+              value: /run/secrets/database-credentials/backend-password
+            - name: DATABASE_MEDIA_WORKER_PASSWORD_FILE
+              value: /run/secrets/database-credentials/media-worker-password
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: POSTGRES_DB
+            - name: POSTGRES_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: POSTGRES_PORT
             - name: DATABASE_TLS_CA_SOURCE_PATH
               value: /run/secrets/database-ca/ca.crt
             - name: PGBOUNCER_TLS_CERT_PATH
@@ -160,9 +172,8 @@ spec:
                 - /bin/sh
                 - -ec
                 - >-
-                  psql -v ON_ERROR_STOP=1
-                  "$(sed 's/@pgbouncer:/@127.0.0.1:/'
-                  /run/secrets/database-credentials/database-url)?sslmode=require"
+                  PGSSLMODE=require PGPASSWORD="$(cat /run/secrets/database-credentials/backend-password)"
+                  psql -h 127.0.0.1 -p 6432 -U zglosto_backend -d "$POSTGRES_DB"
                   -c "SELECT 1" >/dev/null
             periodSeconds: 5
             timeoutSeconds: 4
@@ -174,10 +185,12 @@ spec:
             optional: false
             defaultMode: 0440
             items:
-              - key: DATABASE_URL
-                path: database-url
-              - key: DATABASE_DIRECT_URL
-                path: database-direct-url
+              - key: DATABASE_AUTH_PASSWORD
+                path: auth-password
+              - key: DATABASE_BACKEND_PASSWORD
+                path: backend-password
+              - key: DATABASE_MEDIA_WORKER_PASSWORD
+                path: media-worker-password
         - name: database-ca
           secret:
             secretName: zglosto-database-tls

@@ -1,10 +1,10 @@
-import { validateBackendEnvironment } from '../config/env.ts';
+import { validateObjectStorageEnvironment } from '../config/env.ts';
 import { closeDatabase, database } from '../database.ts';
 import { S3ObjectStorage } from '../storage/s3-object-storage.ts';
 import { auditObjectStorage } from './object-storage-audit.ts';
 
 async function main(): Promise<void> {
-  const storage = new S3ObjectStorage(validateBackendEnvironment().objectStorage);
+  const storage = new S3ObjectStorage(validateObjectStorageEnvironment());
   await storage.checkReadiness();
   const result = await auditObjectStorage(database, storage);
   console.log(JSON.stringify(result, null, 2));

@@ -1,0 +1,92 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: storage-provision
+  namespace: zglosto
+spec:
+  backoffLimit: 6
+  template:
+    metadata:
+      labels: { app: storage-provision }
+    spec:
+      restartPolicy: OnFailure
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: provision
+          image: rustfs/rc:v0.1.37@sha256:7e93fd410a8fe51514f89373e093392c92095b98dc6140335fcfe956810c4c80
+          command: [sh, /provision/provision-storage-iam.sh]
+          env:
+            - { name: S3_ENDPOINT, value: 'http://rustfs:9000' }
+            - name: S3_REGION
+              valueFrom: { configMapKeyRef: { name: zglosto-config, key: S3_REGION } }
+            - name: S3_BUCKET
+              valueFrom: { configMapKeyRef: { name: zglosto-config, key: S3_BUCKET } }
+            - name: S3_OBJECT_PREFIX
+              valueFrom: { configMapKeyRef: { name: zglosto-config, key: S3_OBJECT_PREFIX } }
+            - { name: RUSTFS_ROOT_ACCESS_KEY_FILE, value: /secrets/root/access-key-id }
+            - { name: RUSTFS_ROOT_SECRET_KEY_FILE, value: /secrets/root/secret-access-key }
+            - { name: S3_ACCESS_KEY_ID_FILE, value: /secrets/backend/access-key-id }
+            - { name: S3_SECRET_ACCESS_KEY_FILE, value: /secrets/backend/secret-access-key }
+            - { name: S3_WORKER_ACCESS_KEY_ID_FILE, value: /secrets/worker/access-key-id }
+            - { name: S3_WORKER_SECRET_ACCESS_KEY_FILE, value: /secrets/worker/secret-access-key }
+            - { name: S3_OPERATIONS_ACCESS_KEY_ID_FILE, value: /secrets/operations/access-key-id }
+            - {
+                name: S3_OPERATIONS_SECRET_ACCESS_KEY_FILE,
+                value: /secrets/operations/secret-access-key,
+              }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 50m, memory: 32Mi }
+            limits: { cpu: 500m, memory: 128Mi }
+          volumeMounts:
+            - { name: script, mountPath: /provision, readOnly: true }
+            - { name: root, mountPath: /secrets/root, readOnly: true }
+            - { name: backend, mountPath: /secrets/backend, readOnly: true }
+            - { name: worker, mountPath: /secrets/worker, readOnly: true }
+            - { name: operations, mountPath: /secrets/operations, readOnly: true }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: script
+          configMap: { name: storage-iam-provision-script }
+        - { name: tmp, emptyDir: { medium: Memory, sizeLimit: 16Mi } }
+        - name: root
+          secret:
+            secretName: zglosto-rustfs-root
+            optional: false
+            defaultMode: 0440
+            items:
+              - { key: RUSTFS_ROOT_ACCESS_KEY, path: access-key-id }
+              - { key: RUSTFS_ROOT_SECRET_KEY, path: secret-access-key }
+        - name: backend
+          secret:
+            secretName: zglosto-object-storage-credentials
+            optional: false
+            defaultMode: 0440
+            items:
+              - { key: S3_ACCESS_KEY_ID, path: access-key-id }
+              - { key: S3_SECRET_ACCESS_KEY, path: secret-access-key }
+        - name: worker
+          secret:
+            secretName: zglosto-object-storage-worker-credentials
+            optional: false
+            defaultMode: 0440
+            items:
+              - { key: S3_ACCESS_KEY_ID, path: access-key-id }
+              - { key: S3_SECRET_ACCESS_KEY, path: secret-access-key }
+        - name: operations
+          secret:
+            secretName: zglosto-object-storage-operations-credentials
+            optional: false
+            defaultMode: 0440
+            items:
+              - { key: S3_ACCESS_KEY_ID, path: access-key-id }
+              - { key: S3_SECRET_ACCESS_KEY, path: secret-access-key }

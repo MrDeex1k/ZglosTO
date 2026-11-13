@@ -173,12 +173,12 @@ if (
 
 const localCompose = compose(strings(composeProfiles.local, 'compose.local'), composeEnvironment);
 for (const image of [
-  'otel/opentelemetry-collector-contrib:0.163.1',
-  'prom/prometheus:v3.15.0',
-  'grafana/loki:3.7.8',
-  'grafana/tempo:3.1.0',
-  'grafana/grafana:13.2.4',
-  'prom/alertmanager:v0.34.1',
+  'otel/opentelemetry-collector-contrib:0.165.0',
+  'prom/prometheus:v3.16.0',
+  'grafana/loki:3.7.10',
+  'grafana/tempo:3.1.1',
+  'grafana/grafana:13.2.6',
+  'prom/alertmanager:v0.35.0',
 ]) {
   if (!localCompose.includes(`image: ${image}`)) fail(`local mode lacks pinned ${image}`);
 }

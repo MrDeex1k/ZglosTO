@@ -244,7 +244,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
     if (client === null) return;
     try {
       const nextSession = await fetchSession(client);
-      setSession(nextSession);
+      await commitVerifiedSession(nextSession);
     } catch {
       // 403 nie oznacza wylogowania; zachowujemy dotychczasową sesję przy błędzie sieci.
     }

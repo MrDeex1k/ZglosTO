@@ -61,7 +61,15 @@ test('dependency CLI rejects bypass flags without modifying repository manifests
   const { readFileSync } = await import('node:fs');
   const files = ['package.json', 'Mobile/package.json', 'bun.lock'];
   const before = files.map((file) => readFileSync(file, 'utf8'));
-  for (const argument of ['--force', '--no-save', '--registry', 'fixture@file:../local']) {
+  for (const argument of [
+    '--force',
+    '--no-save',
+    '--registry',
+    'fixture@file:../local',
+    'fixture@npm:typescript@file:../local',
+    'fixture@npm:typescript@git:unreviewed',
+    'fixture@https://example.invalid/package.tgz',
+  ]) {
     const result = spawnSync('bun', ['scripts/dependencies.ts', 'add', argument], {
       encoding: 'utf8',
     });

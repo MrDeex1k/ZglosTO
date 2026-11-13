@@ -1,12 +1,18 @@
 # syntax=docker/dockerfile:1.28.0
 
-ARG POSTGRES_IMAGE=postgres:18.6-alpine3.24
+ARG POSTGRES_IMAGE=postgres:18.7-alpine3.24
+
+FROM golang:1.27.3-alpine3.24@sha256:fa3d596898d9f126af7c01d14ee7597bab3f39cccf392ef36b69fe77cd681f18 AS privilege-dropper
+# Keep the upstream gosu behavior, rebuilding its embedded standard library.
+RUN CGO_ENABLED=0 GOBIN=/out go install github.com/tianon/gosu@1.19
 
 FROM ${POSTGRES_IMAGE} AS extensions
 
 RUN apk add --no-cache pgbackrest postgresql-pg_cron
 
 FROM ${POSTGRES_IMAGE}
+
+COPY --from=privilege-dropper /out/gosu /usr/local/bin/gosu
 
 RUN apk add --no-cache libbz2 libssh2 \
  && echo "shared_preload_libraries = 'pg_cron'" >> /usr/local/share/postgresql/postgresql.conf.sample \

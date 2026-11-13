@@ -10,14 +10,37 @@ fi
 backup_directory=$1
 shift
 compose=(docker compose "$@")
+operations_compose=("${compose[@]}" --file "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/docker-compose.storage.operations.yml")
 source "$(dirname "${BASH_SOURCE[0]}")/lib/compose-maintenance.sh"
 umask 077
 
-if [ -e "$backup_directory" ] && [ -n "$(find "$backup_directory" -mindepth 1 -maxdepth 1 -print -quit)" ]; then
-  printf 'Backup directory must be empty: %s\n' "$backup_directory" >&2
-  exit 65
-fi
-mkdir -p "$backup_directory"
+# A private, newly created directory prevents other local users from reading
+# reports or replacing output files with symlinks during pg_dump/archive writes.
+parent=$(cd "$(dirname "$backup_directory")" && pwd -P)
+backup_directory="$parent/$(basename "$backup_directory")"
+checked=$parent
+while :; do
+    if [ ! -d "$checked" ] || [ -L "$checked" ]; then
+        printf 'Backup ancestors must be existing directories without symlinks: %s\n' "$checked" >&2
+        exit 65
+    fi
+    metadata=$(stat -c '%u %a' "$checked" 2>/dev/null) || metadata=$(stat -f '%u %Lp' "$checked")
+    read -r owner mode <<< "$metadata"
+    if [ "$owner" -ne 0 ] && [ "$owner" -ne "$EUID" ]; then
+        printf 'Untrusted backup directory owner: %s\n' "$checked" >&2
+        exit 65
+    fi
+    if (( (8#$mode & 0022) != 0 )); then
+        if [ "$checked" = "$parent" ] || [ "$owner" -ne 0 ] || (( (8#$mode & 01000) == 0 )); then
+            printf 'Backup directory is writable by other users: %s\n' "$checked" >&2
+            exit 65
+        fi
+    fi
+    [ "$checked" = / ] && break
+    checked=$(dirname "$checked")
+done
+mkdir -m 0700 -- "$backup_directory"
+backup_directory=$(cd "$backup_directory" && pwd -P)
 
 finish_backup() {
   local result=$?
@@ -35,7 +58,7 @@ stop_for_maintenance nginx authorization backend media_worker
 
 printf '[backup] Auditing Object Storage references\n'
 set +e
-"${compose[@]}" run --rm --no-deps -T backend bun dist/operations/object-storage-audit-cli.js \
+"${operations_compose[@]}" run --rm --no-deps -T backend bun dist/operations/object-storage-audit-cli.js \
   > "$backup_directory/object-storage-audit.json"
 audit_status=$?
 set -e
@@ -45,12 +68,12 @@ if [ "$audit_status" -ne 0 ] && [ "$audit_status" -ne 2 ]; then
 fi
 
 printf '[backup] Creating PostgreSQL logical backup through the direct connection\n'
-"${compose[@]}" exec -T database sh -c \
+"${compose[@]}" exec -T database /usr/local/bin/load-container-secrets sh -c \
   'pg_dump --dbname="$DATABASE_DIRECT_URL" --format=custom --no-owner --no-privileges' \
   > "$backup_directory/database.dump"
 
 printf '[backup] Creating provider-neutral Object Storage archive\n'
-"${compose[@]}" run --rm --no-deps -T backend bun dist/operations/object-storage-archive-cli.js backup \
+"${operations_compose[@]}" run --rm --no-deps -T backend bun dist/operations/object-storage-archive-cli.js backup \
   > "$backup_directory/object-storage.ndjson.gz"
 
 created_at=$(date -u '+%Y-%m-%dT%H:%M:%SZ')

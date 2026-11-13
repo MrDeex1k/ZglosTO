@@ -1,0 +1,14 @@
+#!/bin/sh
+# Run inside the database container after stopping all writers; does not run automatically on upgrades.
+set -eu
+[ "${1:-}" = '--apply-runtime-role-separation' ] || {
+  echo 'Stop application writers, back up DB, configure three new password files, then pass --apply-runtime-role-separation' >&2
+  exit 64
+}
+if [ -n "${DATABASE_DIRECT_URL_FILE:-}" ]; then
+  DATABASE_DIRECT_URL=$(cat "$DATABASE_DIRECT_URL_FILE")
+  export DATABASE_DIRECT_URL
+fi
+: "${DATABASE_DIRECT_URL:?Administrative direct URL is required}"
+export DATABASE_ROLES_EXISTING_INSTALLATION=true
+exec /docker-entrypoint-initdb.d/06-runtime-roles.sh

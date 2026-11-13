@@ -1,6 +1,6 @@
 # Polityka zależności
 
-Projekt używa Bun 1.4.3 jako menedżera pakietów. Bezpośrednie zależności mają dokładne wersje. Nowe wersje bezpośrednie i tranzytywne obowiązuje kwarantanna 3 godzin, bez wyjątków.
+Projekt używa Bun 1.4.4 jako menedżera pakietów. Bezpośrednie zależności mają dokładne wersje. Nowe wersje bezpośrednie i tranzytywne obowiązuje kwarantanna 3 godzin, bez wyjątków.
 
 ## Instalacja i aktualizacja
 
@@ -44,7 +44,7 @@ testów odpowiedniego workspace, nie tylko zmiany numeru zależności.
 
 ### Bun i Expo/Metro
 
-Od fazy 4 Bun 1.4.3 wykonuje usługi, skrypty repo, kompilatory, Vite, Vitest, Knip, Oxlint/Oxfmt oraz wrapper SFW i hooki Git. CLI uruchamiamy przez `bun run --bun <narzędzie>`, a Turbo bez globalnego `--bun`, przez jego plik wejściowy. Dzięki temu wymuszenie Bun nie przechodzi do procesów Expo.
+Od fazy 4 Bun 1.4.4 wykonuje usługi, skrypty repo, kompilatory, Vite, Vitest, Knip, Oxlint/Oxfmt oraz wrapper SFW i hooki Git. CLI uruchamiamy przez `bun run --bun <narzędzie>`, a Turbo bez globalnego `--bun`, przez jego plik wejściowy. Dzięki temu wymuszenie Bun nie przechodzi do procesów Expo.
 
 Node >=26.8.1 pozostaje wymagany dla Expo/Metro, Expo Doctor i natywnego toolchainu Mobile. Testy Vitest i typecheck Mobile wykonuje Bun; aplikacja na urządzeniu nadal działa na Hermes. `node:*`, `@types/node` i `NODE_ENV` są kontraktami kompatybilnych API i nie oznaczają uruchomienia Node.
 
@@ -57,3 +57,22 @@ Operacje `deps:install`, `deps:add` i `deps:update` używają wspólnej wyłącz
 Druga operacja kończy się błędem bez zmian. Po przerwaniu procesu blokada może pozostać:
 usuń ten katalog dopiero po potwierdzeniu, że wrapper i procesy instalatora już nie działają.
 Kontrola ręcznych zmian manifestów przed zapisem nadal obowiązuje.
+
+## Aktualizacja bezpieczeństwa 2026-11-13
+
+Bun zaktualizowano do 1.4.4 razem z digestami builderów. Bezpośrednie pakiety
+i graf tranzytywny odświeżono przez SFW i kontrolę wieku publikacji. Advisory
+`glob`, `minimatch` i `systeminformation` usunięto przez jawne overrides;
+`bun run audit:release` wymaga nadal zera advisory produkcyjnych.
+
+Mobile zachowuje macierz natywną zainstalowanego Expo SDK 58: React/React DOM
+19.3.0, AsyncStorage 2.2.0, gesture-handler 3.3.0 i worklets 0.13.0. Najnowsze
+wersje spoza tej macierzy nie są traktowane jako zgodna aktualizacja. React Native
+ma poprawkę 0.88.1 wskazaną przez SDK. Kompilator Mobile i alias Astro pozostają
+na TS6.0.3; Babel core jest zaktualizowany w zgodnej linii 7 do 7.29.13.
+
+Wrapper `deps:add` obsługuje teraz aliasy rejestru (np.
+`typescript-astro@npm:typescript@6.0.3`), z zachowaniem walidacji całego
+grafu i blokadą źródeł file/git/URL. Pełne `deps:update` może ponownie
+wybrać wersje spoza macierzy Expo; po aktualizacji należy zawsze wykonać
+sprawdzenie macierzy SDK na wspieranym Node oraz typecheck, testy i build.

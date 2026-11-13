@@ -106,7 +106,7 @@ configure_compose() {
   case "$OBJECT_STORAGE_MODE" in
     local)
       append_compose_file docker-compose.storage.local.yml
-      external_services+=(rustfs)
+      external_services+=(rustfs storage_provision)
       ;;
     external)
       append_compose_file docker-compose.storage.external.yml
@@ -175,6 +175,11 @@ validate_secret_files() {
     [ -s "$secrets_dir/$secret_file" ] || fail "Empty secret file: $secrets_dir/$secret_file"
   done < "$SECRET_MANIFEST"
 
+  if [ "$OBJECT_STORAGE_MODE" = local ]; then
+    for secret_file in rustfs-root-access-key rustfs-root-secret-key; do
+      [ -s "$secrets_dir/$secret_file" ] || fail "Missing local storage bootstrap secret: $secret_file"
+    done
+  fi
   case "$REDIS_MODE" in
     disabled) ;;
     local)
@@ -262,11 +267,15 @@ smoke() {
 
 run_migrations() {
   configure_compose
+  log "Stopping database writers and PgBouncer before administrative migrations"
+  "${compose[@]}" stop --timeout 120 nginx authorization backend media_worker pgbouncer || return
   log "Applying versioned database migrations"
-  "${compose[@]}" exec -T database sh -ceu '
+  "${compose[@]}" exec -T database /usr/local/bin/load-container-secrets sh -ceu '
     for migration in /opt/zglosto/migrations/*.sql; do
       psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" < "$migration"
     done
+    # Explicit deployment migration step, never an automatic existing-volume startup action.
+    DATABASE_ROLES_EXISTING_INSTALLATION=true sh /docker-entrypoint-initdb.d/06-runtime-roles.sh
   '
 }
 

@@ -119,7 +119,7 @@ load_gate() {
     phase12_load_compose exec -T backend bun --input-type=module -e \
       "import { NestFactory } from '@nestjs/core'; import { AppModule } from './dist/nest/app.module.js'; import { OutboxPublisherService } from './dist/nest/modules/jobs/outbox-publisher.service.js'; const app = await NestFactory.createApplicationContext(AppModule, { logger: false }); await app.get(OutboxPublisherService).tickOnce(); await app.close();"
     active_jobs="$(
-      phase12_load_compose exec -T database sh -c \
+      phase12_load_compose exec -T database /usr/local/bin/load-container-secrets sh -c \
         'psql "$DATABASE_DIRECT_URL" -tAc "SELECT count(*) FROM media_processing_jobs WHERE status IN ('"'"'pending'"'"', '"'"'processing'"'"');"' \
         | tr -d '[:space:]'
     )"

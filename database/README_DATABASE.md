@@ -2,7 +2,7 @@
 
 Ten folder zawiera konfigurację bazy danych PostgreSQL 18 dla projektu ZglosTO.
 
-Obraz bazowy jest przypięty do PostgreSQL `18.6`. Zgodnie z układem oficjalnego obrazu PostgreSQL 18 wolumen danych jest montowany w `/var/lib/postgresql`, a `PGDATA` i `pgBackRest` wskazują `/var/lib/postgresql/18/docker`.
+Obraz bazowy jest przypięty do PostgreSQL `18.7`. Zgodnie z układem oficjalnego obrazu PostgreSQL 18 wolumen danych jest montowany w `/var/lib/postgresql`, a `PGDATA` i `pgBackRest` wskazują `/var/lib/postgresql/18/docker`.
 
 ## Struktura
 
@@ -10,11 +10,11 @@ Obraz bazowy jest przypięty do PostgreSQL `18.6`. Zgodnie z układem oficjalneg
 database/
 ├── Dockerfile              # Obraz Docker dla PostgreSQL 18
 ├── init-scripts/          # Skrypty inicjalizacyjne SQL (wykonywane w kolejności alfabetycznej)
-│   ├── 01-init.sql       # Główny skrypt inicjalizacyjny (rozszerzenia + rola + baza danych)
+│   ├── 01-init.sql       # Główny skrypt inicjalizacyjny (rozszerzenia; bazę i admina tworzy entrypoint)
 │   ├── 02-create-auth.sql       # Tworzenie tabel autoryzacji (Better Auth)
 │   ├── 03-create-dbtables.sql  # Tworzenie tabel aplikacji (incydenty, użytkownicy rozszerzeni)
 │   ├── 04-setup-backup.sql     # Tworzenie backupu bazy danych
-├── migrations/           # Wersjonowane migracje 001-015 kontraktów bazy
+├── migrations/           # Wersjonowane migracje 001-016 kontraktów bazy
 └── README_DATABASE.md             # Ten plik
 ```
 
@@ -22,7 +22,7 @@ database/
 
 Baza danych składa się z czterech głównych części inicjalizowanych w kolejności:
 
-1. **Rozszerzenia i konfiguracja bazy** (`01-init.sql`) - rozszerzenia PostgreSQL, tworzenie roli administratora i bazy danych
+1. **Rozszerzenia i konfiguracja bazy** (`01-init.sql`) - rozszerzenia PostgreSQL; rolę administratora i bazę tworzy oficjalny entrypoint
 2. **Tabele autoryzacji** (`02-create-auth.sql`) - tabele dla systemu Better Auth zgodnie z najnowszymi standardami
 3. **Tabele aplikacji** (`03-create-dbtables.sql`) - tabele biznesowe (incydenty, użytkownicy rozszerzeni)
 4. **Backup bazy danych** (`04-setup-backup.sql`) - automatyczne tworzenie kopii zapasowych
@@ -393,3 +393,75 @@ Migracja nie zmienia zasad weryfikacji e-mail.
 `bun run test:auth-provisioning` sprawdza migrację i świeżą instalację na osobnym
 PostgreSQL w Dockerze: bez sieci, opublikowanych portów i trwałego wolumenu. Test
 obejmuje błąd zapisu roli, retry, rollback, idempotencję i zachowanie istniejących ról.
+
+## Bezpieczeństwo migracji historycznych
+
+Migracja `006-object-storage-images.sql` odmawia przejścia ze starego modelu `bytea`,
+jeżeli tabela `incydenty` zawiera dane. Wymaga wtedy osobnego, jawnego eksportu i migracji
+zdjęć; nie usuwa zgłoszeń przez `TRUNCATE CASCADE`. Nie obchodź tego warunku na bazie
+produkcyjnej. Pusta baza historyczna oraz ponowne zastosowanie migracji są obsługiwane.
+
+Regresję można sprawdzić przez `bun test database/tests/legacy-image-migration.test.ts`.
+Test wymaga Dockera i lokalnego obrazu `postgres:18.7-alpine3.24`; tworzy wyłącznie osobny,
+jednorazowy kontener bez sieci, opublikowanych portów i trwałych wolumenów.
+
+## Role runtime i kontrolowana aktualizacja istniejącej instalacji
+
+Od migracji 016 jedynym administratorem pozostaje bootstrapowy `POSTGRES_USER` (przykładowo
+`zglosto_admin`), dostępny tylko w kontenerze database oraz operacjach migracji/backup/restore.
+Runtime nie dostaje jego hasła ani bezpośredniego URL.
+
+| Rola                   | Uprawnienia aplikacyjne                                                                                                                                |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `zglosto_auth`         | CRUD user/session/account/verification; odczyt ról i katalogu usług; aktualizacja przypisania zgłaszającego i aplikacyjnych ról.                       |
+| `zglosto_backend`      | CRUD zgłoszeń, zdjęć, uploadów, zadań i outbox; katalog usług; role; wyłącznie kolumny id/email/email_verified tabeli user. Bez sesji, kont i tokenów. |
+| `zglosto_media_worker` | SELECT/UPDATE obrazów i zadań; SELECT/DELETE uploadów; SELECT/INSERT ledgeru konsumenta. Bez danych użytkowników, zgłoszeń i outboxa.                  |
+
+Wszystkie trzy role są `NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS NOREPLICATION NOINHERIT`.
+Nie mają CREATE w schemacie ani TEMP w bazie. Obiekty pozostają własnością administratora.
+Trigger `provision_application_user` używa SECURITY DEFINER z ustalonym search_path i zawsze
+nadaje wyłącznie `mieszkaniec`; jego bezpośrednie EXECUTE jest odebrane runtime/PUBLIC.
+Granty nie otwierają automatycznie przyszłych tabel ani funkcji. Nowe migracje muszą przyznać
+wymagane uprawnienia jawnie. PgBouncer nie zawiera `user=` ani hasła w wpisie upstream;
+łączy się z PostgreSQL jako uwierzytelniona rola klienta. Trzy hasła są w prywatnym pliku
+userlist na tmpfs w produkcji/Kubernetes, potrzebnym do SCRAM obu odcinków.
+
+Świeża baza wykonuje `06-runtime-roles.sh` po schemacie i triggerze. Ręczne ponowne
+uruchomienie kontenera z istniejącym wolumenem **nie** migruje poświadczeń ani grantów.
+Kontrolowana aktualizacja wymaga okna utrzymaniowego:
+
+1. Zrób backup; zatrzymaj ingress i wszystkie procesy zapisujące, w tym authorization,
+   backend, worker oraz PgBouncer. Nie usuwaj istniejących wolumenów.
+2. Dostarcz trzy różne hasła runtime (minimum 24 znaki, różne od hasła admina), trzy URL
+   zakodowane zgodnie z URI i pasujące do tych haseł, przez pliki z kontraktu wdrożenia.
+   Zachowaj osobny `DATABASE_DIRECT_URL` obecnego administratora. Nowe role mają stałe nazwy.
+3. Użyj nowego obrazu database i odtwórz tylko jego kontener z nowymi mountami sekretów.
+   Zastosuj wymagane migracje schematu jako admin. Migracja 016 tworzy brakujące role
+   początkowo NOLOGIN, odbiera nadmiarowe granty/członkostwa i nadaje jawny zestaw uprawnień.
+4. Jawnie uruchom `database/apply-runtime-roles.sh --apply-runtime-role-separation`
+   z opcjami `docker compose` właściwej instalacji (np. `--env-file ... --file ...`).
+   Wrapper wewnątrz obrazu wymaga flagi, używa admin URL i pobiera nowe hasła z plików.
+   Można go powtarzać. Nie uruchamia się automatycznie na istniejących danych.
+   W Kubernetes/K3s równoważne wywołanie to `kubectl exec ... -- sh
+   /docker-entrypoint-initdb.d/apply-runtime-roles.txt --apply-runtime-role-separation`.
+5. Odtwórz PgBouncera i runtime z nowymi URL; potwierdź tożsamości oraz logowanie/CRUD.
+   Stary bootstrapowy administrator pozostaje wyłącznie kontem operacyjnym. Jeśli miał
+   inną nazwę, nie zmieniaj jej automatycznie — dopasuj pliki admina do istniejącej bazy.
+
+Skrypt odmawia obsługi roli runtime będącej właścicielem obiektów. Taką niestandardową
+instalację trzeba najpierw kontrolowanie przepisać na właściciela administracyjnego.
+Zmiana przykładowego `POSTGRES_USER` nie przemianowuje kont w istniejącym wolumenie.
+Nie uruchamiaj starego runtime po migracji z poświadczeniami administratora.
+
+Produkcyjny wrapper wdrożenia stosuje provisioning jako jawny krok po migracjach.
+Restore dumpa z `--no-privileges` ponownie nakłada granty przed uruchomieniem aplikacji.
+Test `bun test database/tests/runtime-roles.test.ts` używa osobnego PG18.7/PgBouncera,
+dedykowanej sieci, efemerycznych certyfikatów i losowego portu wyłącznie localhost; weryfikuje loginy,
+CRUD/provisioning, idempotencję, jawny wrapper oraz odmowy operacji administracyjnych.
+
+Pliki źródłowe sekretów w produkcyjnym Compose muszą być czytelne dla odpowiedniego UID/GID:
+trzy pliki haseł runtime dla PgBouncera (GID 70, np. root:70 i 0440), a każdy plik URL dla
+właściwej aplikacji (GID 10001, np. root:10001 i 0440). Katalog źródłowy pozostaje prywatny
+dla administratora; kontener widzi wyłącznie wybrane mounty. Nie polegaj na `uid/gid/mode`
+w krótkiej deklaracji Compose secrets — bind mount zachowuje uprawnienia pliku hosta.
+Kubernetes stosuje kontrakt 0440 i fsGroup odpowiedniego workloadu.

@@ -1,0 +1,75 @@
+-- Administrative migration only. Passwords are provisioned separately from secret files.
+BEGIN;
+DO $$
+DECLARE runtime_role text; membership record;
+BEGIN
+  FOREACH runtime_role IN ARRAY ARRAY['zglosto_auth', 'zglosto_backend', 'zglosto_media_worker'] LOOP
+    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = runtime_role) THEN
+      EXECUTE format('CREATE ROLE %I NOLOGIN', runtime_role);
+    END IF;
+    EXECUTE format('ALTER ROLE %I NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT', runtime_role);
+    -- Remove old memberships, including pg_execute_server_program and read-all-data roles.
+    FOR membership IN SELECT parent.rolname FROM pg_auth_members m
+      JOIN pg_roles parent ON parent.oid = m.roleid JOIN pg_roles member ON member.oid = m.member
+      WHERE member.rolname = runtime_role
+    LOOP
+      EXECUTE format('REVOKE %I FROM %I', membership.rolname, runtime_role);
+    END LOOP;
+    IF EXISTS (SELECT FROM pg_shdepend
+      WHERE refclassid = 'pg_authid'::regclass
+        AND refobjid = (SELECT oid FROM pg_roles WHERE rolname = runtime_role)
+        AND deptype = 'o') THEN
+      RAISE EXCEPTION 'Runtime role % owns objects; transfer ownership to the migration administrator first', runtime_role;
+    END IF;
+  END LOOP;
+END$$;
+
+REVOKE ALL ON SCHEMA public FROM PUBLIC, zglosto_auth, zglosto_backend, zglosto_media_worker;
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM PUBLIC, zglosto_auth, zglosto_backend, zglosto_media_worker;
+REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM PUBLIC, zglosto_auth, zglosto_backend, zglosto_media_worker;
+REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM PUBLIC, zglosto_auth, zglosto_backend, zglosto_media_worker;
+DO $$ BEGIN
+  IF EXISTS (SELECT FROM pg_namespace WHERE nspname = 'cron') THEN
+    REVOKE ALL ON SCHEMA cron FROM PUBLIC, zglosto_auth, zglosto_backend, zglosto_media_worker;
+  END IF;
+  EXECUTE format('REVOKE ALL ON DATABASE %I FROM PUBLIC, zglosto_auth, zglosto_backend, zglosto_media_worker', current_database());
+  EXECUTE format('GRANT CONNECT ON DATABASE %I TO zglosto_auth, zglosto_backend, zglosto_media_worker', current_database());
+END$$;
+DO $$
+DECLARE relation record;
+BEGIN
+  FOR relation IN
+    SELECT c.oid::regclass AS name, string_agg(quote_ident(a.attname), ',') AS columns
+    FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+    JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
+    WHERE n.nspname = 'public' AND c.relkind IN ('r', 'v', 'p') GROUP BY c.oid
+  LOOP
+    EXECUTE format('REVOKE ALL (%s) ON %s FROM PUBLIC, zglosto_auth, zglosto_backend, zglosto_media_worker', relation.columns, relation.name);
+  END LOOP;
+END$$;
+GRANT USAGE ON SCHEMA public TO zglosto_auth, zglosto_backend, zglosto_media_worker;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public."user", public.session, public.account, public.verification TO zglosto_auth;
+GRANT SELECT ON public.uzytkownicy, public.service_types TO zglosto_auth;
+GRANT UPDATE (uprawnienia, service_key) ON public.uzytkownicy TO zglosto_auth;
+GRANT SELECT (reporter_user_id, mail_zglaszajacego), UPDATE (reporter_user_id) ON public.incydenty TO zglosto_auth;
+
+GRANT SELECT (id, email, email_verified) ON public."user" TO zglosto_backend;
+GRANT SELECT ON public.uzytkownicy TO zglosto_backend;
+GRANT UPDATE (uprawnienia, service_key) ON public.uzytkownicy TO zglosto_backend;
+GRANT SELECT, INSERT, UPDATE ON public.service_types TO zglosto_backend;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.incydenty, public.incident_images,
+  public.image_uploads, public.media_processing_jobs, public.outbox_events TO zglosto_backend;
+GRANT SELECT ON public.incident_image_api_refs TO zglosto_backend;
+
+GRANT SELECT, UPDATE ON public.incident_images, public.media_processing_jobs TO zglosto_media_worker;
+GRANT SELECT, DELETE ON public.image_uploads TO zglosto_media_worker;
+GRANT SELECT, INSERT ON public.consumed_messages TO zglosto_media_worker;
+
+-- The identity transaction can create only the fixed resident application role through this trigger.
+ALTER FUNCTION public.provision_application_user() SECURITY DEFINER;
+ALTER FUNCTION public.provision_application_user() SET search_path = pg_catalog, public;
+-- Future objects remain inaccessible until an administrative migration grants access explicitly.
+-- The built-in PUBLIC EXECUTE default is global; a schema-only REVOKE cannot override it.
+ALTER DEFAULT PRIVILEGES REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
+COMMIT;

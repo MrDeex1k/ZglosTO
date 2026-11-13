@@ -41,7 +41,7 @@ try {
     'POSTGRES_HOST_AUTH_METHOD=trust',
     '--mount',
     `type=bind,src=${root}/database/migrations,dst=/opt/zglosto/migrations,readonly`,
-    'postgres:18.6-alpine3.24',
+    'postgres:18.7-alpine3.24',
   ]);
   started = true;
   let ready = false;

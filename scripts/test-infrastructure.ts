@@ -10,6 +10,7 @@ import {
   readdirSync,
   realpathSync,
   symlinkSync,
+  statSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
@@ -387,4 +388,136 @@ test('failed restore audits stop temporary PgBouncer and preserve the original f
       rmSync(fixture.directory, { recursive: true, force: true });
     }
   }
+});
+
+test('Compose backups reject existing, linked and shared destinations before Docker runs', () => {
+  const fixture = maintenanceFixture();
+  try {
+    const existing = join(fixture.directory, 'existing');
+    mkdirSync(existing, { mode: 0o755 });
+    const linked = join(fixture.directory, 'linked');
+    symlinkSync(existing, linked);
+    const shared = join(fixture.directory, 'shared');
+    mkdirSync(shared);
+    chmodSync(shared, 0o777);
+    for (const destination of [existing, linked, join(shared, 'backup')]) {
+      const result = fixture.run('backup-compose.sh', destination);
+      assert.notEqual(result.status, 0);
+      assert.equal(existsSync(fixture.log), false);
+    }
+    const destination = join(fixture.directory, 'private-backup');
+    const result = fixture.run('backup-compose.sh', destination);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(statSync(destination).mode & 0o777, 0o700);
+  } finally {
+    rmSync(fixture.directory, { recursive: true, force: true });
+  }
+});
+
+test('edge access logs omit signed-upload and auth-callback query credentials', () => {
+  const configuration = readFileSync(join(root, 'nginx/nginx-main.conf'), 'utf8');
+  const format = configuration.match(/log_format main[\s\S]*?;/u)?.[0];
+  assert.ok(format);
+  assert.match(format, /\$uri\b/u);
+  assert.doesNotMatch(format, /\$(?:request|request_uri|args|query_string|http_referer)\b/u);
+});
+
+test('backend runtime removes TypeScript platform binaries as well as the compiler package', () => {
+  const dockerfile = readFileSync(join(root, 'backend/Dockerfile'), 'utf8');
+  assert.match(dockerfile, /-path '\*\/@typescript\/typescript-\*'/u);
+  assert.match(dockerfile, /verify-production-install/u);
+});
+
+test('gateway receives usable Redis mode and CA variables in both Compose profiles', () => {
+  for (const mode of ['local', 'external']) {
+    const rendered = execFileSync(
+      'docker',
+      [
+        'compose',
+        '--env-file',
+        'tests/integration/integration.env',
+        '-f',
+        'docker-compose.no-rustfs.yml',
+        '-f',
+        `docker-compose.redis.${mode}.yml`,
+        'config',
+        '--format',
+        'json',
+      ],
+      {
+        cwd: root,
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          REDIS_ACL_FILE: 'tests/fixtures/redis/users.acl',
+          REDIS_URL_SECRET_FILE: 'tests/fixtures/redis/url',
+          RATE_LIMIT_HMAC_KEY_SECRET_FILE: 'tests/fixtures/redis/rate-limit-hmac',
+          REDIS_TLS_CA_FILE: '.certs/database/ca.crt',
+        },
+      },
+    );
+    const gateway = JSON.parse(rendered).services.llm_gateway.environment;
+    assert.equal(gateway.REDIS_MODE, mode);
+    assert.equal(gateway.REDIS_URL_FILE, '/run/secrets/redis/url');
+    assert.equal(gateway.REDIS_TLS_CA_PATH, mode === 'local' ? '' : '/run/secrets/redis/ca.crt');
+  }
+});
+
+test('storage IAM bootstrap and runtime secrets remain separate in rendered profiles', () => {
+  const script = readFileSync(join(root, 'scripts/provision-storage-iam.sh'), 'utf8');
+  assert.equal(
+    readFileSync(join(root, 'k8s/components/rustfs/provision-storage-iam.sh'), 'utf8'),
+    script,
+  );
+  const rendered = render('k3s-rustfs');
+  const documents = rendered.split(/^---\s*$/mu);
+  const workload = (kind: string, name: string) =>
+    documents.find(
+      (document) => document.includes(`kind: ${kind}\n`) && document.includes(`  name: ${name}\n`),
+    ) ?? '';
+  const backend = workload('Deployment', 'backend');
+  const worker = workload('Deployment', 'media-worker');
+  const server = workload('StatefulSet', 'rustfs');
+  const bootstrap = workload('Job', 'storage-provision');
+  assert.match(server, /secretName: zglosto-rustfs-root/u);
+  assert.doesNotMatch(server, /secretName: zglosto-object-storage-credentials/u);
+  assert.match(worker, /secretName: zglosto-object-storage-worker-credentials/u);
+  for (const runtime of [backend, worker]) {
+    assert.doesNotMatch(runtime, /secretName: zglosto-rustfs-root/u);
+    assert.doesNotMatch(runtime, /secretName: zglosto-object-storage-operations-credentials/u);
+  }
+  assert.match(bootstrap, /rustfs\/rc:v0\.1\.37@sha256:/u);
+  assert.match(bootstrap, /automountServiceAccountToken: false/u);
+  assert.match(bootstrap, /secretName: zglosto-object-storage-operations-credentials/u);
+});
+
+test('archive/audit one-off overlay selects operations credentials without exposing root', () => {
+  const overlay = readFileSync(join(root, 'docker-compose.storage.operations.yml'), 'utf8');
+  assert.match(overlay, /S3_ACCESS_KEY_ID_FILE: \/run\/secrets\/s3_operations_access_key_id/u);
+  assert.doesNotMatch(overlay, /rustfs_root/u);
+  for (const file of ['backup-compose.sh', 'restore-compose.sh']) {
+    const script = readFileSync(join(root, 'scripts', file), 'utf8');
+    assert.match(script, /operations_compose=.*docker-compose\.storage\.operations\.yml/u);
+    assert.doesNotMatch(script, /"\$\{compose\[@\]\}" run.*backend/u);
+  }
+});
+
+test('IAM bootstrap rejects reused root identity before any RC request', () => {
+  const result = spawnSync('sh', [join(root, 'scripts/provision-storage-iam.sh')], {
+    env: {
+      PATH: process.env.PATH!,
+      RUSTFS_ROOT_ACCESS_KEY: 'root-fixture',
+      RUSTFS_ROOT_SECRET_KEY: 'root-secret-fixture',
+      S3_ACCESS_KEY_ID: 'root-fixture',
+      S3_SECRET_ACCESS_KEY: 'backend-secret-fixture',
+      S3_WORKER_ACCESS_KEY_ID: 'worker-fixture',
+      S3_WORKER_SECRET_ACCESS_KEY: 'worker-secret-fixture',
+      S3_OPERATIONS_ACCESS_KEY_ID: 'operations-fixture',
+      S3_OPERATIONS_SECRET_ACCESS_KEY: 'operations-secret-fixture',
+    },
+    encoding: 'utf8',
+  });
+  assert.equal(result.status, 78);
+  assert.match(result.stderr, /identities must differ/u);
+  assert.doesNotMatch(result.stderr, /root-secret-fixture|backend-secret-fixture/u);
 });

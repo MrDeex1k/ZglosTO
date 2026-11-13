@@ -198,7 +198,7 @@ function validateCluster(
       'secretName: zglosto-redis-credentials',
       'cat /run/secrets/redis/url',
       '--maxmemory-policy',
-      'allkeys-lru',
+      'noeviction',
     ]) {
       if (!redis.includes(fragment)) fail(`${platform}/local Redis lacks ${fragment}`);
     }

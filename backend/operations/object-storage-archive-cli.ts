@@ -1,4 +1,4 @@
-import { validateBackendEnvironment } from '../config/env.ts';
+import { validateObjectStorageEnvironment } from '../config/env.ts';
 import { S3ObjectStorage } from '../storage/s3-object-storage.ts';
 import {
   restoreObjectStorageArchive,
@@ -7,7 +7,7 @@ import {
 
 async function main(): Promise<void> {
   const operation = process.argv[2] ?? '';
-  const storage = new S3ObjectStorage(validateBackendEnvironment().objectStorage);
+  const storage = new S3ObjectStorage(validateObjectStorageEnvironment());
   await storage.initialize();
 
   if (operation === 'backup') {

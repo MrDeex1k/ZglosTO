@@ -6,7 +6,7 @@ metadata:
   labels:
     app: media-worker
   annotations:
-    secret.reloader.stakater.com/reload: zglosto-pgbouncer-tls,zglosto-rabbitmq-tls,zglosto-database-credentials,zglosto-rabbitmq-credentials,zglosto-object-storage-credentials
+    secret.reloader.stakater.com/reload: zglosto-pgbouncer-tls,zglosto-rabbitmq-tls,zglosto-database-credentials,zglosto-rabbitmq-credentials,zglosto-object-storage-worker-credentials
 spec:
   replicas: 1
   strategy:
@@ -162,7 +162,7 @@ spec:
             secretName: zglosto-database-credentials
             optional: false
             defaultMode: 0440
-            items: [{ key: DATABASE_URL, path: database-url }]
+            items: [{ key: MEDIA_WORKER_DATABASE_URL, path: database-url }]
         - name: rabbitmq-credentials
           secret:
             secretName: zglosto-rabbitmq-credentials
@@ -171,7 +171,7 @@ spec:
             items: [{ key: RABBITMQ_URL, path: rabbitmq-url }]
         - name: object-storage-credentials
           secret:
-            secretName: zglosto-object-storage-credentials
+            secretName: zglosto-object-storage-worker-credentials
             optional: false
             defaultMode: 0440
             items:

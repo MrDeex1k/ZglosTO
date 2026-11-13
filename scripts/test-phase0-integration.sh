@@ -10,10 +10,11 @@ AUTHORIZATION_MTLS_PORT="${INTEGRATION_AUTHORIZATION_MTLS_PORT:-19956}"
 RABBITMQ_TLS_PORT="${INTEGRATION_RABBITMQ_TLS_PORT:-15671}"
 WAIT_TIMEOUT="${INTEGRATION_WAIT_TIMEOUT:-180}"
 KEEP_RUNNING="${INTEGRATION_KEEP_RUNNING:-0}"
-REDIS_MODE="${INTEGRATION_REDIS_MODE:-disabled}"
+REDIS_MODE="${INTEGRATION_REDIS_MODE:-local}"
 REDIS_FAILURE_ONLY="${INTEGRATION_REDIS_FAILURE_ONLY:-0}"
 ENV_FILE="$ROOT_DIR/tests/integration/integration.env"
-BACKUP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/zglosto-restore-test.XXXXXX")"
+BACKUP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/zglosto-restore-test.XXXXXX")"
+BACKUP_DIR="$BACKUP_ROOT/backup"
 
 export INTEGRATION_PROJECT_NAME="$PROJECT_NAME"
 export INTEGRATION_HTTP_PORT="$HTTP_PORT"
@@ -40,10 +41,8 @@ if [ "$REDIS_MODE" = "local" ]; then
   export RATE_LIMIT_HMAC_KEY_SECRET_FILE="$ROOT_DIR/tests/fixtures/redis/rate-limit-hmac"
   export INTEGRATION_EXPECTED_REDIS_STATUS=up
   COMPOSE+=(--file "$ROOT_DIR/docker-compose.redis.local.yml")
-elif [ "$REDIS_MODE" = "disabled" ]; then
-  export INTEGRATION_EXPECTED_REDIS_STATUS=disabled
 else
-  printf '[integration] ERROR: INTEGRATION_REDIS_MODE must be disabled or local\n' >&2
+  printf '[integration] ERROR: the active model stub requires INTEGRATION_REDIS_MODE=local for shared replay protection\n' >&2
   exit 1
 fi
 
@@ -63,7 +62,7 @@ diagnostics() {
   printf '\n[integration] Container status:\n' >&2
   compose ps >&2 || true
   printf '\n[integration] Media job state:\n' >&2
-  compose exec -T database sh -c \
+  compose exec -T database /usr/local/bin/load-container-secrets sh -c \
     'psql "$DATABASE_DIRECT_URL" -x -c "SELECT job.id, job.status, job.attempt_count, job.last_failure_code, image.status AS image_status, image.failure_code FROM media_processing_jobs job JOIN incident_images image ON image.id = job.image_id ORDER BY job.created_at"' \
     >&2 || true
   printf '\n[integration] Media queue depth:\n' >&2
@@ -88,7 +87,7 @@ cleanup() {
     log "Leaving integration environment running (INTEGRATION_KEEP_RUNNING=1)"
   fi
 
-  rm -rf "$BACKUP_DIR"
+  rm -rf "$BACKUP_ROOT"
 
   exit "$status"
 }
@@ -202,6 +201,19 @@ if [ "$REDIS_MODE" = "local" ]; then
     log "ERROR: applications did not recover their Redis connections"
     exit 1
   fi
+  log "Waiting for shared LLM replay protection after Redis data loss"
+  replay_ready=0
+  for _attempt in $(seq 1 90); do
+    if compose exec -T llm_gateway bun dist/src/healthcheck.js --ready >/dev/null 2>&1; then
+      replay_ready=1
+      break
+    fi
+    sleep 1
+  done
+  if [ "$replay_ready" != "1" ]; then
+    log "ERROR: shared LLM replay protection did not recover"
+    exit 1
+  fi
   if [ "$REDIS_FAILURE_ONLY" = "1" ]; then
     log "Redis outage degradation, PostgreSQL fallback and recovery passed"
     exit 0
@@ -222,33 +234,38 @@ fi
 
 log "Verifying the PgBouncer application boundary"
 for service in authorization backend media_worker; do
-  compose exec -T "$service" bun -e \
-    "const fs = require('node:fs'); const url = new URL(process.env.DATABASE_URL); if (url.hostname !== 'pgbouncer') process.exit(1); if (Object.hasOwn(process.env, 'DATABASE_DIRECT_URL')) process.exit(2); if (!fs.statSync(process.env.DATABASE_TLS_CA_PATH).isFile()) process.exit(3); if (fs.existsSync('/run/secrets/database/pgbouncer-server.key') || fs.existsSync('/run/secrets/database/postgres-server.key')) process.exit(4)"
+  case "$service" in
+    authorization) expected_database_role=zglosto_auth;;
+    backend) expected_database_role=zglosto_backend;;
+    media_worker) expected_database_role=zglosto_media_worker;;
+  esac
+  compose exec -T -e EXPECTED_DATABASE_ROLE="$expected_database_role" "$service" /usr/local/bin/load-container-secrets bun -e \
+    "const fs = require('node:fs'); const url = new URL(process.env.DATABASE_URL); if (url.hostname !== 'pgbouncer' || url.username !== process.env.EXPECTED_DATABASE_ROLE) process.exit(1); if (Object.hasOwn(process.env, 'DATABASE_DIRECT_URL')) process.exit(2); if (!fs.statSync(process.env.DATABASE_TLS_CA_PATH).isFile()) process.exit(3); if (fs.existsSync('/run/secrets/database/pgbouncer-server.key') || fs.existsSync('/run/secrets/database/postgres-server.key')) process.exit(4)"
 done
 
 log "Verifying the standalone media_worker boundary"
 compose exec -T media_worker bun dist/nest/media-worker/healthcheck.js
-compose exec -T media_worker bun -e \
-  "if (process.env.SERVICE_NAME !== 'media_worker') process.exit(1); if (!Object.hasOwn(process.env, 'S3_ENDPOINT')) process.exit(2); if (Object.hasOwn(process.env, 'AUTH_SERVICE_URL')) process.exit(3); if (new URL(process.env.DATABASE_URL).hostname !== 'pgbouncer') process.exit(4); if (new URL(process.env.RABBITMQ_URL).protocol !== 'amqps:') process.exit(5); if (Object.keys(process.env).some((name) => name.startsWith('RUSTFS_'))) process.exit(6);"
+compose exec -T media_worker /usr/local/bin/load-container-secrets bun -e \
+  "if (process.env.SERVICE_NAME !== 'media_worker') process.exit(1); if (!Object.hasOwn(process.env, 'S3_ENDPOINT')) process.exit(2); if (Object.hasOwn(process.env, 'AUTH_SERVICE_URL')) process.exit(3); if (new URL(process.env.DATABASE_URL).hostname !== 'pgbouncer' || new URL(process.env.DATABASE_URL).username !== 'zglosto_media_worker') process.exit(4); if (new URL(process.env.RABBITMQ_URL).protocol !== 'amqps:') process.exit(5); if (Object.keys(process.env).some((name) => name.startsWith('RUSTFS_'))) process.exit(6);"
 
 log "Verifying TLS 1.3 on both database transport segments"
-compose exec -T pgbouncer sh -c \
+compose exec -T pgbouncer /usr/local/bin/load-container-secrets sh -c \
   'grep -qx "client_tls_sslmode = require" /etc/pgbouncer/pgbouncer.ini &&
    grep -qx "client_tls_protocols = tlsv1.3" /etc/pgbouncer/pgbouncer.ini &&
    grep -qx "server_tls_sslmode = verify-full" /etc/pgbouncer/pgbouncer.ini &&
    grep -qx "server_tls_protocols = tlsv1.3" /etc/pgbouncer/pgbouncer.ini &&
-   test "$(psql -v ON_ERROR_STOP=1 "$PGBOUNCER_CLIENT_URL" -tAc "SELECT ssl::text || '\''|'\'' || version FROM pg_stat_ssl WHERE pid = pg_backend_pid()")" = "true|TLSv1.3"'
-compose exec -T database sh -c \
+   test "$(PGPASSWORD="$DATABASE_BACKEND_PASSWORD" psql -h pgbouncer -p "$LISTEN_PORT" -U zglosto_backend -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -tAc "SELECT ssl::text || '\''|'\'' || version FROM pg_stat_ssl WHERE pid = pg_backend_pid()")" = "true|TLSv1.3"'
+compose exec -T database /usr/local/bin/load-container-secrets sh -c \
   'test "$(psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" -tAc "SELECT ssl::text || '\''|'\'' || version FROM pg_stat_ssl WHERE pid = pg_backend_pid()")" = "true|TLSv1.3"'
 
 log "Verifying that PostgreSQL and PgBouncer reject plaintext clients"
-compose exec -T database sh -c \
+compose exec -T database /usr/local/bin/load-container-secrets sh -c \
   'if PGSSLMODE=disable psql "$DATABASE_DIRECT_URL" -v ON_ERROR_STOP=1 -tAc "SELECT 1" >/dev/null 2>&1; then exit 1; fi'
-compose exec -T pgbouncer sh -c \
-  'if PGSSLMODE=disable psql "$PGBOUNCER_CLIENT_URL" -v ON_ERROR_STOP=1 -tAc "SELECT 1" >/dev/null 2>&1; then exit 1; fi'
+compose exec -T pgbouncer /usr/local/bin/load-container-secrets sh -c \
+  'if PGSSLMODE=disable PGPASSWORD="$DATABASE_BACKEND_PASSWORD" psql -h pgbouncer -p "$LISTEN_PORT" -U zglosto_backend -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -tAc "SELECT 1" >/dev/null 2>&1; then exit 1; fi'
 
 log "Verifying server CA and SAN rejection on database transports"
-compose exec -T database sh -c '
+compose exec -T database /usr/local/bin/load-container-secrets sh -c '
   set -- $(getent hosts database)
   database_address=$1
   set -- $(getent hosts pgbouncer)
@@ -269,14 +286,14 @@ compose exec -T database sh -c '
   fi
 
   if PGHOST=wrong-pgbouncer.invalid PGHOSTADDR="$pgbouncer_address" PGPORT=6432 \
-    PGDATABASE="$POSTGRES_DB" PGUSER="$POSTGRES_USER" PGPASSWORD="$POSTGRES_PASSWORD" \
+    PGDATABASE="$POSTGRES_DB" PGUSER=zglosto_backend PGPASSWORD="$DATABASE_BACKEND_PASSWORD" \
     PGSSLMODE=verify-full PGSSLROOTCERT=/run/secrets/database/ca.crt \
     psql -v ON_ERROR_STOP=1 -tAc "SELECT 1" >/dev/null 2>&1; then
     exit 3
   fi
 
-  if PGHOST=pgbouncer PGPORT=6432 PGDATABASE="$POSTGRES_DB" PGUSER="$POSTGRES_USER" \
-    PGPASSWORD="$POSTGRES_PASSWORD" PGSSLMODE=verify-full \
+  if PGHOST=pgbouncer PGPORT=6432 PGDATABASE="$POSTGRES_DB" PGUSER=zglosto_backend \
+    PGPASSWORD="$DATABASE_BACKEND_PASSWORD" PGSSLMODE=verify-full \
     PGSSLROOTCERT=/run/test-secrets/foreign-database-ca.crt \
     psql -v ON_ERROR_STOP=1 -tAc "SELECT 1" >/dev/null 2>&1; then
     exit 4
@@ -300,12 +317,12 @@ compose exec -T authorization bun -e \
   "const fs = require('node:fs'); const { X509Certificate } = require('node:crypto'); const certificate = new X509Certificate(fs.readFileSync(process.env.AUTHORIZATION_HEALTHCHECK_CERT_PATH)); if (certificate.subjectAltName !== 'URI:spiffe://zglosto.local/workload/authorization-healthcheck') process.exit(1); if (fs.existsSync('/run/secrets/service/backend-client.key') || fs.existsSync('/run/secrets/service/nginx-client.key')) process.exit(2);"
 
 log "Verifying pgBackRest stanza, WAL archive and initial full backup"
-compose exec -T database sh -c \
+compose exec -T database /usr/local/bin/load-container-secrets sh -c \
   'gosu postgres pgbackrest --stanza=zglosto_db --pg1-port="$POSTGRES_PORT" --pg1-user="$POSTGRES_USER" check'
-compose exec -T database sh -c \
+compose exec -T database /usr/local/bin/load-container-secrets sh -c \
   'psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" -c "SELECT perform_differential_backup()"' \
   >/dev/null
-compose exec -T database sh -c \
+compose exec -T database /usr/local/bin/load-container-secrets sh -c \
   'gosu postgres pgbackrest --stanza=zglosto_db info --output=json' \
   | bun -e '
       let input = "";
@@ -327,12 +344,12 @@ compose exec -T backend bun dist/storage/verify-storage.js
 
 log "Reapplying migrations to verify idempotence"
 for migration in "$ROOT_DIR"/database/migrations/*.sql; do
-  compose exec -T database sh -c \
+  compose exec -T database /usr/local/bin/load-container-secrets sh -c \
     'psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL"' \
     < "$migration" >/dev/null
 done
 
-compose exec -T database sh -c \
+compose exec -T database /usr/local/bin/load-container-secrets sh -c \
   'psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" -tAc "
     SELECT CASE
       WHEN to_regclass('\''public.incident_images'\'') IS NOT NULL
@@ -346,11 +363,11 @@ compose exec -T database sh -c \
   "' | grep -qx '1'
 
 log "Verifying the partial index for the public resolved-incident query"
-compose exec -T database sh -c \
+compose exec -T database /usr/local/bin/load-container-secrets sh -c \
   'psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" -tAc "
     SELECT to_regclass('\''public.idx_incydenty_public_resolved_order'\'') IS NOT NULL
   "' | grep -qx 't'
-compose exec -T database sh -c \
+compose exec -T database /usr/local/bin/load-container-secrets sh -c \
   'psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" -c "
     SET enable_seqscan = off;
     EXPLAIN (COSTS OFF)
@@ -388,7 +405,7 @@ INTEGRATION_CERTIFICATES_DIRECTORY="$ROOT_DIR/.certs" \
   bun "$ROOT_DIR/tests/integration/authorization-mtls.integration.ts"
 
 log "Verifying transactional media jobs and outbox payloads"
-compose exec -T database sh -c \
+compose exec -T database /usr/local/bin/load-container-secrets sh -c \
   'psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL"' \
   < "$ROOT_DIR/tests/integration/media-outbox.sql" >/dev/null
 
@@ -425,22 +442,33 @@ if [ "$consumer_prefetch" != "1" ]; then
   log "ERROR: media_worker consumer prefetch is not bounded to 1: $consumer_prefetch"
   exit 1
 fi
-compose exec -T database sh -c \
+compose exec -T database /usr/local/bin/load-container-secrets sh -c \
   'test "$(psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" -tAc "SELECT count(*) FROM outbox_events WHERE status NOT IN ('\''published'\'', '\''discarded'\'') OR (status = '\''published'\'' AND published_at IS NULL)")" = "0"'
 log "All claimed outbox records are published"
-compose exec -T database sh -c \
+compose exec -T database /usr/local/bin/load-container-secrets sh -c \
   'test "$(psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" -tAc "SELECT count(*) FROM media_processing_jobs WHERE status NOT IN ('\''published'\'', '\''processing'\'', '\''succeeded'\'', '\''superseded'\'')")" = "0"'
 for _ in $(seq 1 30); do
-  remaining_jobs="$(compose exec -T database sh -c \
+  remaining_jobs="$(compose exec -T database /usr/local/bin/load-container-secrets sh -c \
     'psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" -tAc "SELECT count(*) FROM media_processing_jobs WHERE status NOT IN ('\''succeeded'\'', '\''superseded'\'')"')"
   [ "$remaining_jobs" = "0" ] && break
   sleep 1
 done
-compose exec -T database sh -c \
+compose exec -T database /usr/local/bin/load-container-secrets sh -c \
   'test "$(psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" -tAc "SELECT count(*) FROM media_processing_jobs WHERE status NOT IN ('\''succeeded'\'', '\''superseded'\'')")" = "0" && test "$(psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" -tAc "SELECT count(*) FROM incident_images WHERE status <> '\''ready'\'' OR processed_mime_type <> '\''image/webp'\'' OR processed_object_key IS NULL OR original_deleted_at IS NULL")" = "0"'
 log "All active media jobs produced WebP objects and removed their originals"
 
-IFS='|' read -r processed_key original_key processed_checksum processed_width processed_height <<< "$(compose exec -T database sh -c \
+log "Verifying that public image HTTP serves only the processed WebP"
+public_image_id="$(compose exec -T database /usr/local/bin/load-container-secrets sh -c \
+  'psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" -tAc "SELECT image.id FROM incident_images image JOIN incydenty incident ON incident.id_zgloszenia = image.incident_id WHERE image.kind = '\''resolution'\'' AND image.status = '\''ready'\'' AND incident.status_incydentu = '\''resolved'\'' LIMIT 1"')"
+PUBLIC_IMAGE_ID="$public_image_id" INTEGRATION_IMAGE_ORIGIN="http://127.0.0.1:$HTTP_PORT" bun -e '
+  const response = await fetch(`${process.env.INTEGRATION_IMAGE_ORIGIN}/api/images/${process.env.PUBLIC_IMAGE_ID}`);
+  if (response.status !== 200 || response.headers.get("content-type") !== "image/webp") throw new Error("Processed image HTTP response must be WebP");
+  if (response.headers.get("cache-control") !== "public, max-age=300, must-revalidate") throw new Error("Unexpected public image cache policy");
+  const body = Buffer.from(await response.arrayBuffer());
+  if (body.toString("ascii", 0, 4) !== "RIFF" || body.toString("ascii", 8, 12) !== "WEBP") throw new Error("Processed image HTTP body must contain WebP bytes");
+'
+
+IFS='|' read -r processed_key original_key processed_checksum processed_width processed_height <<< "$(compose exec -T database /usr/local/bin/load-container-secrets sh -c \
   'psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" -tA -F "|" -c "SELECT processed_object_key, original_object_key, processed_checksum_sha256, width, height FROM incident_images WHERE status = '\''ready'\'' ORDER BY created_at LIMIT 1"')"
 compose exec -T \
   -e PROCESSED_KEY="$processed_key" \
@@ -452,17 +480,17 @@ compose exec -T \
   "import { createHash } from 'node:crypto'; import sharp from 'sharp'; import { validateObjectStorageEnvironment } from './dist/config/env.js'; import { S3ObjectStorage } from './dist/storage/s3-object-storage.js'; const storage = new S3ObjectStorage(validateObjectStorageEnvironment()); await storage.initialize(); const object = await storage.getObject(process.env.PROCESSED_KEY); const metadata = await sharp(object.body).metadata(); const checksum = createHash('sha256').update(object.body).digest('hex'); if (object.contentType !== 'image/webp' || checksum !== process.env.PROCESSED_CHECKSUM || object.checksumSha256 !== checksum) process.exit(1); if (metadata.format !== 'webp' || String(metadata.width) !== process.env.PROCESSED_WIDTH || String(metadata.height) !== process.env.PROCESSED_HEIGHT || metadata.width > 2000 || metadata.height > 2000) process.exit(2); if (metadata.exif || metadata.icc || metadata.xmp) process.exit(3); if (await storage.objectExists(process.env.ORIGINAL_KEY)) process.exit(4); await storage.close();"
 
 log "Verifying media retry, terminal DLQ and idempotent receipt"
-compose exec -T database sh -c \
+compose exec -T database /usr/local/bin/load-container-secrets sh -c \
   'psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL"' \
   < "$ROOT_DIR/tests/integration/media-worker-retry.sql" >/dev/null
 publish_outbox_once
 for _ in $(seq 1 20); do
-  retry_state="$(compose exec -T database sh -c \
+  retry_state="$(compose exec -T database /usr/local/bin/load-container-secrets sh -c \
     'psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" -tAc "SELECT status::text FROM media_processing_jobs WHERE id = '\''019f67c6-ee5c-7270-afa1-cacee418a003'\''"')"
   [ "$retry_state" = "dead_lettered" ] && break
   sleep 1
 done
-retry_result="$(compose exec -T database sh -c \
+retry_result="$(compose exec -T database /usr/local/bin/load-container-secrets sh -c \
   'psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" -tAc "SELECT job.status::text || '\''|'\'' || job.attempt_count || '\''|'\'' || job.last_failure_code || '\''|'\'' || image.status::text || '\''|'\'' || image.failure_code || '\''|'\'' || (SELECT count(*) FROM consumed_messages WHERE consumer_name = '\''media-worker-v1'\'' AND message_id = '\''019f67c6-ee5c-7270-afa1-cacee418a004'\'') FROM media_processing_jobs job JOIN incident_images image ON image.id = job.image_id WHERE job.id = '\''019f67c6-ee5c-7270-afa1-cacee418a003'\''"')"
 if [ "$retry_result" != "dead_lettered|2|storage_read_failed|failed|storage_read_failed|1" ]; then
   log "ERROR: unexpected media retry result: $retry_result"
@@ -479,14 +507,14 @@ if [ "$dlq_messages" != "1" ]; then
   log "ERROR: unexpected media DLQ depth: $dlq_messages"
   exit 1
 fi
-compose exec -T database sh -c \
+compose exec -T database /usr/local/bin/load-container-secrets sh -c \
   'psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" -c "DELETE FROM consumed_messages WHERE consumer_name = '\''media-worker-v1'\'' AND message_id = '\''019f67c6-ee5c-7270-afa1-cacee418a004'\''; DELETE FROM incydenty WHERE id_zgloszenia = '\''019f67c6-ee5c-7270-afa1-cacee418a001'\'';"' \
   >/dev/null
 compose exec -T rabbitmq rabbitmqctl -q -p zglosto purge_queue \
   zglosto.media.process.dlq.v1 >/dev/null
 
 log "Verifying outbox recovery while RabbitMQ is unavailable"
-compose exec -T database sh -c \
+compose exec -T database /usr/local/bin/load-container-secrets sh -c \
   'psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" -c "UPDATE outbox_events SET status = '\''pending'\'', published_at = NULL, available_at = CURRENT_TIMESTAMP WHERE id = (SELECT id FROM outbox_events WHERE status = '\''published'\'' ORDER BY created_at LIMIT 1)"' >/dev/null
 compose stop rabbitmq >/dev/null
 for _ in $(seq 1 20); do
@@ -500,7 +528,7 @@ if compose exec -T media_worker bun dist/nest/media-worker/healthcheck.js >/dev/
   exit 1
 fi
 publish_outbox_once
-compose exec -T database sh -c \
+compose exec -T database /usr/local/bin/load-container-secrets sh -c \
   'test "$(psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" -tAc "SELECT count(*) FROM outbox_events WHERE status = '\''failed'\'' AND last_error_code = '\''broker_publish_failed'\''")" = "1"'
 compose up --detach --wait --wait-timeout "$WAIT_TIMEOUT" rabbitmq >/dev/null
 for _ in $(seq 1 30); do
@@ -511,38 +539,38 @@ for _ in $(seq 1 30); do
 done
 compose exec -T media_worker bun dist/nest/media-worker/healthcheck.js
 publish_outbox_once
-compose exec -T database sh -c \
+compose exec -T database /usr/local/bin/load-container-secrets sh -c \
   'test "$(psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" -tAc "SELECT count(*) FROM outbox_events WHERE status NOT IN ('\''published'\'', '\''discarded'\'') OR (status = '\''published'\'' AND published_at IS NULL)")" = "0"'
 
 log "Verifying optional incident coordinates and database range guards"
-compose exec -T database sh -c \
+compose exec -T database /usr/local/bin/load-container-secrets sh -c \
   'psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL"' \
   < "$ROOT_DIR/tests/integration/incident-location.sql" >/dev/null
 
 log "Verifying inactive service history and assignment guards"
-compose exec -T database sh -c \
+compose exec -T database /usr/local/bin/load-container-secrets sh -c \
   'psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL"' \
   < "$ROOT_DIR/tests/integration/inactive-service-history.sql" >/dev/null
 
 log "Creating a consistent PostgreSQL and Object Storage backup"
 "$ROOT_DIR/scripts/backup-compose.sh" "$BACKUP_DIR" "${COMPOSE[@]:2}"
 
-incident_count_before_restore="$(compose exec -T database sh -c \
+incident_count_before_restore="$(compose exec -T database /usr/local/bin/load-container-secrets sh -c \
   'psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" -tAc "SELECT count(*) FROM incydenty"')"
-object_key_to_restore="$(compose exec -T database sh -c \
+object_key_to_restore="$(compose exec -T database /usr/local/bin/load-container-secrets sh -c \
   'psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" -tAc "SELECT processed_object_key FROM incident_images WHERE status = '\''ready'\'' ORDER BY created_at LIMIT 1"')"
 [ -n "$object_key_to_restore" ]
 
 log "Simulating loss of database rows and an Object Storage object"
 compose exec -T -e "RESTORE_TEST_OBJECT_KEY=$object_key_to_restore" backend bun --input-type=module -e \
   "import { validateBackendEnvironment } from './dist/config/env.js'; import { S3ObjectStorage } from './dist/storage/s3-object-storage.js'; const storage = new S3ObjectStorage(validateBackendEnvironment().objectStorage); await storage.deleteObject(process.env.RESTORE_TEST_OBJECT_KEY);"
-compose exec -T database sh -c \
+compose exec -T database /usr/local/bin/load-container-secrets sh -c \
   'psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" -c "TRUNCATE incydenty CASCADE"' >/dev/null
 
 log "Restoring PostgreSQL and Object Storage, then checking referential consistency"
 "$ROOT_DIR/scripts/restore-compose.sh" "$BACKUP_DIR" "${COMPOSE[@]:2}"
 
-incident_count_after_restore="$(compose exec -T database sh -c \
+incident_count_after_restore="$(compose exec -T database /usr/local/bin/load-container-secrets sh -c \
   'psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" -tAc "SELECT count(*) FROM incydenty"')"
 [ "$incident_count_after_restore" = "$incident_count_before_restore" ]
 compose exec -T -e "RESTORE_TEST_OBJECT_KEY=$object_key_to_restore" backend bun --input-type=module -e \

@@ -1,0 +1,51 @@
+services:
+  rustfs:
+    image: rustfs/rustfs:1.0.5
+    environment:
+      RUSTFS_ACCESS_KEY: iam-test-root
+      RUSTFS_SECRET_KEY: iam-test-root-secret-unique
+      RUSTFS_REGION: eu-central-1
+      RUSTFS_CONSOLE_ENABLE: 'false'
+      RUSTFS_OBS_LOG_DIRECTORY: ''
+    volumes: [data:/data]
+    ports: ['127.0.0.1::9000']
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, http://127.0.0.1:9000/health/ready]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+  provision:
+    image: rustfs/rc:v0.1.37@sha256:7e93fd410a8fe51514f89373e093392c92095b98dc6140335fcfe956810c4c80
+    user: 10001:10001
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m,uid=10001,gid=10001,mode=0700
+    entrypoint: [sh, /provision.sh]
+    environment:
+      RUSTFS_ROOT_ACCESS_KEY: iam-test-root
+      RUSTFS_ROOT_SECRET_KEY: iam-test-root-secret-unique
+      S3_ACCESS_KEY_ID: iam-test-backend
+      S3_SECRET_ACCESS_KEY: iam-test-backend-secret-unique
+      S3_WORKER_ACCESS_KEY_ID: iam-test-worker
+      S3_WORKER_SECRET_ACCESS_KEY: iam-test-worker-secret-unique
+      S3_OPERATIONS_ACCESS_KEY_ID: iam-test-operations
+      S3_OPERATIONS_SECRET_ACCESS_KEY: iam-test-operations-secret-unique
+      S3_ENDPOINT: http://rustfs:9000
+      S3_BUCKET: iam-test-media
+      S3_OBJECT_PREFIX: incidents
+      S3_REGION: eu-central-1
+      RUSTFS_ROOT_ACCESS_KEY_FILE: /secrets/root-access
+      RUSTFS_ROOT_SECRET_KEY_FILE: /secrets/root-secret
+      S3_ACCESS_KEY_ID_FILE: /secrets/backend-access
+      S3_SECRET_ACCESS_KEY_FILE: /secrets/backend-secret
+      S3_WORKER_ACCESS_KEY_ID_FILE: /secrets/worker-access
+      S3_WORKER_SECRET_ACCESS_KEY_FILE: /secrets/worker-secret
+      S3_OPERATIONS_ACCESS_KEY_ID_FILE: /secrets/operations-access
+      S3_OPERATIONS_SECRET_ACCESS_KEY_FILE: /secrets/operations-secret
+    volumes:
+      - ${IAM_SECRET_DIRECTORY:?IAM_SECRET_DIRECTORY is required}:/secrets:ro
+      - ${IAM_PROJECT_ROOT:?IAM_PROJECT_ROOT must be the repository root}/scripts/provision-storage-iam.sh:/provision.sh:ro
+volumes:
+  data:

@@ -181,7 +181,9 @@ describe('NestJS platform layer', () => {
       message: 'Conflict',
     });
 
-    const failureResponse = await fetch(`${await application.getUrl()}/__platform-test/failure`);
+    const failureResponse = await fetch(
+      `${await application.getUrl()}/__platform-test/failure?token=private-marker`,
+    );
     expect(failureResponse.status).toBe(500);
     const failure = StructuredApiErrorResponseSchema.parse(await failureResponse.json());
     expect(failure).toMatchObject({
@@ -190,6 +192,10 @@ describe('NestJS platform layer', () => {
       message: 'Internal server error',
     });
     expect(JSON.stringify(failure)).not.toContain('Sensitive internal detail');
+    const failureLogs = JSON.stringify(sink.records);
+    expect(failureLogs).not.toContain('private-marker');
+    expect(failureLogs).not.toContain('Sensitive internal detail');
+    expect(failureLogs).not.toContain('Internal detail');
 
     const invalidResponse = await fetch(
       `${await application.getUrl()}/__platform-test/invalid-response`,
@@ -199,5 +205,13 @@ describe('NestJS platform layer', () => {
       errorCode: 'INTERNAL_ERROR',
       message: 'Internal server error',
     });
+  });
+
+  it('does not serialize error messages or stacks that can contain database input', () => {
+    const { logger, sink } = createLogger();
+    logger.error(new Error('invalid input syntax: private-resident-marker'), 'Test');
+    logger.warn({ event: 'test.failure', error: new Error('private-resident-marker') });
+    expect(JSON.stringify(sink.records)).not.toContain('private-resident-marker');
+    expect(sink.records[0]?.data).toEqual({ name: 'Error' });
   });
 });

@@ -115,59 +115,66 @@
   "externalComponents": [
     {
       "id": "rustfs",
-      "image": "rustfs/rustfs:1.0.2",
+      "image": "rustfs/rustfs:1.0.5",
       "module": "objectStorage",
       "mode": "local",
       "includedByDefault": true
     },
     {
       "id": "redis",
-      "image": "redis:8.10.2-alpine3.23",
+      "image": "redis:8.10.3-alpine3.23",
       "module": "redis",
       "mode": "local",
       "includedByDefault": false
     },
     {
       "id": "otel_collector",
-      "image": "otel/opentelemetry-collector-contrib:0.163.1",
+      "image": "otel/opentelemetry-collector-contrib:0.165.0",
       "module": "observability",
       "mode": "local-or-external",
       "includedByDefault": false
     },
     {
       "id": "prometheus",
-      "image": "prom/prometheus:v3.15.0",
+      "image": "prom/prometheus:v3.16.0",
       "module": "observability",
       "mode": "local",
       "includedByDefault": false
     },
     {
       "id": "loki",
-      "image": "grafana/loki:3.7.8",
+      "image": "grafana/loki:3.7.10",
       "module": "observability",
       "mode": "local",
       "includedByDefault": false
     },
     {
       "id": "tempo",
-      "image": "grafana/tempo:3.1.0",
+      "image": "grafana/tempo:3.1.1",
       "module": "observability",
       "mode": "local",
       "includedByDefault": false
     },
     {
       "id": "alertmanager",
-      "image": "prom/alertmanager:v0.34.1",
+      "image": "prom/alertmanager:v0.35.0",
       "module": "observability",
       "mode": "local",
       "includedByDefault": false
     },
     {
       "id": "grafana",
-      "image": "grafana/grafana:13.2.4",
+      "image": "grafana/grafana:13.2.6",
       "module": "observability",
       "mode": "local",
       "includedByDefault": false
+    },
+    {
+      "id": "rustfs_rc",
+      "image": "rustfs/rc:v0.1.37@sha256:7e93fd410a8fe51514f89373e093392c92095b98dc6140335fcfe956810c4c80",
+      "module": "objectStorage",
+      "mode": "local",
+      "includedByDefault": true
     }
   ]
 }

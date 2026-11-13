@@ -182,6 +182,7 @@ try {
       'exec',
       '-T',
       'database',
+      '/usr/local/bin/load-container-secrets',
       'sh',
       '-c',
       'psql "$DATABASE_DIRECT_URL" -v ON_ERROR_STOP=1 -tAc "$1"',

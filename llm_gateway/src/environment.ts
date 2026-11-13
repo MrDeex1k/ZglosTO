@@ -28,7 +28,13 @@ const EnvironmentSchema = z
     dockerModelRunnerEngine: z.string().trim().min(1),
     dockerModelRunnerTemperature: z.coerce.number().min(0).max(2),
     dockerModelRunnerMaxTokens: z.coerce.number().int().positive().max(256),
-    openAiCompatibleUrl: z.url(),
+    // External providers receive a credential and resident-supplied descriptions.
+    openAiCompatibleUrl: z.url().refine((value) => {
+      const url = new URL(value);
+      return (
+        url.protocol === 'https:' && !url.username && !url.password && !url.search && !url.hash
+      );
+    }, 'External LLM URL must use HTTPS without credentials, query or fragment'),
     openAiCompatibleModel: z.string().trim().min(1),
     openAiCompatibleApiKeyFile: z.string().trim().min(1),
     openAiCompatibleTemperature: z.coerce.number().min(0).max(2),

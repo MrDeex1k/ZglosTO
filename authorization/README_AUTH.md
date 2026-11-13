@@ -23,7 +23,7 @@ authorization/
 
 ### Zmienne środowiskowe
 
-Utwórz główny `.env` na podstawie `.env.example`. Authorization waliduje przy starcie `DATABASE_URL`, `BETTER_AUTH_SECRET` (minimum 32 znaki), `BETTER_AUTH_URL`, `FRONTEND_ORIGIN` oraz pełny zestaw `AUTHORIZATION_MTLS_*`. Jedynym portem usługi jest `9956/mTLS`. Pełny katalog znajduje się w `docs/environment-variables.md`.
+Utwórz główny `.env` na podstawie `.env.example`. Authorization waliduje przy starcie własny URL roli `zglosto_auth` z `DATABASE_URL_FILE` (lub jawnego `DATABASE_URL` w lokalnym uruchomieniu), `BETTER_AUTH_SECRET` (minimum 32 znaki), `BETTER_AUTH_URL`, `FRONTEND_ORIGIN` oraz pełny zestaw `AUTHORIZATION_MTLS_*`. Jedynym portem usługi jest `9956/mTLS`. Pełny katalog znajduje się w `docs/environment-variables.md`.
 
 `EMAIL_DELIVERY_MODE=disabled` jest obecnym trybem zwykłego środowiska. Izolowany zestaw Fazy 0 ustawia `test`, zapisuje link Better Auth w pamięciowym outboksie i testuje rzeczywiste potwierdzenie. Tryb `test` jest odrzucany, jeśli `NODE_ENV` nie ma wartości `test`; nie zastępuje produkcyjnego providera poczty.
 
@@ -590,7 +590,7 @@ curl --cacert .certs/service/ca.crt \
 
 ### Błąd połączenia z bazą danych
 
-Sprawdź `DATABASE_URL` w `.env` i upewnij się, że PostgreSQL jest uruchomiony.
+Sprawdź plik `DATABASE_URL_FILE` roli `zglosto_auth` i upewnij się, że PostgreSQL jest uruchomiony.
 
 ### Błędy CORS
 

@@ -60,7 +60,7 @@ for (const [workspace, react, typescript] of [
   const local = createRequire(resolve(workspace, 'package.json'));
   assert.equal(local('react/package.json').version, react);
   assert.equal(local('typescript/package.json').version, typescript);
-  assert.equal(local('@babel/core/package.json').version, '7.29.7');
+  assert.equal(local('@babel/core/package.json').version, '7.29.13');
 }
 const docsRequire = createRequire(resolve('docs-site/package.json'));
 assert.equal(docsRequire('typescript-astro/package.json').version, '6.0.3');

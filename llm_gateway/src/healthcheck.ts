@@ -1,8 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { request } from 'node:https';
 
+// Liveness must not restart a healthy process while replay protection warms up.
+const ready = process.argv.includes('--ready') && process.env.LLM_RUNTIME !== 'disabled';
 const outgoing = request(
-  new URL('https://127.0.0.1:8130/health/live'),
+  new URL(`https://127.0.0.1:8130/health/${ready ? 'ready' : 'live'}`),
   {
     ca: readFileSync(process.env.LLM_GATEWAY_TLS_CA_PATH ?? '/run/secrets/service/ca.crt'),
     cert: readFileSync(

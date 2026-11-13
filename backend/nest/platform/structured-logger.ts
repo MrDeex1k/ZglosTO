@@ -73,9 +73,7 @@ function logEvent(message: unknown): string {
 function logData(message: unknown, optionalParameters: readonly unknown[]): unknown {
   if (message instanceof Error) {
     return {
-      message: message.message,
       name: message.name,
-      stack: message.stack ?? null,
     };
   }
   const dataParameters = [...optionalParameters];

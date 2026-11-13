@@ -8,7 +8,7 @@ wtedy z `LLM_RUNTIME=disabled`, a backend zapisuje zgłoszenie z kontrolowanym f
 Inferencję włącza osobny wariant:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.llm.yml up -d --build
+docker compose -f docker-compose.yml -f docker-compose.llm.yml -f docker-compose.redis.local.yml up -d --build
 ```
 
 Wymagany jest włączony [Docker Model Runner](https://docs.docker.com/ai/model-runner/) oraz
@@ -72,3 +72,14 @@ odpowiedź modelu nie blokują zapisu zgłoszenia.
 Adapter zewnętrzny zachowuje ten sam ścisły parser, temperaturę `0.1`, budżet odpowiedzi
 i fallback. Jego readiness odpytuje `GET <LLM_EXTERNAL_URL>/models` z kluczem Bearer
 odczytanym podczas startu z `LLM_EXTERNAL_API_KEY_FILE`.
+
+## Ochrona replay po audycie bezpieczeństwa
+
+Aktywny lokalny lub zewnętrzny LLM wymaga profilu Redis; bez wspólnego magazynu
+nonce gateway odmawia klasyfikacji i gotowości. Nowa generacja Redis wymaga
+kwarantanny 61s, a healthcheck gatewaya daje na nią 75s okresu startowego.
+LLM disabled pozostaje dostępny bez Redis. Lokalny Redis używa noeviction,
+ponieważ usunięcie żywego nonce przez LRU pozwalałoby ponowić podpisane żądanie.
+Test integracyjny używa aktywnego stubu modelu i domyślnie lokalnego Redis.
+Przed uruchomieniem profilu lokalnego ustaw pliki ACL, URL Redis i klucza HMAC
+zgodnie z dokumentacją profili; przykład polecenia nie generuje sekretów.

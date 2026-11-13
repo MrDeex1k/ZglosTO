@@ -5,12 +5,20 @@ resources:
   - serviceaccount.yaml
   - statefulset.yaml
   - service.yaml
+  - provision-job.yaml
+  - provision-network-policy.yaml
 
 configMapGenerator:
   - name: zglosto-config
     namespace: zglosto
     behavior: merge
+    options: { immutable: true }
     literals:
       - S3_ENDPOINT=http://rustfs:9000
       - S3_FORCE_PATH_STYLE=true
-      - S3_AUTO_CREATE_BUCKET=true
+      - S3_AUTO_CREATE_BUCKET=false
+  - name: storage-iam-provision-script
+    namespace: zglosto
+    options: { immutable: true }
+    files:
+      - provision-storage-iam.sh

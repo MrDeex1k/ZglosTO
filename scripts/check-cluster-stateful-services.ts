@@ -89,7 +89,7 @@ function validateStatefulSet(
 }
 
 function validateApplicationDatabaseIsolation(rendered: string): void {
-  for (const consumer of ['authorization', 'backend']) {
+  for (const consumer of ['authorization', 'backend', 'media-worker']) {
     const deployment = resource(rendered, 'Deployment', consumer);
     if (!deployment.includes('name: DATABASE_URL_FILE')) {
       fail(`Deployment/${consumer} does not receive the PgBouncer application URL`);
@@ -105,13 +105,33 @@ function validateApplicationDatabaseIsolation(rendered: string): void {
 
   const pgbouncer = resource(rendered, 'Deployment', 'pgbouncer');
   if (
-    !pgbouncer.includes('name: DATABASE_URL_FILE') ||
-    !pgbouncer.includes('database-direct-url') ||
-    !pgbouncer.includes('name: PGBOUNCER_CLIENT_URL_FILE') ||
-    !pgbouncer.includes('database-url') ||
+    pgbouncer.includes('DATABASE_DIRECT_URL') ||
+    pgbouncer.includes('database-direct-url') ||
+    pgbouncer.includes('name: DATABASE_URL_FILE') ||
+    !pgbouncer.includes('name: DATABASE_AUTH_PASSWORD_FILE') ||
+    !pgbouncer.includes('name: DATABASE_BACKEND_PASSWORD_FILE') ||
+    !pgbouncer.includes('name: DATABASE_MEDIA_WORKER_PASSWORD_FILE') ||
     !pgbouncer.includes('value: transaction')
   ) {
-    fail('PgBouncer must separate its direct upstream URL from the application URL');
+    fail(
+      'PgBouncer must authenticate the three runtime roles without an administrative upstream identity',
+    );
+  }
+  for (const [consumer, key] of Object.entries({
+    authorization: 'AUTH_DATABASE_URL',
+    backend: 'BACKEND_DATABASE_URL',
+    'media-worker': 'MEDIA_WORKER_DATABASE_URL',
+  })) {
+    const deployment = resource(rendered, 'Deployment', consumer);
+    if (
+      !deployment.includes(`key: ${key}`) ||
+      deployment.includes('key: POSTGRES_PASSWORD') ||
+      deployment.includes('key: DATABASE_AUTH_PASSWORD') ||
+      deployment.includes('key: DATABASE_BACKEND_PASSWORD') ||
+      deployment.includes('key: DATABASE_MEDIA_WORKER_PASSWORD')
+    ) {
+      fail(`Deployment/${consumer} must mount only its own runtime database URL`);
+    }
   }
 }
 
@@ -142,7 +162,7 @@ function validateRustfsOverlay(rendered: string, profile: string, storageClassNa
   if (
     !rendered.includes('S3_ENDPOINT: http://rustfs:9000') ||
     !rendered.includes('S3_FORCE_PATH_STYLE: "true"') ||
-    !rendered.includes('S3_AUTO_CREATE_BUCKET: "true"')
+    !rendered.includes('S3_AUTO_CREATE_BUCKET: "false"')
   ) {
     fail(`${profile} RustFS overlay does not override only the neutral S3 contract`);
   }

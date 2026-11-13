@@ -38,7 +38,7 @@ export function useCreateIncidentMutation() {
   });
 }
 
-export function useServiceIncidentMutation(owner: string) {
+export function useServiceIncidentMutation(owner: string, serviceKey: string | null = null) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -58,7 +58,7 @@ export function useServiceIncidentMutation(owner: string) {
     onSuccess: ({ incidentId, checked, adminStatus }) => {
       updateIncidentCache(
         queryClient,
-        incidentQueryKeys.service(owner),
+        incidentQueryKeys.service(owner, serviceKey),
         incidentId,
         (incident) => ({
           ...incident,

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { z } from 'zod';
 import {
   ClientAddressEnvironmentSchema,
@@ -105,6 +106,14 @@ export const BackendEnvironmentSchema = z
   .strict();
 
 export type BackendEnvironment = z.infer<typeof BackendEnvironmentSchema>;
+
+function databaseUrlSecret(): string {
+  const path = process.env.DATABASE_URL_FILE?.trim();
+  if (!path) return required('DATABASE_URL');
+  const value = readFileSync(path, 'utf8').trim();
+  if (!value) throw new Error('Database URL secret file is empty');
+  return value;
+}
 
 function required(name: string): string {
   const value = process.env[name]?.trim();
@@ -225,7 +234,7 @@ export function validateDatabaseConnectionEnvironment(): DatabaseConnectionEnvir
     ),
     poolMax: positiveInteger('DATABASE_POOL_MAX', process.env.DATABASE_POOL_MAX?.trim() || '10'),
     tlsCaPath: required('DATABASE_TLS_CA_PATH'),
-    url: validDatabaseUrl('DATABASE_URL', required('DATABASE_URL')),
+    url: validDatabaseUrl('DATABASE_URL', databaseUrlSecret()),
   });
 }
 
@@ -289,11 +298,18 @@ export function validateRabbitMqEnvironment(): RabbitMqEnvironment {
 }
 
 export function validateObjectStorageEnvironment(): ObjectStorageEnvironment {
+  // Bucket creation and IAM belong to the dedicated bootstrap, never runtime credentials.
+  if (process.env.S3_AUTO_CREATE_BUCKET?.trim() === 'true') {
+    throw new Error(
+      'S3_AUTO_CREATE_BUCKET must be false; provision buckets before starting runtime',
+    );
+  }
   const endpoint = validUrl('S3_ENDPOINT', required('S3_ENDPOINT'));
   const configuredPublicEndpoint = process.env.S3_PUBLIC_ENDPOINT?.trim();
   const publicEndpoint =
     configuredPublicEndpoint == null || configuredPublicEndpoint === ''
-      ? process.env.SERVICE_NAME === 'media_worker'
+      ? process.env.SERVICE_NAME === 'media_worker' ||
+        process.env.SERVICE_NAME === 'storage_operations'
         ? endpoint
         : validUrl('S3_PUBLIC_ENDPOINT', required('S3_PUBLIC_ENDPOINT'))
       : validUrl('S3_PUBLIC_ENDPOINT', configuredPublicEndpoint);

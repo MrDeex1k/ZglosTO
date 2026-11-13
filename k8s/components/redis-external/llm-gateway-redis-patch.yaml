@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-gateway
+  annotations:
+    secret.reloader.stakater.com/reload: zglosto-llm-gateway-tls,zglosto-llm-gateway-healthcheck-tls,zglosto-llm-auth,zglosto-redis-credentials,zglosto-redis-external-ca
+spec:
+  template:
+    spec:
+      containers:
+        - name: llm-gateway
+          env:
+            - { name: REDIS_MODE, value: external }
+            - { name: REDIS_URL_FILE, value: /run/secrets/redis/url }
+            - { name: REDIS_TLS_CA_PATH, value: /run/secrets/redis-ca/ca.crt }
+          volumeMounts:
+            - name: redis-credentials
+              mountPath: /run/secrets/redis
+              readOnly: true
+            - name: redis-external-ca
+              mountPath: /run/secrets/redis-ca
+              readOnly: true
+      volumes:
+        - name: redis-credentials
+          secret:
+            secretName: zglosto-redis-credentials
+            optional: false
+            defaultMode: 0440
+            items:
+              - key: REDIS_URL
+                path: url
+        - name: redis-external-ca
+          secret:
+            secretName: zglosto-redis-external-ca
+            optional: false
+            defaultMode: 0440
+            items:
+              - key: ca.crt
+                path: ca.crt

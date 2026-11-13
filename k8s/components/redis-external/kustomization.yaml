@@ -13,3 +13,7 @@ patches:
     target:
       kind: Deployment
       name: backend
+  - path: llm-gateway-redis-patch.yaml
+    target:
+      kind: Deployment
+      name: llm-gateway

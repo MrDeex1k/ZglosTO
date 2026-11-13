@@ -104,8 +104,8 @@ export class WorkloadReplayCache {
     }
     if (this.#entries.has(identifier)) return false;
     if (this.#entries.size >= this.maximumEntries) {
-      const oldest = this.#entries.keys().next().value as string | undefined;
-      if (oldest !== undefined) this.#entries.delete(oldest);
+      // Never evict a live nonce: it would make an accepted signature replayable.
+      return false;
     }
     this.#entries.set(identifier, expiresAt);
     return true;

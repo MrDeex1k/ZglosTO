@@ -164,22 +164,24 @@ cache i liczniki są odtwarzalne; utrata poda powoduje jedynie kontrolowaną deg
 
 ## Wspólne i bazodanowe
 
-| Zmienna                          | Wymagana | Sekret | Używana przez                                   | Opis                                                               |
-| -------------------------------- | -------- | ------ | ----------------------------------------------- | ------------------------------------------------------------------ |
-| `NODE_ENV`                       | nie      | nie    | backend, authorization, media_worker            | `development`, `test` albo `production`; domyślnie `development`.  |
-| `POSTGRES_USER`                  | tak      | nie    | database                                        | Użytkownik inicjalnej bazy.                                        |
-| `POSTGRES_PASSWORD`              | tak      | tak    | database                                        | Hasło bazy; w produkcji z Secret.                                  |
-| `POSTGRES_DB`                    | tak      | nie    | database                                        | Nazwa bazy, obecnie `zglosto_db`.                                  |
-| `POSTGRES_PORT`                  | tak      | nie    | database/Compose                                | Port PostgreSQL wewnątrz kontenera i opcjonalne mapowanie lokalne. |
-| `DATABASE_URL`                   | tak      | tak    | backend, authorization, media_worker, pgbouncer | Aplikacyjny URL bazy wskazujący PgBouncer.                         |
-| `DATABASE_DIRECT_URL`            | tak      | tak    | pgbouncer, migracje, backup, administracja      | Bezpośredni URL PostgreSQL omijający pooler.                       |
-| `DATABASE_TLS_CA_PATH`           | tak      | nie    | backend, authorization, media_worker            | Ścieżka Database CA używanego do weryfikacji DNS `pgbouncer`.      |
-| `DATABASE_POOL_MAX`              | nie      | nie    | backend, authorization                          | Maksymalna liczba połączeń stałej puli procesu; domyślnie `10`.    |
-| `DATABASE_IDLE_TIMEOUT_MS`       | nie      | nie    | backend, authorization                          | Zamknięcie bezczynnego połączenia; domyślnie `30000`.              |
-| `DATABASE_CONNECTION_TIMEOUT_MS` | nie      | nie    | backend, authorization                          | Limit zestawienia połączenia; domyślnie `5000`.                    |
-| `PGBOUNCER_PORT`                 | nie      | nie    | pgbouncer, Compose                              | Port poolera w sieci wewnętrznej; domyślnie `6432`.                |
+| Zmienna                          | Wymagana | Sekret | Używana przez                             | Opis                                                               |
+| -------------------------------- | -------- | ------ | ----------------------------------------- | ------------------------------------------------------------------ |
+| `NODE_ENV`                       | nie      | nie    | backend, authorization, media_worker      | `development`, `test` albo `production`; domyślnie `development`.  |
+| `POSTGRES_USER`                  | tak      | nie    | database                                  | Użytkownik inicjalnej bazy.                                        |
+| `POSTGRES_PASSWORD`              | tak      | tak    | database                                  | Hasło bazy; w produkcji z Secret.                                  |
+| `POSTGRES_DB`                    | tak      | nie    | database                                  | Nazwa bazy, obecnie `zglosto_db`.                                  |
+| `POSTGRES_PORT`                  | tak      | nie    | database/Compose                          | Port PostgreSQL wewnątrz kontenera i opcjonalne mapowanie lokalne. |
+| `DATABASE_URL`                   | tak      | tak    | backend, authorization, media_worker      | URL osobnej roli runtime; w kontenerze z `DATABASE_URL_FILE`.      |
+| `DATABASE_DIRECT_URL`            | tak      | tak    | database, migracje, backup, administracja | Bezpośredni URL PostgreSQL omijający pooler.                       |
+| `DATABASE_TLS_CA_PATH`           | tak      | nie    | backend, authorization, media_worker      | Ścieżka Database CA używanego do weryfikacji DNS `pgbouncer`.      |
+| `DATABASE_POOL_MAX`              | nie      | nie    | backend, authorization                    | Maksymalna liczba połączeń stałej puli procesu; domyślnie `10`.    |
+| `DATABASE_IDLE_TIMEOUT_MS`       | nie      | nie    | backend, authorization                    | Zamknięcie bezczynnego połączenia; domyślnie `30000`.              |
+| `DATABASE_CONNECTION_TIMEOUT_MS` | nie      | nie    | backend, authorization                    | Limit zestawienia połączenia; domyślnie `5000`.                    |
+| `PGBOUNCER_PORT`                 | nie      | nie    | pgbouncer, Compose                        | Port poolera w sieci wewnętrznej; domyślnie `6432`.                |
 
-`DATABASE_URL` wskazuje `pgbouncer:6432`, natomiast `DATABASE_DIRECT_URL` wskazuje
+`DATABASE_URL_FILE` wskazuje plik URL właściwej roli runtime (`zglosto_auth`,
+`zglosto_backend` albo `zglosto_media_worker`), z hostem `pgbouncer:6432`.
+`DATABASE_DIRECT_URL` jest wyłącznie administracyjny i wskazuje
 `database:54325`. Oba adresy są obowiązkowe i nie mają wzajemnego fallbacku. Po aktualizacji
 repozytorium trzeba ponownie zsynchronizować lokalny `.env` z `.env.example`.
 
@@ -448,3 +450,21 @@ Są to ścieżki same-origin, a nie adresy usług wewnętrznych. Każda zmienna 
 ## Izolowane testy
 
 `tests/integration/integration.env` zawiera wyłącznie deterministyczne, nieprodukcyjne wartości dla jednorazowej bazy w `tmpfs`. Skrypt `scripts/test-phase0-integration.sh` nadpisuje nimi konfigurację usług, uruchamia testy i usuwa kontenery. Tych wartości nie wolno używać poza środowiskiem testowym.
+
+### Rozdzielone sekrety DB
+
+| Plik/zmienna                               | Konsument           | Znaczenie                                             |
+| ------------------------------------------ | ------------------- | ----------------------------------------------------- |
+| `DATABASE_AUTH_PASSWORD_FILE`              | database, pgbouncer | Osobne hasło `zglosto_auth`; minimum 24 znaki.        |
+| `DATABASE_BACKEND_PASSWORD_FILE`           | database, pgbouncer | Osobne hasło `zglosto_backend`.                       |
+| `DATABASE_MEDIA_WORKER_PASSWORD_FILE`      | database, pgbouncer | Osobne hasło `zglosto_media_worker`.                  |
+| `AUTH_DATABASE_URL` (klucz Secret)         | authorization       | URL roli auth, montowany jako `DATABASE_URL_FILE`.    |
+| `BACKEND_DATABASE_URL` (klucz Secret)      | backend             | URL roli backend, montowany jako `DATABASE_URL_FILE`. |
+| `MEDIA_WORKER_DATABASE_URL` (klucz Secret) | media-worker        | URL roli workera, montowany jako `DATABASE_URL_FILE`. |
+
+W lokalnym Compose pliki wybiera się przez `DATABASE_{AUTH,BACKEND,MEDIA_WORKER}_PASSWORD_SOURCE_FILE`
+oraz `{AUTH,BACKEND,MEDIA_WORKER}_DATABASE_URL_SOURCE_FILE`. Domyślne pliki w
+`tests/fixtures/database/` to wyłącznie znane dane testowe. W produkcji pliki pochodzą
+z `ZTO_SECRETS_DIR`; lista wymagań znajduje się w `deploy/compose/required-secret-files.txt`.
+Kubernetes/K3s dostarczają klucze kontraktu `deploy/cluster-secret-contract.json`.
+PgBouncer otrzymuje trzy hasła runtime, ale żadnego URL/hasła administratora.

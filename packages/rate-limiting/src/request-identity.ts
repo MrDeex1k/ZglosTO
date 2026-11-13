@@ -27,14 +27,18 @@ export function resolveClientAddress(input: ClientAddressInput): string {
 
   const peerAddress = normalizedAddress(input.peerAddress);
   if (peerAddress === null) return 'unknown';
+  if (input.forwardedFor === null) return peerAddress;
 
   const forwardedAddresses = (input.forwardedFor ?? '')
     .split(',')
-    .map((address) => normalizedAddress(address))
-    .filter((address): address is string => address !== null);
+    .map((address) => normalizedAddress(address));
   const chain = [...forwardedAddresses, peerAddress];
   const clientIndex = chain.length - input.trustedProxyHops - 1;
-  return chain[Math.max(0, clientIndex)] ?? peerAddress;
+  // Invalid or missing proxy slots must never shift attacker-controlled entries
+  // into the client position. Collapse malformed chains into a shared bucket.
+  if (clientIndex < 0) return peerAddress;
+  if (chain.slice(clientIndex).some((address) => address === null)) return 'unknown';
+  return chain[clientIndex] ?? 'unknown';
 }
 
 export class RateLimitKeyHasher {

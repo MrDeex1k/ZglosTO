@@ -91,9 +91,7 @@ function exceptionStatus(exception: unknown): number {
 }
 
 function exceptionSummary(exception: unknown): Record<string, string> {
-  return exception instanceof Error
-    ? { message: exception.message, name: exception.name }
-    : { type: 'unknown' };
+  return exception instanceof Error ? { name: exception.name } : { type: 'unknown' };
 }
 
 @Catch()
@@ -128,7 +126,8 @@ export class StructuredHttpExceptionFilter implements ExceptionFilter {
       errorCode,
       event: 'http.request.failed',
       method: request.method,
-      path: request.originalUrl,
+      // URLs and driver exception messages can embed credentials or resident input.
+      route: typeof request.route?.path === 'string' ? request.route.path : 'unmatched',
       statusCode,
     };
     const writeLog = () => {

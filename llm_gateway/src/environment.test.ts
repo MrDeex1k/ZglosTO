@@ -88,3 +88,13 @@ test('accepts the external OpenAI-compatible runtime without exposing its API ke
     openAiCompatibleApiKeyFile: '/run/secrets/llm/api-key',
   });
 });
+
+test.each([
+  'http://provider.example.invalid/v1',
+  'https://user:password@provider.example.invalid/v1',
+  'https://provider.example.invalid/v1?api_key=test',
+  'https://provider.example.invalid/v1#fragment',
+])('rejects unsafe external provider URL: %s', (url) => {
+  process.env.OPENAI_COMPATIBLE_URL = url;
+  expect(() => validateEnvironment()).toThrow();
+});

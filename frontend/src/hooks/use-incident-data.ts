@@ -15,6 +15,7 @@ interface UseIncidentDataOptions {
   userEmail: string;
   userRole: UserRole;
   canLoadAdminData: boolean;
+  serviceKey?: string | null;
 }
 
 export interface IncidentData {
@@ -32,6 +33,7 @@ export function useIncidentData({
   userEmail,
   userRole,
   canLoadAdminData,
+  serviceKey = null,
 }: UseIncidentDataOptions): IncidentData {
   const isPrivateDashboard =
     isLoggedIn && userEmail.length > 0 && pathname === `/dashboard/${userRole}`;
@@ -48,7 +50,7 @@ export function useIncidentData({
     enabled: isPrivateDashboard && userRole === 'admin' && canLoadAdminData,
   });
   const serviceQuery = useQuery({
-    ...serviceIncidentsQueryOptions(userEmail),
+    ...serviceIncidentsQueryOptions(userEmail, serviceKey),
     enabled: isPrivateDashboard && userRole === 'sluzby',
   });
 
