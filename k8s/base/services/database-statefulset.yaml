@@ -70,6 +70,12 @@ spec:
                 configMapKeyRef:
                   name: zglosto-config
                   key: POSTGRES_USER
+            - name: DATABASE_AUTH_PASSWORD_FILE
+              value: /run/secrets/database-credentials/auth-password
+            - name: DATABASE_BACKEND_PASSWORD_FILE
+              value: /run/secrets/database-credentials/backend-password
+            - name: DATABASE_MEDIA_WORKER_PASSWORD_FILE
+              value: /run/secrets/database-credentials/media-worker-password
             - name: POSTGRES_PASSWORD_FILE
               value: /run/secrets/database-credentials/postgres-password
             - name: DATABASE_DIRECT_URL_FILE
@@ -156,6 +162,12 @@ spec:
             optional: false
             defaultMode: 0440
             items:
+              - key: DATABASE_AUTH_PASSWORD
+                path: auth-password
+              - key: DATABASE_BACKEND_PASSWORD
+                path: backend-password
+              - key: DATABASE_MEDIA_WORKER_PASSWORD
+                path: media-worker-password
               - key: POSTGRES_PASSWORD
                 path: postgres-password
               - key: DATABASE_DIRECT_URL

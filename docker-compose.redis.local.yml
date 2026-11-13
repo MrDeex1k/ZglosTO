@@ -1,6 +1,6 @@
 services:
   redis:
-    image: ${REDIS_IMAGE:-redis:8.10.2-alpine3.23}
+    image: ${REDIS_IMAGE:-redis:8.10.3-alpine3.23}
     command:
       [
         'redis-server',
@@ -13,7 +13,7 @@ services:
         '--maxmemory',
         '${REDIS_MAXMEMORY:-256mb}',
         '--maxmemory-policy',
-        'allkeys-lru',
+        'noeviction',
         '--protected-mode',
         'yes',
       ]
@@ -88,6 +88,18 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+
+  llm_gateway:
+    environment:
+      REDIS_MODE: local
+      REDIS_URL_FILE: /run/secrets/redis/url
+      REDIS_TLS_CA_PATH: ''
+    secrets:
+      - source: redis_url
+        target: /run/secrets/redis/url
+        mode: 0440
+    depends_on:
+      redis: { condition: service_healthy }
 
 secrets:
   redis_acl:

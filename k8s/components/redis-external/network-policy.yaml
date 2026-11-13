@@ -8,7 +8,7 @@ spec:
     matchExpressions:
       - key: app
         operator: In
-        values: [authorization, backend]
+        values: [authorization, backend, llm-gateway]
   policyTypes: [Egress]
   egress:
     - to:

@@ -7,7 +7,7 @@ KEEP_CLUSTER=${KEEP_CLUSTER:-0}
 KIND_VERSION=${KIND_VERSION:-v0.32.0}
 KIND_NODE_IMAGE=${KIND_NODE_IMAGE:-kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5}
 K3D_VERSION=${K3D_VERSION:-v5.9.0}
-K3S_IMAGE=${K3S_IMAGE:-rancher/k3s:v1.37.0-k3s1}
+K3S_IMAGE=${K3S_IMAGE:-rancher/k3s:v1.37.2-k3s1}
 CERT_MANAGER_VERSION=${CERT_MANAGER_VERSION:-v1.21.0}
 RELOADER_CHART_VERSION=${RELOADER_CHART_VERSION:-2.2.14}
 KEDA_CHART_VERSION=${KEDA_CHART_VERSION:-2.20.0}
@@ -98,8 +98,8 @@ images=(
     "zglosto/llm-gateway:$TAG"
     "zglosto/frontend:$TAG"
     "zglosto/nginx:$TAG"
-    "rustfs/rustfs:1.0.2"
-    "redis:8.10.2-alpine3.23"
+    "rustfs/rustfs:1.0.5"
+    "redis:8.10.3-alpine3.23"
 )
 
 if [ "$PROFILE" = "kubernetes" ]; then
@@ -164,8 +164,13 @@ helm upgrade --install keda-add-ons-http kedacore/keda-add-ons-http \
 kubectl create namespace zglosto --dry-run=client -o yaml | kubectl apply -f -
 kubectl -n zglosto create secret generic zglosto-database-credentials \
     --from-literal=POSTGRES_PASSWORD='phase9-database-password' \
-    --from-literal=DATABASE_URL='postgresql://zglosto:phase9-database-password@pgbouncer:6432/zglosto_db' \
-    --from-literal=DATABASE_DIRECT_URL='postgresql://zglosto:phase9-database-password@database:54325/zglosto_db'
+    --from-file=DATABASE_AUTH_PASSWORD=tests/fixtures/database/auth-password \
+    --from-file=AUTH_DATABASE_URL=tests/fixtures/database/auth-url \
+    --from-file=DATABASE_BACKEND_PASSWORD=tests/fixtures/database/backend-password \
+    --from-file=BACKEND_DATABASE_URL=tests/fixtures/database/backend-url \
+    --from-file=DATABASE_MEDIA_WORKER_PASSWORD=tests/fixtures/database/media-worker-password \
+    --from-file=MEDIA_WORKER_DATABASE_URL=tests/fixtures/database/media-worker-url \
+    --from-literal=DATABASE_DIRECT_URL='postgresql://zglosto_admin:phase9-database-password@database:54325/zglosto_db'
 kubectl -n zglosto create secret generic zglosto-rabbitmq-credentials \
     --from-literal=RABBITMQ_USER='zglosto' \
     --from-literal=RABBITMQ_PASSWORD='phase9-rabbitmq-password' \

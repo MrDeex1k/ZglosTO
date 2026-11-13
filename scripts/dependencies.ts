@@ -67,7 +67,9 @@ await withDependencyLock(root, async () => {
         (value === '--dev' ||
           value === '--optional' ||
           (!value.startsWith('-') &&
-            /^(@[a-z0-9._-]+\/)?[a-z0-9._-]+(@[a-zA-Z0-9.*^~+<>=|-]+)?$/.test(value)))
+            /^(@[a-z0-9._-]+\/)?[a-z0-9._-]+(@(?:npm:(?:@[a-z0-9._-]+\/)?[a-z0-9._-]+@)?[a-zA-Z0-9.*^~+<>=|-]+)?$/.test(
+              value,
+            )))
       )
         args.push(value);
       else throw new Error(`Unsupported argument: ${value}`);

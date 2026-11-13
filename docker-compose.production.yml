@@ -27,6 +27,9 @@ services:
     container_name: !reset null
     ports: !reset []
     environment:
+      DATABASE_AUTH_PASSWORD_FILE: /run/secrets/database_auth_password
+      DATABASE_BACKEND_PASSWORD_FILE: /run/secrets/database_backend_password
+      DATABASE_MEDIA_WORKER_PASSWORD_FILE: /run/secrets/database_media_worker_password
       POSTGRES_PASSWORD: !reset null
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
       DATABASE_DIRECT_URL: !reset null
@@ -38,6 +41,9 @@ services:
       - postgres-data:/var/lib/postgresql
       - pgbackrest-data:/var/lib/pgbackrest
     secrets:
+      - database_auth_password
+      - database_backend_password
+      - database_media_worker_password
       - database_ca
       - database_direct_url
       - postgres_password
@@ -55,18 +61,18 @@ services:
     image: ${PGBOUNCER_IMAGE:?PGBOUNCER_IMAGE must come from the verified production build}
     build: !reset null
     environment:
-      DATABASE_URL: !reset null
-      DATABASE_URL_FILE: /run/secrets/database_direct_url
-      PGBOUNCER_CLIENT_URL: !reset null
-      PGBOUNCER_CLIENT_URL_FILE: /run/secrets/database_url
+      DATABASE_AUTH_PASSWORD_FILE: /run/secrets/database_auth_password
+      DATABASE_BACKEND_PASSWORD_FILE: /run/secrets/database_backend_password
+      DATABASE_MEDIA_WORKER_PASSWORD_FILE: /run/secrets/database_media_worker_password
       DATABASE_TLS_CA_SOURCE_PATH: /run/secrets/database_ca
       PGBOUNCER_TLS_CERT_PATH: /run/secrets/pgbouncer_server_cert
       PGBOUNCER_TLS_KEY_PATH: /run/secrets/pgbouncer_server_key
     volumes: !reset []
     secrets:
+      - database_auth_password
+      - database_backend_password
+      - database_media_worker_password
       - database_ca
-      - database_direct_url
-      - database_url
       - pgbouncer_server_cert
       - pgbouncer_server_key
     read_only: true
@@ -113,8 +119,7 @@ services:
     build: !reset null
     environment:
       NODE_ENV: production
-      DATABASE_URL: !reset null
-      DATABASE_URL_FILE: /run/secrets/database_url
+      DATABASE_URL_FILE: /run/secrets/auth_database_url
       BETTER_AUTH_SECRET: !reset null
       BETTER_AUTH_SECRET_FILE: /run/secrets/better_auth_secret
       DATABASE_TLS_CA_PATH: /run/secrets/database_ca
@@ -132,7 +137,7 @@ services:
       - authorization_server_key
       - better_auth_secret
       - database_ca
-      - database_url
+      - auth_database_url
       - service_ca
     pids_limit: 128
     cpus: 1
@@ -144,8 +149,7 @@ services:
     build: !reset null
     environment:
       NODE_ENV: production
-      DATABASE_URL: !reset null
-      DATABASE_URL_FILE: /run/secrets/database_url
+      DATABASE_URL_FILE: /run/secrets/backend_database_url
       RABBITMQ_URL: !reset null
       RABBITMQ_URL_FILE: /run/secrets/rabbitmq_url
       S3_ACCESS_KEY_ID: !reset null
@@ -166,7 +170,7 @@ services:
       - backend_client_cert
       - backend_client_key
       - database_ca
-      - database_url
+      - backend_database_url
       - llm_hmac_key
       - rabbitmq_url
       - s3_access_key_id
@@ -183,23 +187,22 @@ services:
     deploy: !reset null
     environment:
       NODE_ENV: production
-      DATABASE_URL: !reset null
-      DATABASE_URL_FILE: /run/secrets/database_url
+      DATABASE_URL_FILE: /run/secrets/media_worker_database_url
       RABBITMQ_URL: !reset null
       RABBITMQ_URL_FILE: /run/secrets/rabbitmq_url
       S3_ACCESS_KEY_ID: !reset null
-      S3_ACCESS_KEY_ID_FILE: /run/secrets/s3_access_key_id
+      S3_ACCESS_KEY_ID_FILE: /run/secrets/s3_worker_access_key_id
       S3_SECRET_ACCESS_KEY: !reset null
-      S3_SECRET_ACCESS_KEY_FILE: /run/secrets/s3_secret_access_key
+      S3_SECRET_ACCESS_KEY_FILE: /run/secrets/s3_worker_secret_access_key
       DATABASE_TLS_CA_PATH: /run/secrets/database_ca
       RABBITMQ_TLS_CA_PATH: /run/secrets/service_ca
     volumes: !reset []
     secrets:
       - database_ca
-      - database_url
+      - media_worker_database_url
       - rabbitmq_url
-      - s3_access_key_id
-      - s3_secret_access_key
+      - s3_worker_access_key_id
+      - s3_worker_secret_access_key
       - service_ca
     pids_limit: 128
     cpus: 0.5
@@ -315,8 +318,6 @@ secrets:
     file: ${ZTO_SECRETS_DIR:?ZTO_SECRETS_DIR is required}/database-ca.crt
   database_direct_url:
     file: ${ZTO_SECRETS_DIR:?ZTO_SECRETS_DIR is required}/database-direct-url
-  database_url:
-    file: ${ZTO_SECRETS_DIR:?ZTO_SECRETS_DIR is required}/database-url
   nginx_client_cert:
     file: ${ZTO_SECRETS_DIR:?ZTO_SECRETS_DIR is required}/nginx-client.crt
   nginx_client_key:
@@ -361,3 +362,20 @@ secrets:
     file: ${ZTO_SECRETS_DIR:?ZTO_SECRETS_DIR is required}/s3-secret-access-key
   service_ca:
     file: ${ZTO_SECRETS_DIR:?ZTO_SECRETS_DIR is required}/service-ca.crt
+  database_auth_password:
+    file: ${ZTO_SECRETS_DIR:?ZTO_SECRETS_DIR is required}/database-auth-password
+  auth_database_url:
+    file: ${ZTO_SECRETS_DIR:?ZTO_SECRETS_DIR is required}/auth-database-url
+  database_backend_password:
+    file: ${ZTO_SECRETS_DIR:?ZTO_SECRETS_DIR is required}/database-backend-password
+  backend_database_url:
+    file: ${ZTO_SECRETS_DIR:?ZTO_SECRETS_DIR is required}/backend-database-url
+  database_media_worker_password:
+    file: ${ZTO_SECRETS_DIR:?ZTO_SECRETS_DIR is required}/database-media-worker-password
+  media_worker_database_url:
+    file: ${ZTO_SECRETS_DIR:?ZTO_SECRETS_DIR is required}/media-worker-database-url
+
+  s3_worker_access_key_id:
+    file: ${ZTO_SECRETS_DIR:?ZTO_SECRETS_DIR is required}/s3-worker-access-key-id
+  s3_worker_secret_access_key:
+    file: ${ZTO_SECRETS_DIR:?ZTO_SECRETS_DIR is required}/s3-worker-secret-access-key

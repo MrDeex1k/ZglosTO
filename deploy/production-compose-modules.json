@@ -28,7 +28,7 @@
       "environmentVariable": "OBJECT_STORAGE_MODE",
       "local": {
         "files": ["docker-compose.storage.local.yml"],
-        "services": ["rustfs"]
+        "services": ["rustfs", "storage_provision"]
       },
       "external": {
         "files": ["docker-compose.storage.external.yml"],

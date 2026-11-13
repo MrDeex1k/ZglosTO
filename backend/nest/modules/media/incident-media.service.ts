@@ -74,9 +74,10 @@ export class IncidentMediaService {
     if (!UUID_PATTERN.test(imageId)) throw notFound('image not found');
     const result = await this.database.query(
       `SELECT image.kind::text,
-              COALESCE(image.processed_object_key, image.original_object_key) AS object_key,
-              COALESCE(image.processed_mime_type, image.original_mime_type) AS mime_type,
-              COALESCE(image.processed_checksum_sha256, image.original_checksum_sha256) AS checksum,
+              image.status::text AS processing_status,
+              image.processed_object_key AS object_key,
+              image.processed_mime_type AS mime_type,
+              image.processed_checksum_sha256 AS checksum,
               incident.reporter_user_id, incident.service_key,
               incident.status_incydentu::text AS incident_status
        FROM incident_images image
@@ -97,6 +98,17 @@ export class IncidentMediaService {
     if (!access.allowed) {
       if (user === null) throw unauthorized('image access denied');
       throw forbidden('image access denied');
+    }
+
+    // Originals can contain EXIF/GPS or content rejected by the worker.
+    // Serve only the decoded, metadata-stripped representation.
+    if (
+      row.processing_status !== 'ready' ||
+      row.mime_type !== 'image/webp' ||
+      typeof row.object_key !== 'string' ||
+      typeof row.checksum !== 'string'
+    ) {
+      throw notFound('image not found');
     }
 
     const checksumSha256 = expectString(row.checksum, 'incidentImage.checksum');

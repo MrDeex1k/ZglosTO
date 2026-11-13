@@ -1,0 +1,1 @@
+postgresql://zglosto_media_worker:fixture-only-media_worker-database-password@pgbouncer:6432/zglosto_db

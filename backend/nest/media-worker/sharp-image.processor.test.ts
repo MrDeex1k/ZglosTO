@@ -85,6 +85,43 @@ describe('SharpImageProcessor', () => {
     ).rejects.toMatchObject({ failureCode: 'size_limit_exceeded', retryable: false });
   });
 
+  it.each(['svg', 'spoofed-jpeg', 'invalid'])(
+    'rejects %s bytes despite matching client MIME and checksum metadata',
+    async (kind) => {
+      const body =
+        kind === 'svg'
+          ? Buffer.from(
+              '<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"><rect width="2" height="2"/></svg>',
+            )
+          : kind === 'spoofed-jpeg'
+            ? await sharp({ create: { width: 2, height: 2, channels: 3, background: 'white' } })
+                .png()
+                .toBuffer()
+            : Buffer.from('not an image');
+      const checksumSha256 = createHash('sha256').update(body).digest('hex');
+      const mimeType = kind === 'spoofed-jpeg' ? 'image/jpeg' : 'image/png';
+      const source: ObjectBody = {
+        body,
+        checksumSha256,
+        contentType: mimeType,
+        objectKey: 'staging/untrusted',
+        sizeBytes: body.byteLength,
+      };
+      await expect(
+        new SharpImageProcessor().process(
+          source,
+          {
+            checksumSha256,
+            mimeType,
+            objectKey: source.objectKey,
+            sizeBytes: body.byteLength,
+          },
+          'result.webp',
+        ),
+      ).rejects.toMatchObject({ retryable: false });
+    },
+  );
+
   it('enforces the configured decompression pixel limit', async () => {
     vi.stubEnv('MEDIA_MAX_INPUT_PIXELS', '50');
     const body = await sharp({

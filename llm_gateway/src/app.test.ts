@@ -209,3 +209,31 @@ test('does not expose incident content in gateway logs', async () => {
   }
   expect(events.join('\n')).not.toContain('sekretna treść');
 });
+
+test('rejects classification when shared replay protection fails', async () => {
+  const body = JSON.stringify({ description: 'Dziura w drodze', address: null, city: 'Warszawa' });
+  const app = createApp(new DisabledRuntime(), {
+    ...protection(),
+    consumeNonce: async () => {
+      throw new Error('Redis unavailable');
+    },
+  });
+  const response = await app.request(LLM_CLASSIFICATION_PATH, authenticatedRequest(body));
+  expect(response.status).toBe(503);
+  expect(await response.json()).toEqual({ error: 'replay_protection_unavailable' });
+});
+
+test('rejects the same signed request on another replica using shared nonce protection', async () => {
+  const seen = new Set<string>();
+  const consumeNonce = async (id: string) => {
+    if (seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  };
+  const first = createApp(new DisabledRuntime(), { ...protection(), consumeNonce });
+  const second = createApp(new DisabledRuntime(), { ...protection(), consumeNonce });
+  const body = JSON.stringify({ description: 'Dziura w drodze', address: null, city: 'Warszawa' });
+  const request = authenticatedRequest(body);
+  expect((await first.request(LLM_CLASSIFICATION_PATH, request)).status).toBe(200);
+  expect((await second.request(LLM_CLASSIFICATION_PATH, request)).status).toBe(401);
+});

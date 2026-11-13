@@ -13,6 +13,7 @@ import {
 } from './env.ts';
 
 beforeEach(() => {
+  delete process.env.DATABASE_URL_FILE;
   delete process.env.DATABASE_CONNECTION_TIMEOUT_MS;
   delete process.env.DATABASE_IDLE_TIMEOUT_MS;
   delete process.env.DATABASE_POOL_MAX;
@@ -380,4 +381,18 @@ test('rejects non-positive cache and limiter configuration', () => {
   expect(() => validateIncidentRateLimitEnvironment()).toThrow(
     'INCIDENT_GLOBAL_RATE_LIMIT_MAX_REQUESTS must be a positive integer',
   );
+});
+
+test('runtime refuses automatic bucket creation delegated to IAM bootstrap', () => {
+  process.env.S3_AUTO_CREATE_BUCKET = 'true';
+  expect(() => validateObjectStorageEnvironment()).toThrow(/provision buckets/u);
+});
+
+test('reads the dedicated runtime database URL from its file', () => {
+  process.env.DATABASE_URL_FILE = new URL(
+    '../../tests/fixtures/database/backend-url',
+    import.meta.url,
+  ).pathname;
+  delete process.env.DATABASE_URL;
+  expect(new URL(validateDatabaseConnectionEnvironment().url).username).toBe('zglosto_backend');
 });

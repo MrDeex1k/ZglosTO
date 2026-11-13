@@ -16,9 +16,11 @@
         "nginx",
         "pgbouncer",
         "rabbitmq",
-        "rustfs"
+        "rustfs",
+        "storage_provision"
       ],
-      "plannedServices": []
+      "plannedServices": [],
+      "bootstrapServices": ["storage_provision"]
     },
     "kubernetes": {
       "topology": "cluster",

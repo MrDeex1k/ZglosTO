@@ -6,8 +6,7 @@ const AUTH_STORAGE_KEYS = [
   `${AUTH_STORAGE_PREFIX}_cookie`,
   `${AUTH_STORAGE_PREFIX}_session_data`,
 ] as const;
-const CHUNK_MARKER = '\u0001ba-chunks:';
-const MAX_AUTH_STORAGE_CHUNKS = 16;
+const MAX_AUTH_STORAGE_CHUNKS = 100;
 
 export const authSecureStorage = {
   getItem: (key: string): string | null => SecureStore.getItem(key),
@@ -17,16 +16,20 @@ export const authSecureStorage = {
 };
 
 async function deleteStoredValue(key: string): Promise<void> {
-  const stored = SecureStore.getItem(key);
-  if (stored?.startsWith(CHUNK_MARKER)) {
-    const count = Number(stored.slice(CHUNK_MARKER.length));
-    if (Number.isInteger(count) && count > 0 && count <= MAX_AUTH_STORAGE_CHUNKS) {
-      await Promise.all(
-        Array.from({ length: count }, (_, index) => SecureStore.deleteItemAsync(`${key}.${index}`)),
-      );
-    }
-  }
+  // Better Auth keeps legacy chunks plus two recovery slots. Remove every bounded
+  // slot even when its marker is missing/corrupt so logout leaves no session fragments.
+  const results = await Promise.allSettled(
+    Array.from({ length: MAX_AUTH_STORAGE_CHUNKS }, (_, index) => [
+      `${key}.${index}`,
+      `${key}.0.${index}`,
+      `${key}.1.${index}`,
+    ])
+      .flat()
+      .map((chunkKey) => SecureStore.deleteItemAsync(chunkKey)),
+  );
+  const failure = results.find((result) => result.status === 'rejected');
   await SecureStore.deleteItemAsync(key);
+  if (failure?.status === 'rejected') throw failure.reason;
 }
 
 export async function clearMobileAuthStorage(): Promise<void> {

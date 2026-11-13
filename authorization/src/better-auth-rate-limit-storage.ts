@@ -44,7 +44,8 @@ export function createBetterAuthRateLimitStorage(
         };
       } catch {
         recordDecision('fallback', performance.now() - startedAt);
-        return { allowed: true, retryAfter: null };
+        // The broad local flood limit cannot replace endpoint-specific login limits.
+        return { allowed: false, retryAfter: rule.window };
       }
     },
   };

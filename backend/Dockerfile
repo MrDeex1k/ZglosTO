@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1.28.0
 
-ARG RUNTIME_IMAGE=alpine:3.24.2
+ARG RUNTIME_IMAGE=alpine:3.24.4
 
-FROM oven/bun:1.4.3-alpine@sha256:629e17411f1f129dbec3af78d5af9c9f2a937435c80349437206c6b0b7422373 AS bun
+FROM oven/bun:1.4.4-alpine@sha256:4cf82f5686b196504fe119db3fcd9185b191f82ece82c40680e597228ec6070a AS bun
 
 FROM bun AS build
 
@@ -35,7 +35,7 @@ RUN --mount=type=cache,id=zglosto-bun,target=/bun/cache \
  && cd /prod/backend \
  && bun install --production --frozen-lockfile --offline --ignore-scripts --filter backend-zglosto... \
  && find node_modules -type l \( -name tsc -o -name tsserver \) -delete \
- && find node_modules -type d -name typescript -prune -exec rm -rf {} \; \
+ && find node_modules -type d \( -name typescript -o -path '*/@typescript/typescript-*' \) -prune -exec rm -rf {} \; \
  && bun /workspace/scripts/verify-production-install.ts /prod/backend backend \
  && rm bun.lock bunfig.toml \
  && find . -type f \( -name "*.map" -o -name "*.d.ts" -o -name "*.d.ts.map" \) -delete

@@ -7,6 +7,9 @@ services:
     container_name: zglosto-postgres
     restart: unless-stopped
     environment:
+      DATABASE_AUTH_PASSWORD_FILE: /run/secrets/database_auth_password
+      DATABASE_BACKEND_PASSWORD_FILE: /run/secrets/database_backend_password
+      DATABASE_MEDIA_WORKER_PASSWORD_FILE: /run/secrets/database_media_worker_password
       PGDATA: /var/lib/postgresql/18/docker
       POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
@@ -44,6 +47,10 @@ services:
       - ./.certs/database/ca.crt:/run/secrets/database/ca.crt:ro
       - ./.certs/database/postgres-server.crt:/run/secrets/database/postgres-server.crt:ro
       - ./.certs/database/postgres-server.key:/run/secrets/database/postgres-server.key:ro
+    secrets:
+      - database_auth_password
+      - database_backend_password
+      - database_media_worker_password
     networks:
       - internal-net
     healthcheck:
@@ -63,11 +70,11 @@ services:
       dockerfile: pgbouncer/Dockerfile
     restart: unless-stopped
     environment:
-      # The image uses DATABASE_URL as its upstream PostgreSQL connection.
-      DATABASE_URL: ${DATABASE_DIRECT_URL:-}
-      DATABASE_URL_FILE: ${DATABASE_DIRECT_URL_FILE:-}
-      PGBOUNCER_CLIENT_URL: ${DATABASE_URL:-}
-      PGBOUNCER_CLIENT_URL_FILE: ${DATABASE_URL_FILE:-}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_PORT: ${POSTGRES_PORT:?POSTGRES_PORT is required}
+      DATABASE_AUTH_PASSWORD_FILE: /run/secrets/database_auth_password
+      DATABASE_BACKEND_PASSWORD_FILE: /run/secrets/database_backend_password
+      DATABASE_MEDIA_WORKER_PASSWORD_FILE: /run/secrets/database_media_worker_password
       PGSSLMODE: verify-full
       PGSSLROOTCERT: /var/run/pgbouncer/tls/ca.crt
       LISTEN_PORT: ${PGBOUNCER_PORT:-6432}
@@ -96,13 +103,20 @@ services:
     healthcheck:
       test:
         [
-          'CMD-SHELL',
-          'psql -v ON_ERROR_STOP=1 "$${PGBOUNCER_CLIENT_URL}" -c "SELECT 1" >/dev/null 2>&1',
+          'CMD',
+          '/usr/local/bin/load-container-secrets',
+          'sh',
+          '-ec',
+          'PGPASSWORD="$${DATABASE_BACKEND_PASSWORD}" psql -h pgbouncer -p "$${LISTEN_PORT}" -U zglosto_backend -d "$${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c "SELECT 1" >/dev/null 2>&1',
         ]
       interval: 4s
       timeout: 4s
       retries: 10
       start_period: 10s
+    secrets:
+      - database_auth_password
+      - database_backend_password
+      - database_media_worker_password
     networks:
       - internal-net
 
@@ -152,8 +166,7 @@ services:
       AUTHORIZATION_HEALTHCHECK_CERT_PATH: ${AUTHORIZATION_HEALTHCHECK_CERT_PATH:-/run/secrets/service/authorization-healthcheck-client.crt}
       AUTHORIZATION_HEALTHCHECK_KEY_PATH: ${AUTHORIZATION_HEALTHCHECK_KEY_PATH:-/run/secrets/service/authorization-healthcheck-client.key}
       AUTHORIZATION_HEALTHCHECK_SERVER_NAME: ${AUTHORIZATION_HEALTHCHECK_SERVER_NAME:-authorization}
-      DATABASE_URL: ${DATABASE_URL:-}
-      DATABASE_URL_FILE: ${DATABASE_URL_FILE:-}
+      DATABASE_URL_FILE: /run/secrets/auth_database_url
       DATABASE_TLS_CA_PATH: ${DATABASE_TLS_CA_PATH:-/run/secrets/database/ca.crt}
       REDIS_MODE: ${REDIS_MODE:-disabled}
       REDIS_URL_FILE: ${REDIS_URL_FILE:-}
@@ -190,6 +203,8 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
+    secrets:
+      - auth_database_url
     networks:
       - internal-net
 
@@ -205,8 +220,7 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       SERVICE_NAME: backend
       BACKEND_PORT: '3000'
-      DATABASE_URL: ${DATABASE_URL:-}
-      DATABASE_URL_FILE: ${DATABASE_URL_FILE:-}
+      DATABASE_URL_FILE: /run/secrets/backend_database_url
       DATABASE_TLS_CA_PATH: ${DATABASE_TLS_CA_PATH:-/run/secrets/database/ca.crt}
       DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-10}
       DATABASE_IDLE_TIMEOUT_MS: ${DATABASE_IDLE_TIMEOUT_MS:-30000}
@@ -268,7 +282,7 @@ services:
       S3_SECRET_ACCESS_KEY_FILE: ${S3_SECRET_ACCESS_KEY_FILE:-}
       S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-false}
       S3_OBJECT_PREFIX: ${S3_OBJECT_PREFIX:-incidents}
-      S3_AUTO_CREATE_BUCKET: ${S3_AUTO_CREATE_BUCKET:-false}
+      S3_AUTO_CREATE_BUCKET: 'false'
       WHITE_LABEL_CONFIG: ${WHITE_LABEL_CONFIG:-/app/config/city.yaml}
     volumes:
       - ${WHITE_LABEL_CONFIG_FILE:-./config/white-label/zglosto.yaml}:/app/config/city.yaml:ro
@@ -293,6 +307,8 @@ services:
       retries: 10
       start_period: 10s
     stop_grace_period: 30s
+    secrets:
+      - backend_database_url
     networks:
       - internal-net
 
@@ -309,8 +325,7 @@ services:
       OTEL_SERVICE_NAME: media_worker
       NODE_ENV: ${NODE_ENV:-development}
       SERVICE_NAME: media_worker
-      DATABASE_URL: ${DATABASE_URL:-}
-      DATABASE_URL_FILE: ${DATABASE_URL_FILE:-}
+      DATABASE_URL_FILE: /run/secrets/media_worker_database_url
       DATABASE_TLS_CA_PATH: ${DATABASE_TLS_CA_PATH:-/run/secrets/database/ca.crt}
       DATABASE_POOL_MAX: ${MEDIA_WORKER_DATABASE_POOL_MAX:-2}
       DATABASE_IDLE_TIMEOUT_MS: ${DATABASE_IDLE_TIMEOUT_MS:-30000}
@@ -337,13 +352,13 @@ services:
       S3_ENDPOINT: ${S3_ENDPOINT:?S3_ENDPOINT is required}
       S3_REGION: ${S3_REGION:-eu-central-1}
       S3_BUCKET: ${S3_BUCKET:?S3_BUCKET is required}
-      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
-      S3_ACCESS_KEY_ID_FILE: ${S3_ACCESS_KEY_ID_FILE:-}
-      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
-      S3_SECRET_ACCESS_KEY_FILE: ${S3_SECRET_ACCESS_KEY_FILE:-}
+      S3_ACCESS_KEY_ID: ${S3_WORKER_ACCESS_KEY_ID:-}
+      S3_ACCESS_KEY_ID_FILE: ${S3_WORKER_ACCESS_KEY_ID_FILE:-}
+      S3_SECRET_ACCESS_KEY: ${S3_WORKER_SECRET_ACCESS_KEY:-}
+      S3_SECRET_ACCESS_KEY_FILE: ${S3_WORKER_SECRET_ACCESS_KEY_FILE:-}
       S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-false}
       S3_OBJECT_PREFIX: ${S3_OBJECT_PREFIX:-incidents}
-      S3_AUTO_CREATE_BUCKET: ${S3_AUTO_CREATE_BUCKET:-false}
+      S3_AUTO_CREATE_BUCKET: 'false'
     volumes:
       - ./.certs/service/ca.crt:/run/secrets/service/ca.crt:ro
       - ./.certs/database/ca.crt:/run/secrets/database/ca.crt:ro
@@ -358,6 +373,8 @@ services:
       timeout: 3s
       retries: 10
       start_period: 10s
+    secrets:
+      - media_worker_database_url
     networks:
       - internal-net
     deploy:
@@ -401,11 +418,11 @@ services:
       - ./.certs/service/llm-gateway-healthcheck-client.key:/run/secrets/service/llm-gateway-healthcheck-client.key:ro
       - ./.certs/service/llm-hmac-key:/run/secrets/llm-auth/hmac-key:ro
     healthcheck:
-      test: ['CMD', 'bun', 'dist/src/healthcheck.js']
+      test: ['CMD', 'bun', 'dist/src/healthcheck.js', '--ready']
       interval: 5s
       timeout: 3s
       retries: 10
-      start_period: 5s
+      start_period: 75s
     networks:
       - internal-net
       - llm-runtime-net
@@ -472,3 +489,17 @@ networks:
     driver: bridge
   llm-runtime-net:
     driver: bridge
+
+secrets:
+  database_auth_password:
+    file: ${DATABASE_AUTH_PASSWORD_SOURCE_FILE:-./tests/fixtures/database/auth-password}
+  auth_database_url:
+    file: ${AUTH_DATABASE_URL_SOURCE_FILE:-./tests/fixtures/database/auth-url}
+  database_backend_password:
+    file: ${DATABASE_BACKEND_PASSWORD_SOURCE_FILE:-./tests/fixtures/database/backend-password}
+  backend_database_url:
+    file: ${BACKEND_DATABASE_URL_SOURCE_FILE:-./tests/fixtures/database/backend-url}
+  database_media_worker_password:
+    file: ${DATABASE_MEDIA_WORKER_PASSWORD_SOURCE_FILE:-./tests/fixtures/database/media-worker-password}
+  media_worker_database_url:
+    file: ${MEDIA_WORKER_DATABASE_URL_SOURCE_FILE:-./tests/fixtures/database/media-worker-url}

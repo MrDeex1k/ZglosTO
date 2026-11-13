@@ -26,7 +26,7 @@ backend/
 
 ### Zmienne środowiskowe
 
-Utwórz główny `.env` na podstawie `.env.example`. Backend wymaga `DATABASE_URL`, zestawów `AUTH_SERVICE_*` i `LLM_GATEWAY_*` dla mTLS/HMAC, `FRONTEND_ORIGIN`, `LLM_TIMEOUT_MS` oraz `WHITE_LABEL_CONFIG`. Fallback i katalog służb pochodzą z konfiguracji White Label. Pełny opis znajduje się w `docs/environment-variables.md`.
+Utwórz główny `.env` na podstawie `.env.example`. Backend wymaga własnego URL roli `zglosto_backend` z `DATABASE_URL_FILE` (lub jawnego `DATABASE_URL` lokalnie), zestawów `AUTH_SERVICE_*` i `LLM_GATEWAY_*` dla mTLS/HMAC, `FRONTEND_ORIGIN`, `LLM_TIMEOUT_MS` oraz `WHITE_LABEL_CONFIG`. Fallback i katalog służb pochodzą z konfiguracji White Label. Pełny opis znajduje się w `docs/environment-variables.md`.
 
 ### Uruchomienie
 
@@ -745,7 +745,7 @@ Wszystkie endpointy zwracają błędy w formacie JSON:
 
 ### Błąd połączenia z bazą danych
 
-Sprawdź `DATABASE_URL` w zmiennych środowiskowych i upewnij się, że PostgreSQL jest uruchomiony.
+Sprawdź plik `DATABASE_URL_FILE` roli `zglosto_backend` i upewnij się, że PostgreSQL jest uruchomiony.
 
 ### Problemy z autoryzacją
 
@@ -755,7 +755,11 @@ Sprawdź `DATABASE_URL` w zmiennych środowiskowych i upewnij się, że PostgreS
 
 ### Problemy z CORS
 
-Serwer ma włączony CORS dla wszystkich origin, ale upewnij się, że frontend wysyła odpowiednie nagłówki.
+Backend nie włącza CORS. Frontend korzysta z tego samego origin przez proxy `/api/`.
+Mutacje wymagają `Content-Type: application/json`; formularze HTML oraz żądania
+z `Sec-Fetch-Site: cross-site` otrzymują 403. Klient natywny może wysyłać JSON
+bez nagłówków Fetch Metadata. Włączenie CORS wymaga osobnej, jawnej polityki
+zaufanych origin, aby zachować ochronę API opartego o cookies przed CSRF.
 
 ### Duże pliki graficzne
 

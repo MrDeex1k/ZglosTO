@@ -301,7 +301,7 @@ spec:
             optional: false
             defaultMode: 0440
             items:
-              - key: DATABASE_URL
+              - key: BACKEND_DATABASE_URL
                 path: database-url
         - name: rabbitmq-credentials
           secret:

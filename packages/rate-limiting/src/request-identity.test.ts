@@ -56,3 +56,29 @@ describe('request identity', () => {
     expect(hasher.hash('authorization', '203.0.113.7')).not.toBe(first);
   });
 });
+
+it('never promotes a spoofed address by dropping malformed proxy slots', () => {
+  for (const spoofed of ['198.51.100.1', '198.51.100.2']) {
+    expect(
+      resolveClientAddress({
+        forwardedFor: `${spoofed}, invalid`,
+        peerAddress: '172.20.0.4',
+        trustedProxyHops: 1,
+      }),
+    ).toBe('unknown');
+    expect(
+      resolveClientAddress({
+        forwardedFor: `${spoofed}, 203.0.113.7, invalid`,
+        peerAddress: '172.20.0.4',
+        trustedProxyHops: 2,
+      }),
+    ).toBe('unknown');
+    expect(
+      resolveClientAddress({
+        forwardedFor: spoofed,
+        peerAddress: '172.20.0.4',
+        trustedProxyHops: 2,
+      }),
+    ).toBe('172.20.0.4');
+  }
+});

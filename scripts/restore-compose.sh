@@ -10,6 +10,7 @@ fi
 backup_directory=$1
 shift
 compose=(docker compose "$@")
+operations_compose=("${compose[@]}" --file "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/docker-compose.storage.operations.yml")
 source "$(dirname "${BASH_SOURCE[0]}")/lib/compose-maintenance.sh"
 umask 077
 
@@ -50,12 +51,16 @@ trap 'exit 143' TERM
 stop_for_maintenance nginx authorization backend media_worker pgbouncer
 
 printf '[restore] Restoring PostgreSQL through the direct connection\n'
-"${compose[@]}" exec -T database sh -c \
+"${compose[@]}" exec -T database /usr/local/bin/load-container-secrets sh -c \
   'pg_restore --dbname="$DATABASE_DIRECT_URL" --clean --if-exists --exit-on-error --no-owner --no-privileges' \
   < "$backup_directory/database.dump"
 
+printf '[restore] Reapplying database runtime role grants after no-privileges restore\n'
+"${compose[@]}" exec -T -e DATABASE_ROLES_EXISTING_INSTALLATION=true database \
+  /usr/local/bin/load-container-secrets sh /docker-entrypoint-initdb.d/06-runtime-roles.sh
+
 printf '[restore] Restoring Object Storage through the active S3-compatible provider\n'
-"${compose[@]}" run --rm --no-deps -T backend \
+"${operations_compose[@]}" run --rm --no-deps -T backend \
   bun dist/operations/object-storage-archive-cli.js restore \
   < "$backup_directory/object-storage.ndjson.gz"
 
@@ -65,7 +70,7 @@ if [ "${#services_to_resume[@]}" -eq 0 ] || [[ " ${services_to_resume[*]} " != *
   temporary_pgbouncer=true
 fi
 "${compose[@]}" start --wait --wait-timeout 120 pgbouncer >/dev/null
-"${compose[@]}" run --rm --no-deps -T backend bun dist/operations/object-storage-audit-cli.js \
+"${operations_compose[@]}" run --rm --no-deps -T backend bun dist/operations/object-storage-audit-cli.js \
   > "$backup_directory/post-restore-object-storage-audit.json"
 
 if [ "$temporary_pgbouncer" = true ]; then

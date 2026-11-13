@@ -85,7 +85,10 @@ for (const fragment of [
 }
 
 for (const [path, fragment] of [
-  ['authorization/src/distributed-rate-limit.test.ts', 'local limiter remains active'],
+  [
+    'authorization/src/distributed-rate-limit.test.ts',
+    'rejects authentication attempts when Redis cannot enforce the endpoint limit',
+  ],
   [
     'backend/nest/modules/residents/distributed-incident-rate-limiter.test.ts',
     'mandatory local limiter',
@@ -95,7 +98,7 @@ for (const [path, fragment] of [
     'falls back to PostgreSQL',
   ],
 ] as const) {
-  if (!source(path).includes(fragment)) fail(`${path} lacks the Redis fallback test`);
+  if (!source(path).includes(fragment)) fail(`${path} lacks its Redis outage security test`);
 }
 
 console.log(

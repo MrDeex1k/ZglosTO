@@ -65,6 +65,19 @@ interface AppRouteState {
 const AppRouteStateContext = createContext<AppRouteState | null>(null);
 
 export function AppRouteStateProvider({ children }: Readonly<{ children: ReactNode }>) {
+  const { data: session } = useSession();
+  // Remount local dialogs/forms at the session boundary: query eviction alone does
+  // not discard a selected private incident or an unfinished report from React state.
+  const scope = JSON.stringify([
+    session?.session.id ?? null,
+    session?.user.id ?? null,
+    session?.user.uprawnienia ?? null,
+    session?.user.serviceKey ?? null,
+  ]);
+  return <ScopedAppRouteStateProvider key={scope}>{children}</ScopedAppRouteStateProvider>;
+}
+
+function ScopedAppRouteStateProvider({ children }: Readonly<{ children: ReactNode }>) {
   const pathname = useRouterState({
     select: (state) => state.location.pathname.replace(/\/+$/, '') || '/',
   });
@@ -92,8 +105,18 @@ export function AppRouteStateProvider({ children }: Readonly<{ children: ReactNo
     serviceIncidents,
     isLoadingIncidents,
     incidentsError,
-  } = useIncidentData({ pathname, isLoggedIn, userEmail, userRole, canLoadAdminData });
-  const serviceIncidentMutation = useServiceIncidentMutation(userEmail);
+  } = useIncidentData({
+    pathname,
+    isLoggedIn,
+    userEmail,
+    userRole,
+    canLoadAdminData,
+    serviceKey: sessionUser?.serviceKey ?? null,
+  });
+  const serviceIncidentMutation = useServiceIncidentMutation(
+    userEmail,
+    sessionUser?.serviceKey ?? null,
+  );
 
   const navigateToLogin = () => {
     void navigate({ to: '/login' });

@@ -1,6 +1,6 @@
 // oxlint-disable-next-line import/no-unassigned-import -- Module metadata requires reflect-metadata.
 import 'reflect-metadata';
-import { Controller, Get, Req, type INestApplication } from '@nestjs/common';
+import { Controller, Get, Post, Req, type INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import {
   StructuredApiErrorResponseSchema,
@@ -55,6 +55,12 @@ class AuthTestController {
   @OptionalSession()
   optional(@Req() request: Request): { userId: string | null } {
     return { userId: this.authContext.user(request)?.id ?? null };
+  }
+
+  @Post('mutation')
+  @OptionalSession()
+  mutation(): { success: true } {
+    return { success: true };
   }
 
   @Get('authenticated')
@@ -112,6 +118,48 @@ describe('NestJS Authorization bridge', () => {
       userId: null,
     });
     expect(verifier.verifySession).not.toHaveBeenCalled();
+  });
+
+  it('rejects form mutations and cross-site JSON while allowing browser and native JSON', async () => {
+    const { application } = await createApplication(async () => verifiedSession('mieszkaniec'));
+    const target = `${await application.getUrl()}/__auth-test/mutation`;
+    await Promise.all(
+      ['', 'better-auth.session_token=valid'].flatMap((cookie) => {
+        const requests = [
+          ...[
+            'application/x-www-form-urlencoded',
+            'text/plain',
+            'multipart/form-data; boundary=test',
+          ].map((contentType) => ({
+            headers: { Cookie: cookie, 'Content-Type': contentType },
+            body: 'value=test',
+            expectedStatus: 403,
+          })),
+          {
+            headers: {
+              Cookie: cookie,
+              'Content-Type': 'application/json',
+              'sec-fetch-site': 'cross-site',
+            },
+            body: '{}',
+            expectedStatus: 403,
+          },
+          ...[{}, { 'sec-fetch-site': 'same-origin' }].map((metadata) => ({
+            headers: {
+              Cookie: cookie,
+              'Content-Type': 'application/json; charset=utf-8',
+              ...metadata,
+            },
+            body: '{}',
+            expectedStatus: 201,
+          })),
+        ];
+        return requests.map(async ({ headers, body, expectedStatus }) => {
+          const response = await fetch(target, { method: 'POST', headers, body });
+          expect(response.status).toBe(expectedStatus);
+        });
+      }),
+    );
   });
 
   it('is secure by default and maps a missing or invalid session to 401', async () => {

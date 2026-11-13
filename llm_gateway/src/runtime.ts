@@ -30,11 +30,14 @@ async function fetchWithTimeout(
   url: string,
   init: RequestInit,
   timeoutMs: number,
-): Promise<Response> {
+): Promise<unknown> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    return await fetch(url, { ...init, signal: controller.signal });
+    // Keep the deadline through body consumption and never redirect report data.
+    const response = await fetch(url, { ...init, redirect: 'error', signal: controller.signal });
+    if (!response.ok) throw new Error('Model provider is unavailable');
+    return await response.json();
   } finally {
     clearTimeout(timer);
   }
@@ -110,9 +113,9 @@ export class DockerModelRunnerRuntime implements ModelRuntime {
   constructor(private readonly environment: LlmGatewayEnvironment) {}
 
   async classify(request: LlmClassificationRequest): Promise<LlmClassificationResponse> {
-    let response: Response;
+    let payload: unknown;
     try {
-      response = await fetchWithTimeout(
+      payload = await fetchWithTimeout(
         dockerModelRunnerEndpoint(this.environment, 'chat/completions'),
         {
           method: 'POST',
@@ -129,13 +132,10 @@ export class DockerModelRunnerRuntime implements ModelRuntime {
         this.environment.upstreamTimeoutMs,
       );
     } catch (error) {
-      return fallback(timeoutReason(error));
+      return fallback(error instanceof SyntaxError ? 'invalid_response' : timeoutReason(error));
     }
-    if (!response.ok) return fallback('unavailable');
     try {
-      return parseDockerModelRunnerClassification(
-        readDockerModelRunnerContent(await response.json()),
-      );
+      return parseDockerModelRunnerClassification(readDockerModelRunnerContent(payload));
     } catch {
       return fallback('invalid_response');
     }
@@ -143,13 +143,11 @@ export class DockerModelRunnerRuntime implements ModelRuntime {
 
   async health(): Promise<LlmHealthResponse> {
     try {
-      const response = await fetchWithTimeout(
+      const payload = await fetchWithTimeout(
         dockerModelRunnerEndpoint(this.environment, 'models'),
         {},
         this.environment.upstreamTimeoutMs,
       );
-      if (!response.ok) throw new Error('Docker Model Runner is unavailable');
-      const payload: unknown = await response.json();
       if (!isRecord(payload) || !Array.isArray(payload.data)) {
         throw new Error('Docker Model Runner model list is invalid');
       }
@@ -196,9 +194,9 @@ export class OpenAiCompatibleRuntime implements ModelRuntime {
   }
 
   async classify(request: LlmClassificationRequest): Promise<LlmClassificationResponse> {
-    let response: Response;
+    let payload: unknown;
     try {
-      response = await fetchWithTimeout(
+      payload = await fetchWithTimeout(
         openAiCompatibleEndpoint(this.environment, 'chat/completions'),
         {
           method: 'POST',
@@ -218,13 +216,10 @@ export class OpenAiCompatibleRuntime implements ModelRuntime {
         this.environment.upstreamTimeoutMs,
       );
     } catch (error) {
-      return fallback(timeoutReason(error));
+      return fallback(error instanceof SyntaxError ? 'invalid_response' : timeoutReason(error));
     }
-    if (!response.ok) return fallback('unavailable');
     try {
-      return parseDockerModelRunnerClassification(
-        readDockerModelRunnerContent(await response.json()),
-      );
+      return parseDockerModelRunnerClassification(readDockerModelRunnerContent(payload));
     } catch {
       return fallback('invalid_response');
     }
@@ -232,7 +227,7 @@ export class OpenAiCompatibleRuntime implements ModelRuntime {
 
   async health(): Promise<LlmHealthResponse> {
     try {
-      const response = await fetchWithTimeout(
+      const payload = await fetchWithTimeout(
         openAiCompatibleEndpoint(this.environment, 'models'),
         {
           headers: {
@@ -241,8 +236,6 @@ export class OpenAiCompatibleRuntime implements ModelRuntime {
         },
         this.environment.upstreamTimeoutMs,
       );
-      if (!response.ok) throw new Error('OpenAI-compatible provider is unavailable');
-      const payload: unknown = await response.json();
       if (!isRecord(payload) || !Array.isArray(payload.data)) {
         throw new Error('OpenAI-compatible model list is invalid');
       }

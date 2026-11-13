@@ -14,7 +14,7 @@ spec:
             matchExpressions:
               - key: app
                 operator: In
-                values: [authorization, backend]
+                values: [authorization, backend, llm-gateway]
       ports:
         - { protocol: TCP, port: 6379 }
 ---
@@ -28,7 +28,7 @@ spec:
     matchExpressions:
       - key: app
         operator: In
-        values: [authorization, backend]
+        values: [authorization, backend, llm-gateway]
   policyTypes: [Egress]
   egress:
     - to:

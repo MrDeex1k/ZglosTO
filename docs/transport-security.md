@@ -99,8 +99,8 @@ Wdrożone wymagania Compose:
 - klienci używają odpowiedniej Database CA i pełnej weryfikacji nazwy hosta;
 - połączenia bez TLS są odrzucane;
 - SCRAM-SHA-256 pozostaje wymagane niezależnie od szyfrowania;
-- backend, authorization i worker mają kontrolowane dane logowania; docelowe rozdzielenie
-  ról brokera i bazy nastąpi w produkcyjnym provisioningu;
+- backend, authorization i worker używają osobnych ról DB `NOSUPERUSER NOCREATEDB
+  NOCREATEROLE NOBYPASSRLS`; PgBouncer zachowuje tożsamość klienta i nie ma poświadczeń admina;
 - `DATABASE_DIRECT_URL` używa TLS w migracjach, backupie i administracji;
 - aplikacje nadal nie otrzymują `DATABASE_DIRECT_URL`.
 

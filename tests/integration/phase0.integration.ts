@@ -553,9 +553,9 @@ async function run(): Promise<void> {
   assert.match(reportImage.originalObjectKey, /^staging\/report\/[0-9a-f-]+\/original\.png$/u);
   assert.match(reportImage.originalChecksumSha256, /^[0-9a-f]{64}$/);
   await requestImage(reportImage.url, null, 401);
-  const privateImage = await requestImage(reportImage.url, residentJar);
-  assert.equal(privateImage.response.headers.get('content-type'), 'image/png');
-  assert.deepEqual(Buffer.from(privateImage.bytes), image);
+  // The outbox is deliberately unpublished until the later worker-drain phase.
+  // Even the owner must not receive an unprocessed original (EXIF/GPS or unsafe bytes).
+  await requestImage(reportImage.url, residentJar, 404);
 
   await request('/api/mieszkaniec/incydenty', {
     method: 'POST',
@@ -715,13 +715,8 @@ async function run(): Promise<void> {
   const resolutionImage = updatedIncident.zdjecie_incydentu_rozwiazanego;
   assert.ok(resolutionImage);
   assert.equal(resolutionImage.kind, 'resolution');
-  const publicImage = await requestImage(resolutionImage.url, null);
-  assert.equal(publicImage.response.headers.get('content-type'), 'image/png');
-  assert.equal(
-    publicImage.response.headers.get('cache-control'),
-    'public, max-age=300, must-revalidate',
-  );
-  assert.deepEqual(Buffer.from(publicImage.bytes), image);
+  // Resolving an incident does not make its unprocessed original publishable.
+  await requestImage(resolutionImage.url, null, 404);
 
   const homepageResponse = await request('/api/mieszkaniec/incydenty/glowna');
   const homepageIds = parsePublicIncidentIds(homepageResponse.payload);

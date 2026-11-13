@@ -21,7 +21,9 @@
         "scripts/stage-production.ts",
         "scripts/verify-production-install.ts",
         "scripts/check-integration-telemetry.ts",
-        "scripts/render-cluster-candidate.ts"
+        "scripts/render-cluster-candidate.ts",
+        "database/tests/**/*.test.ts",
+        "scripts/**/*.test.ts"
       ],
       "ignoreDependencies": [
         "sfw",

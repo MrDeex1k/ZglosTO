@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import {
   ClientAddressEnvironmentSchema,
   LocalRateLimitEnvironmentSchema,
@@ -19,6 +20,14 @@ export interface MtlsEnvironment {
   backendIdentity: string;
   healthcheckIdentity: string;
   nginxIdentity: string;
+}
+
+function databaseUrlSecret(): string {
+  const path = process.env.DATABASE_URL_FILE?.trim();
+  if (!path) return required('DATABASE_URL');
+  const value = readFileSync(path, 'utf8').trim();
+  if (!value) throw new Error('Database URL secret file is empty');
+  return value;
 }
 
 function required(name: string): string {
@@ -201,7 +210,7 @@ if (betterAuthSecret.length < 32) {
 
 export const env = Object.freeze({
   nodeEnv: process.env.NODE_ENV?.trim() || 'development',
-  databaseUrl: validDatabaseUrl('DATABASE_URL', required('DATABASE_URL')),
+  databaseUrl: validDatabaseUrl('DATABASE_URL', databaseUrlSecret()),
   databaseTlsCaPath: required('DATABASE_TLS_CA_PATH'),
   databasePool: {
     connectionTimeoutMillis: positiveInteger(

@@ -1,0 +1,91 @@
+# Replace image with the verified release. Bind the backup PVC to encrypted off-host storage.
+# This example is suspended deliberately; resume after selecting backup/restore.
+apiVersion: batch/v1
+kind: Job
+metadata: { name: storage-operations, namespace: zglosto }
+spec:
+  suspend: true
+  backoffLimit: 0
+  template:
+    metadata:
+      labels: { app: storage-operations }
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: archive
+          image: docker.io/zglosto/backend:phase9-baseline
+          command: [/usr/local/bin/load-container-secrets, sh, -ec]
+          args:
+            - |
+              case "$STORAGE_ARCHIVE_OPERATION" in
+                backup) bun dist/operations/object-storage-archive-cli.js backup > /backup/object-storage.ndjson.gz ;;
+                restore) bun dist/operations/object-storage-archive-cli.js restore < /backup/object-storage.ndjson.gz ;;
+                *) exit 64 ;;
+              esac
+          env:
+            - { name: SERVICE_NAME, value: storage_operations }
+            - { name: STORAGE_ARCHIVE_OPERATION, value: backup }
+            - { name: S3_ACCESS_KEY_ID_FILE, value: /run/secrets/storage/access-key-id }
+            - { name: S3_SECRET_ACCESS_KEY_FILE, value: /run/secrets/storage/secret-access-key }
+            - { name: S3_AUTO_CREATE_BUCKET, value: 'false' }
+            - name: S3_ENDPOINT
+              valueFrom: { configMapKeyRef: { name: zglosto-config, key: S3_ENDPOINT } }
+            - name: S3_REGION
+              valueFrom: { configMapKeyRef: { name: zglosto-config, key: S3_REGION } }
+            - name: S3_BUCKET
+              valueFrom: { configMapKeyRef: { name: zglosto-config, key: S3_BUCKET } }
+            - name: S3_OBJECT_PREFIX
+              valueFrom: { configMapKeyRef: { name: zglosto-config, key: S3_OBJECT_PREFIX } }
+            - name: S3_FORCE_PATH_STYLE
+              valueFrom: { configMapKeyRef: { name: zglosto-config, key: S3_FORCE_PATH_STYLE } }
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: '1', memory: 1Gi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: credentials, mountPath: /run/secrets/storage, readOnly: true }
+            - { name: backup, mountPath: /backup }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: credentials
+          secret:
+            secretName: zglosto-object-storage-operations-credentials
+            optional: false
+            defaultMode: 0440
+            items:
+              - { key: S3_ACCESS_KEY_ID, path: access-key-id }
+              - { key: S3_SECRET_ACCESS_KEY, path: secret-access-key }
+        - { name: backup, persistentVolumeClaim: { claimName: zglosto-storage-archives } }
+        - { name: tmp, emptyDir: { medium: Memory, sizeLimit: 32Mi } }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: allow-storage-operations-egress, namespace: zglosto }
+spec:
+  podSelector: { matchLabels: { app: storage-operations } }
+  policyTypes: [Egress]
+  egress:
+    - to: [{ podSelector: { matchLabels: { app: rustfs } } }]
+      ports: [{ protocol: TCP, port: 9000 }]
+    - to: [{ ipBlock: { cidr: 0.0.0.0/0 } }]
+      ports: [{ protocol: TCP, port: 443 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: allow-storage-operations-ingress, namespace: zglosto }
+spec:
+  podSelector: { matchLabels: { app: rustfs } }
+  policyTypes: [Ingress]
+  ingress:
+    - from: [{ podSelector: { matchLabels: { app: storage-operations } } }]
+      ports: [{ protocol: TCP, port: 9000 }]

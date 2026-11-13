@@ -2,34 +2,34 @@
 
 ## Aktualny baseline
 
-Od 2026-10-17 projekt używa następujących przypiętych obrazów:
+Od 2026-11-13 projekt używa następujących przypiętych obrazów:
 
 | Obszar                                          | Obraz                                                                                          |
 | ----------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| minimalny runtime usług Bun                     | `alpine:3.24.2` + binarny Bun 1.4.3                                                            |
-| publiczny Nginx i runtime statycznego frontendu | `nginx:1.31.7-alpine3.24-slim`                                                                 |
+| minimalny runtime usług Bun                     | `alpine:3.24.4` + binarny Bun 1.4.4                                                            |
+| publiczny Nginx i runtime statycznego frontendu | `nginx:1.31.8-alpine3.24-slim`                                                                 |
 | opcjonalny model DMR                            | `ai/gemma3-qat:1B-Q4_K_M`                                                                      |
-| baza własnego obrazu database                   | `postgres:18.6-alpine3.24`                                                                     |
-| własny obraz poolera                            | `pgbouncer/Dockerfile` bazujący na `edoburu/pgbouncer:v1.26.0-p0`                              |
-| trwały broker bez panelu management             | `rabbitmq:4.3.6-alpine`                                                                        |
-| opcjonalny lokalny Redis                        | `redis:8.10.2-alpine3.23`                                                                      |
-| lokalny Object Storage zgodny z S3              | `rustfs/rustfs:1.0.0`                                                                          |
-| OpenTelemetry Collector                         | `otel/opentelemetry-collector-contrib:0.161.0`                                                 |
-| Prometheus                                      | `prom/prometheus:v3.14.0`                                                                      |
-| Loki                                            | `grafana/loki:3.7.8`                                                                           |
-| Tempo                                           | `grafana/tempo:3.0.3`                                                                          |
-| Alertmanager                                    | `prom/alertmanager:v0.34.1`                                                                    |
-| Grafana                                         | `grafana/grafana:13.2.2`                                                                       |
+| baza własnego obrazu database                   | `postgres:18.7-alpine3.24`                                                                     |
+| własny obraz poolera                            | `pgbouncer/Dockerfile` bazujący na `edoburu/pgbouncer:v1.26.1-p0`                              |
+| trwały broker bez panelu management             | `rabbitmq:4.4.0-alpine`                                                                        |
+| opcjonalny lokalny Redis                        | `redis:8.10.3-alpine3.23`                                                                      |
+| lokalny Object Storage zgodny z S3              | `rustfs/rustfs:1.0.5`                                                                          |
+| OpenTelemetry Collector                         | `otel/opentelemetry-collector-contrib:0.165.0`                                                 |
+| Prometheus                                      | `prom/prometheus:v3.16.0`                                                                      |
+| Loki                                            | `grafana/loki:3.7.10`                                                                          |
+| Tempo                                           | `grafana/tempo:3.1.1`                                                                          |
+| Alertmanager                                    | `prom/alertmanager:v0.35.0`                                                                    |
+| Grafana                                         | `grafana/grafana:13.2.6`                                                                       |
 | węzeł testowego klastra Kind                    | `kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5` |
-| serwer testowego klastra K3s                    | `rancher/k3s:v1.37.0-k3s1`                                                                     |
+| serwer testowego klastra K3s                    | `rancher/k3s:v1.37.2-k3s1`                                                                     |
 
 Wersje są przypięte jawnie, aby kolejne buildy nie zmieniały runtime'u wyłącznie przez przesunięcie ruchomego tagu bazowego.
 
-RustFS `1.0.0` jest przypiętym obrazem wieloarchitekturowym. Konfiguracja uruchamia go jako użytkownika
+RustFS `1.0.5` jest przypiętym obrazem wieloarchitekturowym. Konfiguracja uruchamia go jako użytkownika
 `10001`, zapisuje do wolumenu `/data`, nie publikuje portów `9000/9001` na hoście i jest
 sprawdzany przez `/health/ready`. Produkcyjny klaster oraz PVC pozostają zakresem Fazy 9.
 
-PgBouncer `1.25.2` zawiera poprawki bezpieczeństwa dla linii 1.25. Obraz `-p0` został
+PgBouncer `1.26.1` zawiera poprawki bezpieczeństwa dla linii 1.26. Obraz `-p0` został
 opublikowany ponad 48 godzin przed wdrożeniem, obsługuje `linux/amd64` i `linux/arm64` oraz
 zawiera `psql` używane przez healthcheck. Projektowy wrapper działa od początku jako
 `postgres:postgres`, kopiuje montowany klucz do chronionego katalogu runtime i uruchamia
@@ -52,14 +52,14 @@ Model DMR ma zweryfikowany digest
 uruchamiany wyłącznie przez opcjonalny `docker-compose.llm.yml`. Nie jest obrazem
 aplikacyjnym budowanym przez `build-images.sh`.
 
-Buildery używają Bun 1.4.3 z przypiętego digestem obrazu Alpine (musl, amd64/arm64), bez binarki Node. Bun wykonuje frozen install, CLI kompilatora, build Vite oraz skrypty stagingu. `scripts/stage-production.ts` zbiera wyłącznie produkcyjny graf workspace i ich dist do pustego katalogu. Osobna instalacja production/offline/frozen tworzy samodzielny store. Obraz zawiera ten graf w `/app`, a katalog roboczy usługi to `/app/backend`, `/app/authorization` lub `/app/llm_gateway`. Komendy `dist/...` i użytkownik non-root pozostają zachowane. Runtime Bun zastępuje Node; finalne obrazy usług nie zawierają binarki Node.
+Buildery używają Bun 1.4.4 z przypiętego digestem obrazu Alpine (musl, amd64/arm64), bez binarki Node. Bun wykonuje frozen install, CLI kompilatora, build Vite oraz skrypty stagingu. `scripts/stage-production.ts` zbiera wyłącznie produkcyjny graf workspace i ich dist do pustego katalogu. Osobna instalacja production/offline/frozen tworzy samodzielny store. Obraz zawiera ten graf w `/app`, a katalog roboczy usługi to `/app/backend`, `/app/authorization` lub `/app/llm_gateway`. Komendy `dist/...` i użytkownik non-root pozostają zachowane. Runtime Bun zastępuje Node; finalne obrazy usług nie zawierają binarki Node.
 
 Backend HTTP i `media_worker` są budowane z tego samego, niezmiennego artefaktu
 `backend/Dockerfile`, ale Compose uruchamia je jako dwa niezależne procesy i kontenery z
 różnymi komendami, ENV, healthcheckami oraz limitami zasobów. Worker nie dziedziczy runtime'u
 procesu backendu i nie otwiera portu `3000`; współdzielenie obrazu ogranicza wyłącznie
 duplikowanie zależności i kodu infrastrukturalnego. Pipeline workera używa dokładnie
-przypiętego `sharp@0.35.4`; natywne binaria libvips są instalowane przez Bun dla platformy
+przypiętego `sharp@0.35.5`; natywne binaria libvips są instalowane przez Bun dla platformy
 obrazu podczas builda, a test obrazu wykonuje rzeczywiste kodowanie WebP.
 
 ## PostgreSQL 18
@@ -125,3 +125,13 @@ ZgłosTO i pozostawia dokładnie zestaw z `current.images.env`. Nie usuwa aktywn
 ani danych wolumenów. Procedury i dowody opisują
 [runbook Compose](production-compose-runbook.md) oraz
 [podsumowanie Fazy 11](phase-11-completion.md).
+
+## Aktualizacja 2026-11-13: region lokalnego storage
+
+RustFS 1.0.5 weryfikuje region przy tworzeniu bucketa. Lokalne profile Compose
+przekazują `S3_REGION` jako `RUSTFS_REGION`, a komponent Kubernetes pobiera go
+z tego samego ConfigMap co backend. Brak tej konfiguracji przy regionie klienta
+`eu-central-1` powodował odrzucenie CreateBucket przez serwer z domyślnym
+`us-east-1`, niedostępność storage oraz negatywną gotowość backendu i workera.
+Test `dist/storage/verify-storage.js` potwierdził błąd przed zmianą i pełny cykl
+put/get/head/delete po poprawce; gotowość backendu wróciła z 503 do 200.

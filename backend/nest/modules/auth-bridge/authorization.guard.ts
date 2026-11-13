@@ -29,6 +29,18 @@ function containsBetterAuthSessionCookie(cookie: string): boolean {
   });
 }
 
+function requireSafeMutationRequest(request: Request): void {
+  // JSON requires a CORS preflight; HTML forms must never mutate this cookie-based API.
+  // Keep CORS disabled unless a separate explicit origin policy is introduced.
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method)) {
+    if (!request.is('application/json') || request.get('sec-fetch-site') === 'cross-site') {
+      throw new ForbiddenException('JSON same-site requests required', {
+        errorCode: 'FORBIDDEN',
+      });
+    }
+  }
+}
+
 @Injectable()
 export class AuthorizationGuard implements CanActivate {
   constructor(
@@ -39,6 +51,7 @@ export class AuthorizationGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest<Request>();
     const targets = [context.getHandler(), context.getClass()];
     const access =
       this.reflector.getAllAndOverride<AuthAccessMode>(AUTH_ACCESS_METADATA, targets) ??
@@ -50,13 +63,14 @@ export class AuthorizationGuard implements CanActivate {
       if (roles.length > 0) {
         throw new Error('A public endpoint cannot require authenticated roles');
       }
+      requireSafeMutationRequest(request);
       return true;
     }
 
-    const request = context.switchToHttp().getRequest<Request>();
     const cookie = request.get('cookie') ?? '';
     if (!containsBetterAuthSessionCookie(cookie)) {
       if (access === 'optional-session' && roles.length === 0) {
+        requireSafeMutationRequest(request);
         return true;
       }
       throw new UnauthorizedException('Authentication required', {
@@ -82,6 +96,7 @@ export class AuthorizationGuard implements CanActivate {
     }
 
     this.authContext.attach(request, verifiedSession);
+    requireSafeMutationRequest(request);
     if (roles.length === 0) {
       return true;
     }

@@ -6,7 +6,7 @@ metadata:
   labels:
     app: rustfs
   annotations:
-    secret.reloader.stakater.com/reload: zglosto-object-storage-credentials
+    secret.reloader.stakater.com/reload: zglosto-rustfs-root
 spec:
   serviceName: rustfs-headless
   replicas: 1
@@ -33,7 +33,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: rustfs
-          image: rustfs/rustfs:1.0.2
+          image: rustfs/rustfs:1.0.5
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -46,6 +46,11 @@ spec:
               export RUSTFS_SECRET_KEY="$(cat /run/secrets/object-storage/secret-access-key)"
               exec /entrypoint.sh rustfs
           env:
+            - name: RUSTFS_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: S3_REGION
             - name: RUSTFS_CONSOLE_ENABLE
               value: 'false'
             - name: RUSTFS_OBS_LOG_DIRECTORY
@@ -90,13 +95,13 @@ spec:
       volumes:
         - name: object-storage-credentials
           secret:
-            secretName: zglosto-object-storage-credentials
+            secretName: zglosto-rustfs-root
             optional: false
             defaultMode: 0440
             items:
-              - key: S3_ACCESS_KEY_ID
+              - key: RUSTFS_ROOT_ACCESS_KEY
                 path: access-key-id
-              - key: S3_SECRET_ACCESS_KEY
+              - key: RUSTFS_ROOT_SECRET_KEY
                 path: secret-access-key
   volumeClaimTemplates:
     - metadata:

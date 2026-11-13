@@ -155,3 +155,42 @@ test('authenticates to an external OpenAI-compatible provider using a mounted se
     }),
   );
 });
+
+test('keeps the upstream deadline active while consuming the response body', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (_url, init: RequestInit) => ({
+      ok: true,
+      json: () =>
+        new Promise((_resolve, reject) => {
+          init.signal?.addEventListener('abort', () =>
+            reject(new DOMException('Timed out', 'AbortError')),
+          );
+        }),
+    })),
+  );
+  const environment = dockerEnvironment('http://model-runner:12434');
+  environment.upstreamTimeoutMs = 10;
+  await expect(new DockerModelRunnerRuntime(environment).classify(request)).resolves.toMatchObject({
+    classification: 'unknown',
+    source: 'fallback',
+    reason: 'timeout',
+  });
+});
+
+test('disallows redirects and sends no address or city to the external provider', async () => {
+  const fetchMock = vi.fn(async (_url: RequestInfo | URL, _init?: RequestInit) =>
+    Response.json({
+      choices: [{ message: { content: '{"classification":"municipal","confidence":0.9}' } }],
+    }),
+  );
+  vi.stubGlobal('fetch', fetchMock);
+  await new OpenAiCompatibleRuntime({
+    ...dockerEnvironment('http://model-runner:12434'),
+    runtime: 'openai-compatible',
+  }).classify({ ...request, address: 'Private address', city: 'Private city' });
+  const init = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
+  expect(init?.redirect).toBe('error');
+  expect(String(init?.body)).not.toContain('Private address');
+  expect(String(init?.body)).not.toContain('Private city');
+});

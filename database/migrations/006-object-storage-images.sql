@@ -1,7 +1,7 @@
 BEGIN;
 
--- The installation contains only disposable test data from the previous bytea model. The
--- guard keeps this destructive one-time transition idempotent for the repository migration runner.
+-- Legacy image bytes require an explicit export before this schema transition.
+-- Refuse populated legacy databases instead of silently deleting incidents and related data.
 DO $$
 BEGIN
 	IF EXISTS (
@@ -10,7 +10,11 @@ BEGIN
 			AND table_name = 'incydenty'
 			AND column_name IN ('zdjecie_incydentu_zglaszanego', 'zdjecie_incydentu_rozwiazanego')
 	) THEN
-		TRUNCATE TABLE incydenty CASCADE;
+		-- Lock out concurrent inserts between the emptiness check and dropping bytea columns.
+		LOCK TABLE incydenty IN ACCESS EXCLUSIVE MODE;
+		IF EXISTS (SELECT 1 FROM incydenty) THEN
+			RAISE EXCEPTION 'Legacy incident images require an explicit data migration before migration 006';
+		END IF;
 	END IF;
 END$$;
 

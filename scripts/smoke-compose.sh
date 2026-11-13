@@ -151,30 +151,35 @@ done
 
 log "Checking that application database traffic uses PgBouncer"
 for service in authorization backend media_worker; do
-  compose exec -T "$service" bun -e \
-    "const fs = require('node:fs'); const url = new URL(process.env.DATABASE_URL); if (url.hostname !== 'pgbouncer') process.exit(1); if (Object.hasOwn(process.env, 'DATABASE_DIRECT_URL')) process.exit(2); if (!fs.statSync(process.env.DATABASE_TLS_CA_PATH).isFile()) process.exit(3); if (fs.existsSync('/run/secrets/database/pgbouncer-server.key') || fs.existsSync('/run/secrets/database/postgres-server.key')) process.exit(4)"
+  case "$service" in
+    authorization) expected_database_role=zglosto_auth;;
+    backend) expected_database_role=zglosto_backend;;
+    media_worker) expected_database_role=zglosto_media_worker;;
+  esac
+  compose exec -T -e EXPECTED_DATABASE_ROLE="$expected_database_role" "$service" /usr/local/bin/load-container-secrets bun -e \
+    "const fs = require('node:fs'); const url = new URL(process.env.DATABASE_URL); if (url.hostname !== 'pgbouncer' || url.username !== process.env.EXPECTED_DATABASE_ROLE) process.exit(1); if (Object.hasOwn(process.env, 'DATABASE_DIRECT_URL')) process.exit(2); if (!fs.statSync(process.env.DATABASE_TLS_CA_PATH).isFile()) process.exit(3); if (fs.existsSync('/run/secrets/database/pgbouncer-server.key') || fs.existsSync('/run/secrets/database/postgres-server.key')) process.exit(4)"
 done
 
 log "Checking the standalone media_worker boundary"
 compose exec -T media_worker bun dist/nest/media-worker/healthcheck.js
-compose exec -T media_worker bun -e \
+compose exec -T media_worker /usr/local/bin/load-container-secrets bun -e \
   "if (process.env.SERVICE_NAME !== 'media_worker') process.exit(1); if (!Object.hasOwn(process.env, 'S3_ENDPOINT')) process.exit(2); if (Object.hasOwn(process.env, 'AUTH_SERVICE_URL')) process.exit(3); if (new URL(process.env.RABBITMQ_URL).protocol !== 'amqps:') process.exit(4); if (Object.keys(process.env).some((name) => name.startsWith('RUSTFS_'))) process.exit(5);"
 
 log "Checking TLS 1.3 on both database transport segments"
-compose exec -T pgbouncer sh -c \
+compose exec -T pgbouncer /usr/local/bin/load-container-secrets sh -c \
   'grep -qx "client_tls_sslmode = require" /etc/pgbouncer/pgbouncer.ini &&
    grep -qx "client_tls_protocols = tlsv1.3" /etc/pgbouncer/pgbouncer.ini &&
    grep -qx "server_tls_sslmode = verify-full" /etc/pgbouncer/pgbouncer.ini &&
    grep -qx "server_tls_protocols = tlsv1.3" /etc/pgbouncer/pgbouncer.ini &&
-   test "$(psql -v ON_ERROR_STOP=1 "$PGBOUNCER_CLIENT_URL" -tAc "SELECT ssl::text || '\''|'\'' || version FROM pg_stat_ssl WHERE pid = pg_backend_pid()")" = "true|TLSv1.3"'
-compose exec -T database sh -c \
+   test "$(PGPASSWORD="$DATABASE_BACKEND_PASSWORD" psql -h pgbouncer -p "$LISTEN_PORT" -U zglosto_backend -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -tAc "SELECT ssl::text || '\''|'\'' || version FROM pg_stat_ssl WHERE pid = pg_backend_pid()")" = "true|TLSv1.3"'
+compose exec -T database /usr/local/bin/load-container-secrets sh -c \
   'test "$(psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" -tAc "SELECT ssl::text || '\''|'\'' || version FROM pg_stat_ssl WHERE pid = pg_backend_pid()")" = "true|TLSv1.3"'
 
 log "Checking that PostgreSQL and PgBouncer reject plaintext clients"
-compose exec -T database sh -c \
+compose exec -T database /usr/local/bin/load-container-secrets sh -c \
   'if PGSSLMODE=disable psql "$DATABASE_DIRECT_URL" -v ON_ERROR_STOP=1 -tAc "SELECT 1" >/dev/null 2>&1; then exit 1; fi'
-compose exec -T pgbouncer sh -c \
-  'if PGSSLMODE=disable psql "$PGBOUNCER_CLIENT_URL" -v ON_ERROR_STOP=1 -tAc "SELECT 1" >/dev/null 2>&1; then exit 1; fi'
+compose exec -T pgbouncer /usr/local/bin/load-container-secrets sh -c \
+  'if PGSSLMODE=disable PGPASSWORD="$DATABASE_BACKEND_PASSWORD" psql -h pgbouncer -p "$LISTEN_PORT" -U zglosto_backend -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -tAc "SELECT 1" >/dev/null 2>&1; then exit 1; fi'
 
 log "Checking the neutral S3 Object Storage boundary"
 compose exec -T backend bun -e \
@@ -183,7 +188,7 @@ compose exec -T backend bun dist/storage/verify-storage.js
 
 log "Checking that Phase 0 database migrations are repeatable"
 for migration in "$ROOT_DIR"/database/migrations/*.sql; do
-  compose exec -T database sh -c \
+  compose exec -T database /usr/local/bin/load-container-secrets sh -c \
     'psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL"' \
     < "$migration" >/dev/null
 done

@@ -5,7 +5,7 @@ import { afterAll, afterEach, expect, test, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
   logApiRequest: vi.fn(async () => {}),
-  handler: vi.fn(async () => Response.json({ ok: true })),
+  handler: vi.fn(async (_request: Request) => Response.json({ ok: true })),
 }));
 vi.mock('@hono/node-server/conninfo', () => ({
   getConnInfo: () => ({ remote: { address: '127.0.0.1' } }),
@@ -81,4 +81,32 @@ test('test email outbox is unavailable in production', async () => {
   expect(
     (await app.request('/api/auth/__test__/verification-email?email=test@example.com')).status,
   ).toBe(404);
+});
+
+test('overwrites a client-supplied internal IP header before Better Auth', async () => {
+  const response = await app.request('/api/auth/get-session', {
+    headers: {
+      'x-forwarded-for': '198.51.100.123, 203.0.113.7',
+      'x-zglosto-client-ip': '198.51.100.99',
+    },
+  });
+  expect(response.status).toBe(200);
+  const forwarded = mocks.handler.mock.calls[0]?.[0] as Request | null;
+  expect(forwarded?.headers.get('x-zglosto-client-ip')).toBe('203.0.113.7');
+});
+
+test('does not grant credentialed CORS access to an attacker origin', async () => {
+  const response = await app.request('/api/auth/get-session', {
+    headers: { origin: 'https://attacker.example' },
+  });
+  expect(response.headers.get('access-control-allow-origin')).toBeNull();
+});
+
+test('test role modification is unavailable in production', async () => {
+  const response = await app.request('/api/auth/__test__/role', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email: 'a@example.com', role: 'admin', serviceKey: null }),
+  });
+  expect(response.status).toBe(404);
 });

@@ -1,3 +1,4 @@
+import { assertDatabaseRoleIsolation } from './database-role-policy.ts';
 import { execFileSync } from 'node:child_process';
 import { readFileSync, statSync } from 'node:fs';
 
@@ -53,6 +54,12 @@ const serviceImageVariables: Readonly<Record<string, string>> = {
 };
 const secretEnvironmentNames = [
   'BETTER_AUTH_SECRET',
+  'DATABASE_AUTH_PASSWORD',
+  'DATABASE_BACKEND_PASSWORD',
+  'DATABASE_MEDIA_WORKER_PASSWORD',
+  'AUTH_DATABASE_URL',
+  'BACKEND_DATABASE_URL',
+  'MEDIA_WORKER_DATABASE_URL',
   'DATABASE_DIRECT_URL',
   'DATABASE_URL',
   'PGBOUNCER_CLIENT_URL',
@@ -385,6 +392,7 @@ function validateModes(
   imageEnvironment: Map<string, string>,
 ): void {
   const services = asRecord(compose.services, 'services');
+  assertDatabaseRoleIsolation(services);
   assertSame(
     Object.keys(services),
     [...coreServices, ...expectedModuleServices(contract, modes)],
@@ -431,15 +439,33 @@ function validateModes(
     const rustfs = asRecord(services.rustfs, 'services.rustfs');
     validateOptionalServiceHardening('rustfs', rustfs);
     const rustfsEnvironment = asRecord(rustfs.environment, 'services.rustfs.environment');
+    const provision = asRecord(services.storage_provision, 'services.storage_provision');
+    const provisionTmpfs = Array.isArray(provision.tmpfs) ? provision.tmpfs : [];
+    if (
+      provisionTmpfs.length !== 1 ||
+      provisionTmpfs[0] !== '/tmp:rw,noexec,nosuid,nodev,size=16m,uid=10001,gid=10001,mode=0700'
+    ) {
+      fail('storage bootstrap must use one private hardened tmpfs');
+    }
+
+    if (
+      provision.image !==
+        'rustfs/rc:v0.1.37@sha256:7e93fd410a8fe51514f89373e093392c92095b98dc6140335fcfe956810c4c80' ||
+      backendEnvironment.S3_AUTO_CREATE_BUCKET !== 'false' ||
+      workerEnvironment.S3_AUTO_CREATE_BUCKET !== 'false'
+    ) {
+      fail('local storage requires pinned IAM bootstrap and runtime bucket auto-create disabled');
+    }
+
     if (Object.hasOwn(rustfs, 'ports') || Object.hasOwn(rustfs, 'expose')) {
       fail('local RustFS API must remain private on the internal Docker network');
     }
     if (
-      rustfs.image !== 'rustfs/rustfs:1.0.2' ||
+      rustfs.image !== 'rustfs/rustfs:1.0.5' ||
       backendEnvironment.S3_ENDPOINT !== 'http://rustfs:9000' ||
       workerEnvironment.S3_ENDPOINT !== 'http://rustfs:9000' ||
-      rustfsEnvironment.RUSTFS_ACCESS_KEY_FILE !== '/run/secrets/s3/access-key-id' ||
-      rustfsEnvironment.RUSTFS_SECRET_KEY_FILE !== '/run/secrets/s3/secret-access-key' ||
+      rustfsEnvironment.RUSTFS_ACCESS_KEY_FILE !== '/run/secrets/rustfs-root/access-key-id' ||
+      rustfsEnvironment.RUSTFS_SECRET_KEY_FILE !== '/run/secrets/rustfs-root/secret-access-key' ||
       Object.hasOwn(rustfsEnvironment, 'RUSTFS_ACCESS_KEY') ||
       Object.hasOwn(rustfsEnvironment, 'RUSTFS_SECRET_KEY')
     ) {

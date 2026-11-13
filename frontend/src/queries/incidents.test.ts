@@ -196,3 +196,14 @@ describe('query cancellation reaches the HTTP request', () => {
     client.clear();
   });
 });
+
+// A reassignment must not display the previous municipal service's cached queue.
+it('isolates cached queues after a service reassignment for the same account', () => {
+  const client = createAppQueryClient();
+  const oldScope = serviceIncidentsQueryOptions('worker@example.test', 'roads');
+  const newScope = serviceIncidentsQueryOptions('worker@example.test', 'water');
+  client.setQueryData(oldScope.queryKey, [incident]);
+  expect(client.getQueryData(newScope.queryKey)).toBeUndefined();
+  expect(client.getQueryData(oldScope.queryKey)).toEqual([incident]);
+  client.clear();
+});

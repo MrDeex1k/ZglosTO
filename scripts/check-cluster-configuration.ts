@@ -6,6 +6,12 @@ type JsonRecord = Record<string, unknown>;
 const profiles = ['kubernetes', 'k3s'] as const;
 const sensitiveRuntimeKeys = [
   'BETTER_AUTH_SECRET',
+  'DATABASE_AUTH_PASSWORD',
+  'DATABASE_BACKEND_PASSWORD',
+  'DATABASE_MEDIA_WORKER_PASSWORD',
+  'AUTH_DATABASE_URL',
+  'BACKEND_DATABASE_URL',
+  'MEDIA_WORKER_DATABASE_URL',
   'DATABASE_DIRECT_URL',
   'DATABASE_URL',
   'POSTGRES_PASSWORD',
@@ -35,7 +41,7 @@ function asStringArray(value: unknown, path: string): string[] {
   return value;
 }
 
-function render(profile: (typeof profiles)[number]): string {
+function render(profile: string): string {
   return execFileSync('kubectl', ['kustomize', `k8s/overlays/${profile}`], {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -119,6 +125,8 @@ function validateSecretDelivery(
     }
   }
   for (const secretName of expectedSecrets) {
+    const definition = asRecord(secretContract[secretName], secretName);
+    if (Array.isArray(definition.requiredProfiles) && !profile.includes('rustfs')) continue;
     if (!renderedSecretNames.has(secretName)) {
       fail(`${profile} does not consume contracted Secret/${secretName}`);
     }
@@ -196,6 +204,11 @@ for (const profile of profiles) {
   validateGeneratedConfigMaps(profile, rendered);
   validateSecretDelivery(profile, rendered, expectedSecrets);
   validateWhiteLabelConsumers(profile, rendered);
+  const localProfile = `${profile}-rustfs`;
+  const localRendered = render(localProfile);
+  validateGeneratedConfigMaps(localProfile, localRendered);
+  validateSecretDelivery(localProfile, localRendered, expectedSecrets);
+  validateWhiteLabelConsumers(localProfile, localRendered);
 }
 
 console.log(

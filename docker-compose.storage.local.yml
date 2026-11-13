@@ -1,24 +1,25 @@
 services:
   rustfs:
-    image: ${RUSTFS_IMAGE:-rustfs/rustfs:1.0.2}
+    image: ${RUSTFS_IMAGE:-rustfs/rustfs:1.0.5}
     pull_policy: missing
     restart: always
     init: true
     user: 10001:10001
     environment:
-      RUSTFS_ACCESS_KEY_FILE: /run/secrets/s3/access-key-id
-      RUSTFS_SECRET_KEY_FILE: /run/secrets/s3/secret-access-key
+      RUSTFS_ACCESS_KEY_FILE: /run/secrets/rustfs-root/access-key-id
+      RUSTFS_SECRET_KEY_FILE: /run/secrets/rustfs-root/secret-access-key
+      RUSTFS_REGION: ${S3_REGION:?S3_REGION is required}
       RUSTFS_CONSOLE_ENABLE: 'false'
       RUSTFS_OBS_LOG_DIRECTORY: ''
       RUSTFS_CORS_ALLOWED_ORIGINS: ${FRONTEND_ORIGIN:?FRONTEND_ORIGIN is required}
     volumes:
       - rustfs-data:/data
     secrets:
-      - source: s3_access_key_id
-        target: /run/secrets/s3/access-key-id
+      - source: rustfs_root_access_key
+        target: /run/secrets/rustfs-root/access-key-id
         mode: 0440
-      - source: s3_secret_access_key
-        target: /run/secrets/s3/secret-access-key
+      - source: rustfs_root_secret_key
+        target: /run/secrets/rustfs-root/secret-access-key
         mode: 0440
     networks:
       - internal-net
@@ -51,20 +52,69 @@ services:
       S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://uploads.127.0.0.1.nip.io:1235}
       S3_UPLOAD_EXPIRY_SECONDS: ${S3_UPLOAD_EXPIRY_SECONDS:-300}
       S3_FORCE_PATH_STYLE: 'true'
-      S3_AUTO_CREATE_BUCKET: 'true'
+      S3_AUTO_CREATE_BUCKET: 'false'
     depends_on:
-      rustfs:
-        condition: service_healthy
+      storage_provision:
+        condition: service_completed_successfully
 
   media_worker:
     environment:
       S3_ENDPOINT: http://rustfs:9000
       S3_FORCE_PATH_STYLE: 'true'
-      S3_AUTO_CREATE_BUCKET: 'true'
+      S3_AUTO_CREATE_BUCKET: 'false'
     depends_on:
-      rustfs:
-        condition: service_healthy
+      storage_provision:
+        condition: service_completed_successfully
+
+  storage_provision:
+    image: rustfs/rc:v0.1.37@sha256:7e93fd410a8fe51514f89373e093392c92095b98dc6140335fcfe956810c4c80
+    restart: 'no'
+    user: 10001:10001
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ['/tmp:rw,noexec,nosuid,nodev,size=16m,uid=10001,gid=10001,mode=0700']
+    entrypoint: [sh, /provision/provision-storage-iam.sh]
+    environment:
+      S3_ENDPOINT: http://rustfs:9000
+      S3_REGION: ${S3_REGION:?S3_REGION is required}
+      S3_BUCKET: ${S3_BUCKET:?S3_BUCKET is required}
+      S3_OBJECT_PREFIX: ${S3_OBJECT_PREFIX:-incidents}
+      RUSTFS_ROOT_ACCESS_KEY_FILE: /run/secrets/rustfs_root_access_key
+      RUSTFS_ROOT_SECRET_KEY_FILE: /run/secrets/rustfs_root_secret_key
+      S3_ACCESS_KEY_ID_FILE: /run/secrets/s3_access_key_id
+      S3_SECRET_ACCESS_KEY_FILE: /run/secrets/s3_secret_access_key
+      S3_WORKER_ACCESS_KEY_ID_FILE: /run/secrets/s3_worker_access_key_id
+      S3_WORKER_SECRET_ACCESS_KEY_FILE: /run/secrets/s3_worker_secret_access_key
+      S3_OPERATIONS_ACCESS_KEY_ID_FILE: /run/secrets/s3_operations_access_key_id
+      S3_OPERATIONS_SECRET_ACCESS_KEY_FILE: /run/secrets/s3_operations_secret_access_key
+    secrets:
+      - rustfs_root_access_key
+      - rustfs_root_secret_key
+      - s3_access_key_id
+      - s3_secret_access_key
+      - s3_worker_access_key_id
+      - s3_worker_secret_access_key
+      - s3_operations_access_key_id
+      - s3_operations_secret_access_key
+    volumes: [./scripts/provision-storage-iam.sh:/provision/provision-storage-iam.sh:ro]
+    networks: [internal-net]
+    depends_on:
+      rustfs: { condition: service_healthy }
+    pids_limit: 64
+    cpus: 0.5
+    mem_limit: 128m
 
 volumes:
   rustfs-data:
     driver: local
+
+secrets:
+  rustfs_root_access_key:
+    file: ${ZTO_SECRETS_DIR:?ZTO_SECRETS_DIR is required}/rustfs-root-access-key
+  rustfs_root_secret_key:
+    file: ${ZTO_SECRETS_DIR:?ZTO_SECRETS_DIR is required}/rustfs-root-secret-key
+  s3_operations_access_key_id:
+    file: ${ZTO_SECRETS_DIR:?ZTO_SECRETS_DIR is required}/s3-operations-access-key-id
+  s3_operations_secret_access_key:
+    file: ${ZTO_SECRETS_DIR:?ZTO_SECRETS_DIR is required}/s3-operations-secret-access-key

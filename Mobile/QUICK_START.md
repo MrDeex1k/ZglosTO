@@ -6,7 +6,7 @@ Cloudflare Quick Tunnel, Apple Developer, Google Play, EAS ani agent-device.
 ## Wymagania
 
 - macOS z Xcode dla iOS Simulator;
-- Bun 1.4.3 (pin w `.bun-version`) i Node.js co najmniej 26.8.1 dla Expo/Metro;
+- Bun 1.4.4 (pin w `.bun-version`) i Node.js co najmniej 26.8.1 dla Expo/Metro;
 - Docker Desktop albo OrbStack;
 - Java 17 i Android SDK dla Android Emulator;
 - co najmniej jeden skonfigurowany symulator lub emulator dla wybranej platformy.

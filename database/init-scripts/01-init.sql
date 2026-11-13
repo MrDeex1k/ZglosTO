@@ -1,23 +1,5 @@
+-- The official PostgreSQL entrypoint creates POSTGRES_DB owned by POSTGRES_USER.
+-- Do not create a second hard-coded database/administrator inside a DO transaction.
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
-DO $$
-BEGIN
-	IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'zglosto_admin') THEN
-		CREATE ROLE zglosto_admin WITH LOGIN;
-	END IF;
-
-	IF NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = 'zglosto_db') THEN
-		PERFORM dblink_connect('dbname=postgres');
-		EXECUTE 'CREATE DATABASE zglosto_db OWNER zglosto_admin';
-	ELSE
-		EXECUTE 'ALTER DATABASE zglosto_db OWNER TO zglosto_admin';
-	END IF;
-EXCEPTION WHEN undefined_function THEN
-	IF NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = 'zglosto_db') THEN
-		EXECUTE 'CREATE DATABASE zglosto_db OWNER zglosto_admin';
-	ELSE
-		EXECUTE 'ALTER DATABASE zglosto_db OWNER TO zglosto_admin';
-	END IF;
-END$$;

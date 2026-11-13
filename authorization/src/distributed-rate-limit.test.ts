@@ -40,7 +40,7 @@ describe('Better Auth distributed rate-limit storage', () => {
     expect(increment.mock.calls[0]?.[0]).not.toContain('203.0.113.7');
   });
 
-  it('allows the request when Redis fails because the local limiter remains active', async () => {
+  it('rejects authentication attempts when Redis cannot enforce the endpoint limit', async () => {
     const storage = createBetterAuthRateLimitStorage(
       transientStore(async () => {
         throw new Error('Redis unavailable');
@@ -50,6 +50,26 @@ describe('Better Auth distributed rate-limit storage', () => {
 
     await expect(
       storage.consume?.('client-/sign-up/email', { max: 3, window: 10 }),
-    ).resolves.toEqual({ allowed: true, retryAfter: null });
+    ).resolves.toEqual({ allowed: false, retryAfter: 10 });
+  });
+});
+
+it('resumes enforcing the Redis counter after an outage without failing open during it', async () => {
+  const increment = vi
+    .fn<TransientStore['increment']>()
+    .mockRejectedValueOnce(new Error('unavailable'))
+    .mockResolvedValueOnce({ value: 1, resetAfterMs: 60_000 });
+  const storage = createBetterAuthRateLimitStorage(
+    transientStore(increment),
+    new RateLimitKeyHasher(Buffer.alloc(32, 9)),
+  );
+  const rule = { max: 3, window: 60 };
+  await expect(storage.consume?.('client-/request-password-reset', rule)).resolves.toEqual({
+    allowed: false,
+    retryAfter: 60,
+  });
+  await expect(storage.consume?.('client-/request-password-reset', rule)).resolves.toEqual({
+    allowed: true,
+    retryAfter: null,
   });
 });

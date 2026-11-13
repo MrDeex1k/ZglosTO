@@ -24,6 +24,8 @@ import { Hono } from 'hono';
 import type { ModelRuntime } from './runtime.ts';
 
 export interface GatewayRequestProtection {
+  replayReady?: () => Promise<unknown>;
+  consumeNonce?: (identifier: string) => Promise<boolean>;
   authClockSkewSeconds: number;
   hmacKey: Uint8Array;
   hmacKeyId: string;
@@ -95,6 +97,11 @@ export function createApp(runtime: ModelRuntime, protection: GatewayRequestProte
     context.json({ status: 'ok', service: 'llm_gateway', runtime: runtime.name }),
   );
   app.get('/health/ready', async (context) => {
+    try {
+      await protection.replayReady?.();
+    } catch {
+      return context.json({ error: 'replay_protection_unavailable' }, 503);
+    }
     const health = await runtime.health();
     return context.json(health, health.loaded ? 200 : 503);
   });
@@ -133,6 +140,17 @@ export function createApp(runtime: ModelRuntime, protection: GatewayRequestProte
       if (!verification.ok) {
         addCounter('zglosto_llm_workload_auth_failures', 1, authFailureAttributes(verification));
         return context.json({ error: 'invalid_workload_auth' }, 401);
+      }
+      // HMAC is verified before touching Redis; duplicates across replicas fail closed.
+      if (protection.consumeNonce) {
+        try {
+          const identifier = `${verification.keyId}:${context.req.header('x-zglosto-workload-nonce')}`;
+          if (!(await protection.consumeNonce(identifier))) {
+            return context.json({ error: 'invalid_workload_auth' }, 401);
+          }
+        } catch {
+          return context.json({ error: 'replay_protection_unavailable' }, 503);
+        }
       }
       if (activeClassifications >= protection.maxConcurrentClassifications) {
         context.header('retry-after', '1');

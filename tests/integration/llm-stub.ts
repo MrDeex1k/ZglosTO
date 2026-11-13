@@ -9,7 +9,10 @@ const json = (response: ServerResponse, status: number, payload: unknown): void 
 const model = 'ai/gemma3-qat:1B-Q4_K_M';
 
 const server = http.createServer(async (request, response) => {
-  if (request.method === 'GET' && request.url === '/engines/v1/models') {
+  if (
+    request.method === 'GET' &&
+    (request.url === '/engines/v1/models' || request.url === '/engines/llama.cpp/v1/models')
+  ) {
     return json(response, 200, { object: 'list', data: [{ id: model, object: 'model' }] });
   }
 

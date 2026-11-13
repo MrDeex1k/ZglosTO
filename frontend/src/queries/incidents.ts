@@ -18,7 +18,8 @@ export const incidentQueryKeys = {
   private: ['incidents', 'private'] as const,
   resident: (owner: string) => ['incidents', 'private', 'resident', owner] as const,
   admin: (owner: string) => ['incidents', 'private', 'admin', owner] as const,
-  service: (owner: string) => ['incidents', 'private', 'service', owner] as const,
+  service: (owner: string, serviceKey: string | null = null) =>
+    ['incidents', 'private', 'service', owner, serviceKey] as const,
 };
 
 export function mapResolvedIncident(apiIncident: CurrentResolvedIncidentDto): Incident {
@@ -88,8 +89,8 @@ export const residentIncidentsQueryOptions = (owner: string) =>
 export const adminIncidentsQueryOptions = (owner: string) =>
   privateIncidentQueryOptions(incidentQueryKeys.admin(owner), fetchAllIncidents);
 
-export const serviceIncidentsQueryOptions = (owner: string) =>
-  privateIncidentQueryOptions(incidentQueryKeys.service(owner), fetchServiceIncidents);
+export const serviceIncidentsQueryOptions = (owner: string, serviceKey: string | null = null) =>
+  privateIncidentQueryOptions(incidentQueryKeys.service(owner, serviceKey), fetchServiceIncidents);
 
 export function updateIncidentCache(
   queryClient: QueryClient,

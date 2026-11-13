@@ -43,10 +43,14 @@ services:
 
   backend:
     environment:
+      # The business suite creates many uploads/reports from one synthetic IP.
+      # Production limits remain unchanged; dedicated limiter tests cover rejection.
       INCIDENT_LOCAL_RATE_LIMIT_MAX_REQUESTS: '100'
+      INCIDENT_IP_RATE_LIMIT_MAX_REQUESTS: '100'
+      INCIDENT_USER_RATE_LIMIT_MAX_REQUESTS: '100'
       LLM_GATEWAY_URL: https://llm_gateway:8130
       LLM_TIMEOUT_MS: '500'
-      S3_AUTO_CREATE_BUCKET: 'true'
+      S3_AUTO_CREATE_BUCKET: 'false'
       S3_PUBLIC_ENDPOINT: 'http://uploads.localhost:${INTEGRATION_HTTP_PORT:-11335}'
       S3_UPLOAD_EXPIRY_SECONDS: '300'
       RABBITMQ_PUBLISHER_ENABLED: 'false'
@@ -87,6 +91,8 @@ services:
     environment:
       LLM_RUNTIME: docker-model-runner
       LLM_UPSTREAM_TIMEOUT_MS: '200'
+      # Exercise the same quarantine state machine with a shorter isolated-test window.
+      LLM_GATEWAY_AUTH_CLOCK_SKEW_SECONDS: '1'
       DOCKER_MODEL_RUNNER_URL: http://model_runner_stub:8123
       DOCKER_MODEL_RUNNER_MODEL: ai/gemma3-qat:1B-Q4_K_M
     depends_on:
