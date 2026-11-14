@@ -26,8 +26,6 @@ const EnvironmentSchema = z
     dockerModelRunnerUrl: z.url(),
     dockerModelRunnerModel: z.string().trim().min(1),
     dockerModelRunnerEngine: z.string().trim().min(1),
-    dockerModelRunnerTemperature: z.coerce.number().min(0).max(2),
-    dockerModelRunnerMaxTokens: z.coerce.number().int().positive().max(256),
     // External providers receive a credential and resident-supplied descriptions.
     openAiCompatibleUrl: z.url().refine((value) => {
       const url = new URL(value);
@@ -72,10 +70,9 @@ export function validateEnvironment(): LlmGatewayEnvironment {
     upstreamTimeoutMs: process.env.LLM_UPSTREAM_TIMEOUT_MS ?? '5000',
     dockerModelRunnerUrl:
       process.env.DOCKER_MODEL_RUNNER_URL ?? 'http://model-runner.docker.internal:12434',
-    dockerModelRunnerModel: process.env.DOCKER_MODEL_RUNNER_MODEL ?? 'ai/gemma3-qat:1B-Q4_K_M',
+    dockerModelRunnerModel:
+      process.env.DOCKER_MODEL_RUNNER_MODEL ?? 'zglosto/basal-2.0-4.5b:q4_k_m',
     dockerModelRunnerEngine: process.env.DOCKER_MODEL_RUNNER_ENGINE ?? 'llama.cpp',
-    dockerModelRunnerTemperature: process.env.DOCKER_MODEL_RUNNER_TEMPERATURE ?? '0.1',
-    dockerModelRunnerMaxTokens: process.env.DOCKER_MODEL_RUNNER_MAX_TOKENS ?? '64',
     openAiCompatibleUrl: process.env.OPENAI_COMPATIBLE_URL ?? 'https://llm.example.invalid/v1',
     openAiCompatibleModel: process.env.OPENAI_COMPATIBLE_MODEL ?? 'disabled',
     openAiCompatibleApiKeyFile:

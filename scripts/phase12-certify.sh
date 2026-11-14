@@ -187,7 +187,7 @@ case "${1:-}" in
       'Commands:' \
       '  static                   full repository quality gate' \
       '  host                     capture reference-host evidence' \
-      '  dmr                      test real Gemma 3 1B through Docker Model Runner' \
+      '  dmr                      test real Basal 2.0 4.5B Q4 through Docker Model Runner' \
       '  edge                     verify real DNS, public TLS, HSTS and public probes' \
       '  soak                     run the 60-minute acceptance soak against PHASE12_BASE_URL' \
       '  observability            run isolated metric -> trace -> log and failure drill' \

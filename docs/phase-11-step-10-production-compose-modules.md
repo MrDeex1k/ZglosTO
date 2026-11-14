@@ -60,7 +60,7 @@ lokalnego Collectora, a tylko Collector otrzymuje sieć egress oraz plik autoryz
 ### LLM
 
 - `disabled` zachowuje bezpieczny fallback gatewaya;
-- `local` włącza Docker Model Runner z Gemma 3 1B i ustalonymi parametrami;
+- `local` włącza Docker Model Runner z Basal 2.0 4,5B Q4_K_M i ustalonymi parametrami;
 - `external` uruchamia nowy adapter `openai-compatible`. URL i model są publiczną
   konfiguracją, a klucz API jest montowany wyłącznie do `llm_gateway` jako plik.
 

@@ -103,6 +103,7 @@ compose.override.yml
 compose.override.yaml
 
 # LLM model artifacts and caches
+.local-models/
 llm_service/.cache/
 llm_service/models/
 .cache/huggingface/

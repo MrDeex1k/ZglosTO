@@ -420,10 +420,8 @@ jest sekretem i nie może trafić do ENV, White-Label YAML, obrazu ani repozytor
 | `LLM_RUNTIME`                                | nie      | nie    | llm_gateway   | Wynik selektora: `disabled`, `docker-model-runner` lub `openai-compatible`. |
 | `LLM_UPSTREAM_TIMEOUT_MS`                    | nie      | nie    | llm_gateway   | Timeout adaptera DMR, domyślnie `5000`.                                     |
 | `DOCKER_MODEL_RUNNER_URL`                    | dla DMR  | nie    | llm_gateway   | OpenAI-compatible URL wstrzykiwany przez Compose `models`.                  |
-| `DOCKER_MODEL_RUNNER_MODEL`                  | dla DMR  | nie    | llm_gateway   | `ai/gemma3-qat:1B-Q4_K_M`; backend go nie zna.                              |
+| `DOCKER_MODEL_RUNNER_MODEL`                  | dla DMR  | nie    | llm_gateway   | `zglosto/basal-2.0-4.5b:q4_k_m`; backend go nie zna.                        |
 | `DOCKER_MODEL_RUNNER_ENGINE`                 | dla DMR  | nie    | llm_gateway   | Silnik ścieżki OpenAI-compatible, domyślnie `llama.cpp`.                    |
-| `DOCKER_MODEL_RUNNER_TEMPERATURE`            | dla DMR  | nie    | llm_gateway   | Temperatura inferencji, domyślnie `0.1`.                                    |
-| `DOCKER_MODEL_RUNNER_MAX_TOKENS`             | dla DMR  | nie    | llm_gateway   | Limit tokenów odpowiedzi klasyfikatora, domyślnie `64`.                     |
 | `LLM_EXTERNAL_URL`                           | external | nie    | selektor      | Bazowy URL API zgodnego z OpenAI, zawierający właściwą ścieżkę `/v1`.       |
 | `LLM_EXTERNAL_MODEL`                         | external | nie    | selektor      | Dokładny identyfikator modelu zewnętrznego providera.                       |
 | `LLM_EXTERNAL_API_KEY_FILE`                  | external | tak    | Compose       | Hostowy plik klucza montowany wyłącznie do `llm_gateway`.                   |

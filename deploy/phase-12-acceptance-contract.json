@@ -24,7 +24,7 @@
       "observability": "disabled",
       "llm": "local",
       "llmRuntime": "docker-model-runner",
-      "llmModel": "ai/gemma3-qat:1B-Q4_K_M"
+      "llmModel": "zglosto/basal-2.0-4.5b:q4_k_m"
     },
     "recommended": {
       "objectStorage": "local",

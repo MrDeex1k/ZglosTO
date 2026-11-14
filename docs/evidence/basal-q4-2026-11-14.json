@@ -1,0 +1,384 @@
+{
+  "schemaVersion": 1,
+  "capturedDate": "2026-11-14",
+  "hardware": {
+    "cpu": "Apple M4 Pro",
+    "logicalCpu": 12,
+    "memoryBytes": 25769803776,
+    "dmrMemoryLimitGiB": 11.73
+  },
+  "runtime": {
+    "dmr": "1.2.9",
+    "dmrLlamaCpp": "b9879-72874f559",
+    "dmrAcceleration": "CPU",
+    "nativeLlamaCpp": "b11312-0c1e57098",
+    "nativeAcceleration": "Metal",
+    "nativeArguments": "-c 4096 -np 1 -ngl 99 -t 6 -tb 6 -fa on",
+    "nativeMaxRssBytes": {
+      "basal-2.0-4.5b": 3440721920,
+      "basal-omni-1.0-mini": 6016565248
+    },
+    "dmrAfterBenchmarkMemoryGiB": {
+      "basal-2.0-4.5b": 3.264,
+      "basal-omni-1.0-mini": 4.164
+    },
+    "memoryCaveat": "RSS and docker stats snapshots are different measurements, not total/peak production memory requirements."
+  },
+  "artifacts": [
+    {
+      "model": "basal-2.0-4.5b",
+      "sourceRevision": "a21eae2ebf988274f2e6326925525012c3bd36d8",
+      "bytes": 2878886368,
+      "sha256": "b271979c29c71527f357b800fa82ec2e317ae8617f334fb4b96c86a03269465d"
+    },
+    {
+      "model": "basal-omni-1.0-mini",
+      "sourceRevision": "a7a495ff99d8c55df5402c1f932e58d52c3a1ad2",
+      "bytes": 5302274016,
+      "sha256": "d834b159b73652762be336867c1aa951bf400e11df2e2d1567a19913fa3edaa3"
+    }
+  ],
+  "fixture": {
+    "path": "tests/fixtures/llm/basal-classification.json",
+    "sha256": "eab1b65f7b7107413a13c9bcd62f8017a4a8106f1c6d45651b7bf59cff3bfdf9",
+    "ids": [
+      "municipal-pothole",
+      "municipal-litter",
+      "municipal-graffiti",
+      "municipal-bench",
+      "municipal-lamp",
+      "municipal-historic-fire",
+      "municipal-negated-gas",
+      "municipal-hypothetical",
+      "municipal-ambiguous-no-threat",
+      "municipal-injection",
+      "municipal-injection-token",
+      "municipal-water-puddle",
+      "municipal-quote",
+      "municipal-cleared-threat",
+      "municipal-weeds",
+      "emergency-unconscious",
+      "emergency-fire",
+      "emergency-gas",
+      "emergency-live-wire",
+      "emergency-assault",
+      "emergency-child-road",
+      "emergency-tree-falling",
+      "emergency-flood",
+      "emergency-negated-history",
+      "emergency-historic-current",
+      "emergency-hypothetical-current",
+      "emergency-injection",
+      "emergency-drowning",
+      "emergency-active-theft",
+      "emergency-brakes"
+    ],
+    "municipal": 15,
+    "emergency": 15,
+    "synthetic": true
+  },
+  "limitations": [
+    "Small hand-written control set; no held-out production accuracy estimate.",
+    "Single sequential run per model/runtime, warm DMR models; no concurrency or reference-host certification.",
+    "Custom Q4 is uncalibrated; official Omni Q4 failed upstream port gate.",
+    "Native and DMR timings use different acceleration and should only be compared within their runtime."
+  ],
+  "runs": [
+    {
+      "name": "dmr-45",
+      "startedAt": "2026-11-14T00:57:10.437Z",
+      "finishedAt": "2026-11-14T00:58:01.771Z",
+      "model": "zglosto/basal-2.0-4.5b:q4_k_m",
+      "variant": "basal-2.0-4.5b",
+      "modelSha256": "b271979c29c71527f357b800fa82ec2e317ae8617f334fb4b96c86a03269465d",
+      "fixtureSha256": "eab1b65f7b7107413a13c9bcd62f8017a4a8106f1c6d45651b7bf59cff3bfdf9",
+      "calibration": "none: custom Q4_K_M; scores are raw restricted probabilities",
+      "settings": {
+        "bos": "server adds one BOS; request omits the template BOS",
+        "timeoutMs": 5000,
+        "repeats": 1,
+        "fixtureCount": 30,
+        "optionOrders": 2,
+        "maxTokens": 1,
+        "logprobs": 20,
+        "temperature": 1
+      },
+      "summary": {
+        "decisionMethod": "mean of two raw distributions after mapping each option order back to classes",
+        "perOrder": {
+          "forward": {
+            "decisions": 30,
+            "correct": 30,
+            "accuracy": 1,
+            "fallbacks": 0,
+            "falseNegatives": 0,
+            "falsePositives": 0,
+            "latencyMs": {
+              "p50": 532.6732919999995,
+              "p95": 1351.803791000002
+            }
+          },
+          "reverse": {
+            "decisions": 30,
+            "correct": 30,
+            "accuracy": 1,
+            "fallbacks": 0,
+            "falseNegatives": 0,
+            "falsePositives": 0,
+            "latencyMs": {
+              "p50": 534.096209000003,
+              "p95": 1362.417416999997
+            }
+          }
+        },
+        "decisions": 30,
+        "correct": 30,
+        "accuracy": 1,
+        "fallbacks": 0,
+        "fallbackCounts": {},
+        "falseNegatives": 0,
+        "falsePositives": 0,
+        "orderDisagreements": 0,
+        "calls": 60,
+        "successfulCalls": 60,
+        "latencyMs": {
+          "firstCall": 1178.6105,
+          "p50": 534.096209000003,
+          "p95": 1351.803791000002,
+          "total": 51327.330581
+        },
+        "usage": {
+          "promptTokens": 9260,
+          "completionTokens": 60,
+          "callsWithUsage": 60
+        }
+      },
+      "failures": []
+    },
+    {
+      "name": "dmr-omni",
+      "startedAt": "2026-11-14T00:53:07.356Z",
+      "finishedAt": "2026-11-14T00:54:44.547Z",
+      "model": "zglosto/basal-omni-1.0-mini:q4_k_m",
+      "variant": "basal-omni-1.0-mini",
+      "modelSha256": "d834b159b73652762be336867c1aa951bf400e11df2e2d1567a19913fa3edaa3",
+      "fixtureSha256": "eab1b65f7b7107413a13c9bcd62f8017a4a8106f1c6d45651b7bf59cff3bfdf9",
+      "calibration": "none: custom Q4_K_M; scores are raw restricted probabilities",
+      "settings": {
+        "bos": "server adds one BOS; request omits the template BOS",
+        "timeoutMs": 5000,
+        "repeats": 1,
+        "fixtureCount": 30,
+        "optionOrders": 2,
+        "maxTokens": 1,
+        "logprobs": 20,
+        "temperature": 1
+      },
+      "summary": {
+        "decisionMethod": "mean of two raw distributions after mapping each option order back to classes",
+        "perOrder": {
+          "forward": {
+            "decisions": 30,
+            "correct": 30,
+            "accuracy": 1,
+            "fallbacks": 0,
+            "falseNegatives": 0,
+            "falsePositives": 0,
+            "latencyMs": {
+              "p50": 1622.6616249999934,
+              "p95": 1771.762917
+            }
+          },
+          "reverse": {
+            "decisions": 30,
+            "correct": 30,
+            "accuracy": 1,
+            "fallbacks": 0,
+            "falseNegatives": 0,
+            "falsePositives": 0,
+            "latencyMs": {
+              "p50": 1618.9227080000055,
+              "p95": 1731.810666999998
+            }
+          }
+        },
+        "decisions": 30,
+        "correct": 30,
+        "accuracy": 1,
+        "fallbacks": 0,
+        "fallbackCounts": {},
+        "falseNegatives": 0,
+        "falsePositives": 0,
+        "orderDisagreements": 0,
+        "calls": 60,
+        "successfulCalls": 60,
+        "latencyMs": {
+          "firstCall": 1771.762917,
+          "p50": 1621.2393329999977,
+          "p95": 1744.5203749999928,
+          "total": 97186.89858699997
+        },
+        "usage": {
+          "promptTokens": 10284,
+          "completionTokens": 60,
+          "callsWithUsage": 60
+        }
+      },
+      "failures": []
+    },
+    {
+      "name": "native-45",
+      "startedAt": "2026-11-14T00:52:33.294Z",
+      "finishedAt": "2026-11-14T00:52:45.245Z",
+      "model": "basal-2.0-4.5b-q4",
+      "variant": "basal-2.0-4.5b",
+      "modelSha256": "b271979c29c71527f357b800fa82ec2e317ae8617f334fb4b96c86a03269465d",
+      "fixtureSha256": "eab1b65f7b7107413a13c9bcd62f8017a4a8106f1c6d45651b7bf59cff3bfdf9",
+      "calibration": "none: custom Q4_K_M; scores are raw restricted probabilities",
+      "settings": {
+        "bos": "server adds one BOS; request omits the template BOS",
+        "timeoutMs": 120000,
+        "repeats": 1,
+        "fixtureCount": 30,
+        "optionOrders": 2,
+        "maxTokens": 1,
+        "logprobs": 20,
+        "temperature": 1
+      },
+      "summary": {
+        "decisionMethod": "mean of two raw distributions after mapping each option order back to classes",
+        "perOrder": {
+          "forward": {
+            "decisions": 30,
+            "correct": 30,
+            "accuracy": 1,
+            "fallbacks": 0,
+            "falseNegatives": 0,
+            "falsePositives": 0,
+            "latencyMs": {
+              "p50": 135.5762080000004,
+              "p95": 313.7945000000004
+            }
+          },
+          "reverse": {
+            "decisions": 30,
+            "correct": 30,
+            "accuracy": 1,
+            "fallbacks": 0,
+            "falseNegatives": 0,
+            "falsePositives": 0,
+            "latencyMs": {
+              "p50": 135.79691699999995,
+              "p95": 256.15179199999966
+            }
+          }
+        },
+        "decisions": 30,
+        "correct": 30,
+        "accuracy": 1,
+        "fallbacks": 0,
+        "fallbackCounts": {},
+        "falseNegatives": 0,
+        "falsePositives": 0,
+        "orderDisagreements": 0,
+        "calls": 60,
+        "successfulCalls": 60,
+        "latencyMs": {
+          "firstCall": 337.411292,
+          "p50": 135.79691699999995,
+          "p95": 312.4512500000001,
+          "total": 11946.407249000002
+        },
+        "usage": {
+          "promptTokens": 9260,
+          "completionTokens": 60,
+          "callsWithUsage": 60
+        }
+      },
+      "failures": []
+    },
+    {
+      "name": "native-omni",
+      "startedAt": "2026-11-14T00:51:24.202Z",
+      "finishedAt": "2026-11-14T00:51:47.493Z",
+      "model": "basal-omni-1.0-mini-q4",
+      "variant": "basal-omni-1.0-mini",
+      "modelSha256": "d834b159b73652762be336867c1aa951bf400e11df2e2d1567a19913fa3edaa3",
+      "fixtureSha256": "eab1b65f7b7107413a13c9bcd62f8017a4a8106f1c6d45651b7bf59cff3bfdf9",
+      "calibration": "none: custom Q4_K_M; scores are raw restricted probabilities",
+      "settings": {
+        "bos": "server adds one BOS; request omits the template BOS",
+        "timeoutMs": 120000,
+        "repeats": 1,
+        "fixtureCount": 30,
+        "optionOrders": 2,
+        "maxTokens": 1,
+        "logprobs": 20,
+        "temperature": 1
+      },
+      "summary": {
+        "decisionMethod": "mean of two raw distributions after mapping each option order back to classes",
+        "perOrder": {
+          "forward": {
+            "decisions": 30,
+            "correct": 30,
+            "accuracy": 1,
+            "fallbacks": 0,
+            "falseNegatives": 0,
+            "falsePositives": 0,
+            "latencyMs": {
+              "p50": 382.2731249999997,
+              "p95": 416.0308750000004
+            }
+          },
+          "reverse": {
+            "decisions": 30,
+            "correct": 30,
+            "accuracy": 1,
+            "fallbacks": 0,
+            "falseNegatives": 0,
+            "falsePositives": 0,
+            "latencyMs": {
+              "p50": 381.8552500000005,
+              "p95": 385.1804999999986
+            }
+          }
+        },
+        "decisions": 30,
+        "correct": 30,
+        "accuracy": 1,
+        "fallbacks": 0,
+        "fallbackCounts": {},
+        "falseNegatives": 0,
+        "falsePositives": 0,
+        "orderDisagreements": 0,
+        "calls": 60,
+        "successfulCalls": 60,
+        "latencyMs": {
+          "firstCall": 717.074375,
+          "p50": 382.25945800000045,
+          "p95": 385.1804999999986,
+          "total": 23288.916207
+        },
+        "usage": {
+          "promptTokens": 10284,
+          "completionTokens": 60,
+          "callsWithUsage": 60
+        }
+      },
+      "failures": []
+    }
+  ],
+  "applicationGate": {
+    "schemaVersion": 1,
+    "phase": "12",
+    "model": "zglosto/basal-2.0-4.5b:q4_k_m",
+    "engine": "llama.cpp",
+    "sampleCount": 5,
+    "timeoutMs": 5000,
+    "p95Ms": 3893,
+    "maximumMs": 3893,
+    "passed": true,
+    "capturedAt": "2026-11-14T00:56:14.094Z"
+  }
+}

@@ -34,7 +34,7 @@ Dokument obejmuje:
 | `backend`           | `backend/`           | Bun 1.4.2 + NestJS             | API incydentow, admina i sluzb |
 | `authorization`     | `authorization/`     | Bun 1.4.2 + Hono + Better Auth | auth, sesje i role             |
 | `llm_gateway`       | `llm_gateway/`       | Bun 1.4.2 + Hono + TypeScript  | granica klasyfikacji LLM       |
-| Docker Model Runner | poza kodem aplikacji | llama.cpp + Gemma 3 1B QAT     | opcjonalny runtime modelu      |
+| Docker Model Runner | poza kodem aplikacji | llama.cpp + Basal 2.0 4,5B Q4  | opcjonalny runtime modelu      |
 | `database`          | `database/`          | PostgreSQL                     | dane domenowe i auth           |
 
 Kontrakt liveness/readiness wszystkich uslug opisuje dokument [Healthchecki Fazy 0](healthchecks.md).

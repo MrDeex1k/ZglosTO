@@ -8,6 +8,7 @@ import {
   type LlmHealthResponse,
 } from '@zglosto/contracts';
 import type { LlmGatewayEnvironment } from './environment.ts';
+import { basalCompletionPrompt, parseBasalClassification } from './basal.ts';
 
 export interface ModelRuntime {
   readonly name: string;
@@ -96,7 +97,7 @@ function modelPrompt(request: LlmClassificationRequest): {
 
 function dockerModelRunnerEndpoint(
   environment: LlmGatewayEnvironment,
-  path: 'chat/completions' | 'models',
+  path: 'completions' | 'models',
 ): string {
   const baseUrl = environment.dockerModelRunnerUrl.replace(/\/+$/, '');
   if (baseUrl.endsWith('/v1')) return `${baseUrl}/${path}`;
@@ -116,17 +117,20 @@ export class DockerModelRunnerRuntime implements ModelRuntime {
     let payload: unknown;
     try {
       payload = await fetchWithTimeout(
-        dockerModelRunnerEndpoint(this.environment, 'chat/completions'),
+        dockerModelRunnerEndpoint(this.environment, 'completions'),
         {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
             model: this.environment.dockerModelRunnerModel,
-            temperature: this.environment.dockerModelRunnerTemperature,
-            max_tokens: this.environment.dockerModelRunnerMaxTokens,
+            temperature: 1,
+            top_k: 0,
+            top_p: 1,
+            min_p: 0,
+            max_tokens: 1,
             stream: false,
-            response_format: { type: 'json_object' },
-            ...modelPrompt(request),
+            logprobs: 20,
+            prompt: basalCompletionPrompt(request.description),
           }),
         },
         this.environment.upstreamTimeoutMs,
@@ -135,7 +139,7 @@ export class DockerModelRunnerRuntime implements ModelRuntime {
       return fallback(error instanceof SyntaxError ? 'invalid_response' : timeoutReason(error));
     }
     try {
-      return parseDockerModelRunnerClassification(readDockerModelRunnerContent(payload));
+      return parseBasalClassification(payload);
     } catch {
       return fallback('invalid_response');
     }

@@ -45,10 +45,10 @@ produkcyjny.
 
 ## Certyfikowane profile
 
-| Profil        | Object Storage | Redis      | Observability | LLM                     |
-| ------------- | -------------- | ---------- | ------------- | ----------------------- |
-| `minimal`     | lokalny RustFS | `disabled` | `disabled`    | lokalny DMR, Gemma 3 1B |
-| `recommended` | lokalny RustFS | `local`    | `disabled`    | `disabled`              |
+| Profil        | Object Storage | Redis      | Observability | LLM                                |
+| ------------- | -------------- | ---------- | ------------- | ---------------------------------- |
+| `minimal`     | lokalny RustFS | `disabled` | `disabled`    | lokalny DMR, Basal 2.0 4,5B Q4_K_M |
+| `recommended` | lokalny RustFS | `local`    | `disabled`    | `disabled`                         |
 
 Wszystkie 54 kombinacje nadal przechodzą walidację statyczną. Profile external otrzymują
 certyfikację runtime dopiero po wskazaniu rzeczywistych S3/R2, Redis, OTLP albo

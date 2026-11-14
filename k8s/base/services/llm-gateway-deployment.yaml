@@ -86,16 +86,6 @@ spec:
                 configMapKeyRef:
                   name: zglosto-config
                   key: DOCKER_MODEL_RUNNER_ENGINE
-            - name: DOCKER_MODEL_RUNNER_TEMPERATURE
-              valueFrom:
-                configMapKeyRef:
-                  name: zglosto-config
-                  key: DOCKER_MODEL_RUNNER_TEMPERATURE
-            - name: DOCKER_MODEL_RUNNER_MAX_TOKENS
-              valueFrom:
-                configMapKeyRef:
-                  name: zglosto-config
-                  key: DOCKER_MODEL_RUNNER_MAX_TOKENS
           volumeMounts:
             - { name: service-ca, mountPath: /run/secrets/service, readOnly: true }
             - { name: llm-gateway-tls, mountPath: /run/secrets/llm-gateway, readOnly: true }
