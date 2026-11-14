@@ -28,14 +28,14 @@ Dokument obejmuje:
 
 ## Obecne uslugi
 
-| Usluga              | Obecny katalog       | Obecny runtime                 | Odpowiedzialnosc               |
-| ------------------- | -------------------- | ------------------------------ | ------------------------------ |
-| `frontend`          | `frontend/`          | TanStack Start SPA + React     | UI i wywolania API             |
-| `backend`           | `backend/`           | Bun 1.4.2 + NestJS             | API incydentow, admina i sluzb |
-| `authorization`     | `authorization/`     | Bun 1.4.2 + Hono + Better Auth | auth, sesje i role             |
-| `llm_gateway`       | `llm_gateway/`       | Bun 1.4.2 + Hono + TypeScript  | granica klasyfikacji LLM       |
-| Docker Model Runner | poza kodem aplikacji | llama.cpp + Gemma 3 1B QAT     | opcjonalny runtime modelu      |
-| `database`          | `database/`          | PostgreSQL                     | dane domenowe i auth           |
+| Usluga              | Obecny katalog       | Obecny runtime                     | Odpowiedzialnosc               |
+| ------------------- | -------------------- | ---------------------------------- | ------------------------------ |
+| `frontend`          | `frontend/`          | TanStack Start SPA + React         | UI i wywolania API             |
+| `backend`           | `backend/`           | Bun 1.4.2 + NestJS                 | API incydentow, admina i sluzb |
+| `authorization`     | `authorization/`     | Bun 1.4.2 + Hono + Better Auth     | auth, sesje i role             |
+| `llm_gateway`       | `llm_gateway/`       | Bun 1.4.2 + Hono + TypeScript      | granica klasyfikacji LLM       |
+| Docker Model Runner | poza kodem aplikacji | llama.cpp + Basal 2.0 Mini 1,5B Q5 | opcjonalny runtime modelu      |
+| `database`          | `database/`          | PostgreSQL                         | dane domenowe i auth           |
 
 Kontrakt liveness/readiness wszystkich uslug opisuje dokument [Healthchecki Fazy 0](healthchecks.md).
 
@@ -235,7 +235,7 @@ Kontrakt rozdziela:
 - stabilny kod maszynowy `reported`, `in_progress`, `resolved`;
 - etykiete UI, np. `ZGŁOSZONY`, `W TRAKCIE NAPRAWY`, `NAPRAWIONY`.
 
-Stare wartosci nie sa przyjmowane przez API. Istniejace lokalne dane migruje idempotentny skrypt `database/migrations/001-incident-status-codes.sql`, uruchamiany przez `scripts/migrate-incident-statuses.sh`. Nowe bazy od razu tworza enum z kodami maszynowymi. Nie utrzymujemy publicznej warstwy kompatybilnosci, poniewaz aplikacja nie byla wdrozona produkcyjnie.
+Stare wartosci nie sa przyjmowane przez API. Inicjalizacja pustej bazy od razu tworzy enum z kodami maszynowymi. Nie utrzymujemy historycznych migracji ani publicznej warstwy kompatybilnosci, poniewaz aplikacja nie byla wdrozona produkcyjnie.
 
 ## Typy sluzb
 
@@ -260,8 +260,8 @@ Zasada:
 - API i baza uzywaja `serviceKey`;
 - UI pokazuje `label`;
 - konfiguracja miasta decyduje, ktore sluzby sa aktywne.
-- PostgreSQL zapewnia integralnosc przez `service_types` i klucze obce; migracja
-  `004-service-types-catalog.sql` usunela historyczny `typ_sluzby_enum`.
+- PostgreSQL zapewnia integralnosc przez `service_types` i klucze obce, tworzone
+  bezpośrednio w aktualnym schemacie inicjalizacyjnym.
 
 ## Publiczna konfiguracja White-Label
 
@@ -429,7 +429,7 @@ To kod i testy kontraktowe określają obowiązkowe pola, wartości null i zasad
 
 1. `zaakceptowana` ([ADR-004](architecture-decisions.md)): anonimowe zgloszenia sa dozwolone, a po potwierdzeniu e-maila zostaja przypisane do konta; prywatne listy wymagaja sesji.
 2. `zaakceptowana` ([ADR-005](architecture-decisions.md)): Better Auth obsluguje web i Expo; mobile przechowuje cookies w SecureStore i jawnie wysyla naglowek `Cookie` do API.
-3. `wdrozona` ([ADR-006](architecture-decisions.md)): sesja, API i konsumenci używają wyłącznie stabilnego `serviceKey`; stara nazwa pozostaje tylko w historycznej migracji schematu.
+3. `wdrozona` ([ADR-006](architecture-decisions.md)): sesja, API i konsumenci używają wyłącznie stabilnego `serviceKey`; aktualny schemat inicjalizacyjny używa tej samej nazwy.
 4. `wdrozona` ([ADR-007](architecture-decisions.md)): baza, backend, frontend i wspolny kontrakt uzywaja kodow maszynowych; polskie nazwy sa etykietami UI.
 5. Historyczny [ADR-008](architecture-decisions.md) nadal ma oznaczenie `otwarta`; bieżąca implementacja zwraca `IncidentImageRef` z metadanymi i URL-em, bez base64 na listach.
 6. `zaakceptowana` ([ADR-009](architecture-decisions.md)): awaria LLM zapisuje `unknown` z `fallbackServiceKey`, `modelAvailable: false`, `source: fallback` i technicznym kodem przyczyny, bez blokowania zgloszenia.

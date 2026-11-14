@@ -82,6 +82,7 @@ beforeAll(async () => {
     '05-user-provisioning.sql',
     '06-runtime-roles.sh',
     'apply-runtime-roles.txt',
+    'runtime-role-grants.txt',
   ]) {
     copyFileSync(`${root}/database/init-scripts/${file}`, `${temporary}/init/${file}`);
   }
@@ -129,8 +130,6 @@ beforeAll(async () => {
     'POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256',
     '-v',
     `${temporary}/init:/docker-entrypoint-initdb.d:ro`,
-    '-v',
-    `${root}/database/migrations:/opt/zglosto/migrations:ro`,
     '-v',
     `${root}/tests/fixtures/database:/runtime-secrets:ro`,
     '-v',
@@ -336,12 +335,10 @@ test('all runtime roles deny OS commands, DDL, role changes, catalog secrets and
 
 test('administrative reapplication is idempotent and removes dangerous role membership', async () => {
   await allowed('zglosto_admin', 'GRANT pg_read_all_data TO zglosto_media_worker;', false);
-  const migration = await Bun.file(
-    `${root}/database/migrations/016-runtime-role-grants.sql`,
-  ).text();
+  const grants = await Bun.file(`${root}/database/init-scripts/runtime-role-grants.txt`).text();
   for (let i = 0; i < 2; i++) {
     // oxlint-disable-next-line no-await-in-loop
-    await allowed('zglosto_admin', migration, false);
+    await allowed('zglosto_admin', grants, false);
   }
   expect((await sql('zglosto_media_worker', 'SELECT * FROM session', true)).code).not.toBe(0);
   expect(
@@ -353,7 +350,7 @@ test('administrative reapplication is idempotent and removes dangerous role memb
   ).toContain('mieszkaniec');
 });
 
-test('explicit existing-installation entrypoint refuses missing confirmation and safely reapplies', async () => {
+test('explicit credential refresh entrypoint refuses missing confirmation and uses a direct connection', async () => {
   expect(
     (await docker(['exec', pg, 'sh', '/docker-entrypoint-initdb.d/apply-runtime-roles.txt'])).code,
   ).not.toBe(0);
@@ -372,7 +369,7 @@ test('explicit existing-installation entrypoint refuses missing confirmation and
   expect(await allowed('zglosto_backend', 'SELECT current_user')).toBe('zglosto_backend');
 });
 
-test('migration refuses roles owning objects instead of leaving an ownership bypass', async () => {
+test('current role grants refuse roles owning objects instead of leaving an ownership bypass', async () => {
   await allowed(
     'zglosto_admin',
     'ALTER FUNCTION public.trigger_set_timestamp() OWNER TO zglosto_backend;',
@@ -380,7 +377,7 @@ test('migration refuses roles owning objects instead of leaving an ownership byp
   );
   const result = await sql(
     'zglosto_admin',
-    await Bun.file(`${root}/database/migrations/016-runtime-role-grants.sql`).text(),
+    await Bun.file(`${root}/database/init-scripts/runtime-role-grants.txt`).text(),
   );
   expect(result.code).not.toBe(0);
   expect(result.stderr).toContain('owns objects');

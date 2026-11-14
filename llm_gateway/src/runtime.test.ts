@@ -26,10 +26,8 @@ function dockerEnvironment(url: string): LlmGatewayEnvironment {
     runtime: 'docker-model-runner',
     upstreamTimeoutMs: 100,
     dockerModelRunnerUrl: url,
-    dockerModelRunnerModel: 'ai/gemma3-qat:1B-Q4_K_M',
+    dockerModelRunnerModel: 'zglosto/basal-2.0-mini:q5_k_m',
     dockerModelRunnerEngine: 'llama.cpp',
-    dockerModelRunnerTemperature: 0.1,
-    dockerModelRunnerMaxTokens: 64,
     openAiCompatibleUrl: 'https://provider.example.invalid/v1',
     openAiCompatibleModel: 'municipal-classifier',
     openAiCompatibleApiKeyFile: providerApiKeyFile,
@@ -38,35 +36,39 @@ function dockerEnvironment(url: string): LlmGatewayEnvironment {
   };
 }
 
-test('accepts strict JSON from Docker Model Runner OpenAI-compatible API', async () => {
+test('reads Basal option logprobs from Docker Model Runner raw completions', async () => {
   const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
     Response.json({
-      choices: [{ message: { content: '{"classification":"emergency","confidence":0.95}' } }],
+      choices: [{ text: 'A', logprobs: { top_logprobs: [{ A: -3, B: -1 }] } }],
     }),
   );
   vi.stubGlobal('fetch', fetchMock);
   const environment = dockerEnvironment('http://model-runner:12434');
 
-  await expect(new DockerModelRunnerRuntime(environment).classify(request)).resolves.toEqual({
+  await expect(new DockerModelRunnerRuntime(environment).classify(request)).resolves.toMatchObject({
     classification: 'emergency',
     serviceKey: null,
-    confidence: 0.95,
+    confidence: null,
     modelAvailable: true,
     source: 'model',
     reason: null,
   });
   expect(fetchMock).toHaveBeenCalledWith(
-    'http://model-runner:12434/engines/llama.cpp/v1/chat/completions',
+    'http://model-runner:12434/engines/llama.cpp/v1/completions',
     expect.objectContaining({ body: expect.any(String) }),
   );
   const init = fetchMock.mock.calls[0]?.[1];
   const body: unknown = JSON.parse(String(init?.body));
-  expect(body).toMatchObject({
-    model: 'ai/gemma3-qat:1B-Q4_K_M',
-    temperature: 0.1,
-    max_tokens: 64,
+  expect(body).toEqual({
+    model: environment.dockerModelRunnerModel,
+    temperature: 1,
+    top_k: 0,
+    top_p: 1,
+    min_p: 0,
+    max_tokens: 1,
     stream: false,
-    response_format: { type: 'json_object' },
+    logprobs: 100,
+    prompt: expect.stringMatching(/^<\|im_start\|>system\n/),
   });
 });
 
@@ -74,7 +76,7 @@ test('uses the Compose-injected OpenAI base URL and accepts a canonical Docker m
   const fetchMock = vi.fn(async () =>
     Response.json({
       object: 'list',
-      data: [{ id: 'docker.io/ai/gemma3-qat:1B-Q4_K_M', object: 'model' }],
+      data: [{ id: 'docker.io/zglosto/basal-2.0-mini:q5_k_m', object: 'model' }],
     }),
   );
   vi.stubGlobal('fetch', fetchMock);
@@ -91,7 +93,7 @@ test('uses the Compose-injected OpenAI base URL and accepts a canonical Docker m
   );
 });
 
-test('rejects prose or malformed model output instead of guessing', async () => {
+test('rejects generated text without option logits instead of guessing', async () => {
   vi.stubGlobal(
     'fetch',
     vi.fn(async () => Response.json({ choices: [{ message: { content: 'probably municipal' } }] })),
@@ -105,32 +107,41 @@ test('rejects prose or malformed model output instead of guessing', async () => 
   });
 });
 
-test('accepts a JSON-only markdown fence emitted by Gemma', async () => {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async () =>
-      Response.json({
-        choices: [
-          {
-            message: {
-              content: '```json\n{\n  "classification": "municipal",\n  "confidence": 0.95\n}\n```',
-            },
+test('uses an injected v1 URL and supports the DMR chat-style logprobs layout', async () => {
+  const fetchMock = vi.fn(async () =>
+    Response.json({
+      choices: [
+        {
+          logprobs: {
+            content: [
+              {
+                top_logprobs: [
+                  { token: 'A', logprob: -1 },
+                  { token: 'B', logprob: -3 },
+                ],
+              },
+            ],
           },
-        ],
-      }),
-    ),
+        },
+      ],
+    }),
   );
+  vi.stubGlobal('fetch', fetchMock);
   const environment = dockerEnvironment('http://model-runner:12434/v1/');
 
   await expect(new DockerModelRunnerRuntime(environment).classify(request)).resolves.toMatchObject({
     classification: 'municipal',
-    confidence: 0.95,
+    confidence: null,
     source: 'model',
   });
+  expect(fetchMock).toHaveBeenCalledWith(
+    'http://model-runner:12434/v1/completions',
+    expect.objectContaining({ redirect: 'error' }),
+  );
 });
 
 test('authenticates to an external OpenAI-compatible provider using a mounted secret', async () => {
-  const fetchMock = vi.fn(async () =>
+  const fetchMock = vi.fn(async (_url: RequestInfo | URL, _init?: RequestInit) =>
     Response.json({
       choices: [{ message: { content: '{"classification":"municipal","confidence":0.91}' } }],
     }),
@@ -154,6 +165,20 @@ test('authenticates to an external OpenAI-compatible provider using a mounted se
       }),
     }),
   );
+  const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+  expect(body).toMatchObject({
+    model: environment.openAiCompatibleModel,
+    temperature: environment.openAiCompatibleTemperature,
+    max_tokens: environment.openAiCompatibleMaxTokens,
+    stream: false,
+    response_format: { type: 'json_object' },
+    messages: [
+      { role: 'system', content: expect.stringContaining('classification oraz confidence') },
+      { role: 'user', content: request.description },
+    ],
+  });
+  expect(body).not.toHaveProperty('prompt');
+  expect(body).not.toHaveProperty('logprobs');
 });
 
 test('keeps the upstream deadline active while consuming the response body', async () => {
@@ -194,3 +219,182 @@ test('disallows redirects and sends no address or city to the external provider'
   expect(String(init?.body)).not.toContain('Private address');
   expect(String(init?.body)).not.toContain('Private city');
 });
+
+test('sends only description to local Basal and preserves a prefixed v1 endpoint', async () => {
+  const fetchMock = vi.fn(async (_url: RequestInfo | URL, _init?: RequestInit) =>
+    Response.json({ choices: [{ logprobs: { top_logprobs: [{ A: -1, B: -3 }] } }] }),
+  );
+  vi.stubGlobal('fetch', fetchMock);
+  await new DockerModelRunnerRuntime(
+    dockerEnvironment('http://model-runner:12434/local/v1///'),
+  ).classify({ ...request, address: 'Private address', city: 'Private city' });
+  expect(fetchMock).toHaveBeenCalledWith(
+    'http://model-runner:12434/local/v1/completions',
+    expect.objectContaining({ redirect: 'error' }),
+  );
+  const init = fetchMock.mock.calls[0]?.[1];
+  expect(String(init?.body)).toContain(request.description);
+  expect(String(init?.body)).not.toContain('Private address');
+  expect(String(init?.body)).not.toContain('Private city');
+});
+
+test.each([
+  { choices: [{ logprobs: { top_logprobs: [{ A: -1 }] } }] },
+  { choices: [{ logprobs: { top_logprobs: [{ A: -1, B: null }] } }] },
+  { choices: [{ message: { content: '{"classification":"municipal","confidence":0.99}' } }] },
+])('returns invalid_response for unusable Basal logits: %j', async (payload) => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => Response.json(payload)),
+  );
+  await expect(
+    new DockerModelRunnerRuntime(dockerEnvironment('http://model-runner:12434')).classify(request),
+  ).resolves.toMatchObject({
+    classification: 'unknown',
+    modelAvailable: false,
+    confidence: null,
+    reason: 'invalid_response',
+  });
+});
+
+test('returns invalid_response for a non-JSON provider response', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => new Response('broken json')),
+  );
+  await expect(
+    new DockerModelRunnerRuntime(dockerEnvironment('http://model-runner:12434')).classify(request),
+  ).resolves.toMatchObject({ reason: 'invalid_response' });
+});
+
+test('reports a missing configured model without considering another model healthy', async () => {
+  const fetchMock = vi.fn(async () => Response.json({ data: [{ id: 'ai/other-model' }] }));
+  vi.stubGlobal('fetch', fetchMock);
+  await expect(
+    new DockerModelRunnerRuntime(dockerEnvironment('http://model-runner:12434')).health(),
+  ).resolves.toMatchObject({ enabled: true, loaded: false, error: 'model_unavailable' });
+  expect(fetchMock).toHaveBeenCalledWith(
+    'http://model-runner:12434/engines/llama.cpp/v1/models',
+    expect.objectContaining({ redirect: 'error' }),
+  );
+});
+
+test('maps provider network failures to unavailable classification and health', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => {
+      throw new TypeError('Network unavailable');
+    }),
+  );
+  const runtime = new DockerModelRunnerRuntime(dockerEnvironment('http://model-runner:12434'));
+  await expect(runtime.classify(request)).resolves.toMatchObject({ reason: 'unavailable' });
+  await expect(runtime.health()).resolves.toMatchObject({
+    enabled: false,
+    loaded: false,
+    error: 'model_unavailable',
+  });
+});
+
+test('continues accepting JSON markdown fences from an external provider', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () =>
+      Response.json({
+        choices: [
+          {
+            message: {
+              content: '```json\n{"classification":"municipal","confidence":0.95}\n```',
+            },
+          },
+        ],
+      }),
+    ),
+  );
+  await expect(
+    new OpenAiCompatibleRuntime({
+      ...dockerEnvironment('http://model-runner:12434'),
+      runtime: 'openai-compatible',
+    }).classify(request),
+  ).resolves.toMatchObject({ classification: 'municipal', confidence: 0.95 });
+});
+
+test.each([
+  { a: -3, b: -1, expected: 'emergency', probability: 0.8807970779778823 },
+  { a: -1, b: -3, expected: 'municipal', probability: 0.11920292202211755 },
+])(
+  'records private raw diagnostics for $expected without replacing calibrated confidence',
+  async ({ a, b, expected, probability }) => {
+    const digest = 'a'.repeat(64);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        Response.json({
+          model: `/models/bundles/sha256/${digest}/model/model.gguf`,
+          choices: [{ logprobs: { top_logprobs: [{ A: a, B: b }] } }],
+        }),
+      ),
+    );
+    const result = await new DockerModelRunnerRuntime(
+      dockerEnvironment('http://runner:12434'),
+    ).classify(request);
+    expect(result.classification).toBe(expected);
+    expect(result.confidence).toBeNull();
+    expect(result.diagnostics).toMatchObject({
+      modelId: 'zglosto/basal-2.0-mini:q5_k_m',
+      modelRevision: `sha256:${digest}`,
+      promptVersion: 'municipal-emergency-v1',
+      calibrationVersion: null,
+      latencyMs: expect.any(Number),
+    });
+    expect(result.diagnostics?.pEmergencyRaw).toBeCloseTo(probability, 12);
+    expect(result.diagnostics?.confidenceRaw).toBeCloseTo(
+      Math.max(probability, 1 - probability),
+      12,
+    );
+    expect(Number.isInteger(result.diagnostics?.latencyMs)).toBe(true);
+  },
+);
+
+test('never invents an immutable model revision from a model tag', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () =>
+      Response.json({
+        model: 'zglosto/basal-2.0-mini:q5_k_m',
+        choices: [{ logprobs: { top_logprobs: [{ A: -1, B: -2 }] } }],
+      }),
+    ),
+  );
+  const result = await new DockerModelRunnerRuntime(
+    dockerEnvironment('http://runner:12434'),
+  ).classify(request);
+  expect(result.diagnostics?.modelRevision).toBeNull();
+});
+
+test.each(['unavailable', 'timeout', 'invalid_response'] as const)(
+  'keeps raw diagnostics null on %s',
+  async (reason) => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        if (reason === 'timeout') throw new DOMException('deadline', 'AbortError');
+        if (reason === 'unavailable') return new Response(null, { status: 503 });
+        return Response.json({ choices: [] });
+      }),
+    );
+    const result = await new DockerModelRunnerRuntime(
+      dockerEnvironment('http://runner:12434'),
+    ).classify(request);
+    expect(result).toMatchObject({
+      source: 'fallback',
+      reason,
+      diagnostics: {
+        confidenceRaw: null,
+        pEmergencyRaw: null,
+        modelRevision: null,
+        modelId: 'zglosto/basal-2.0-mini:q5_k_m',
+        latencyMs: expect.any(Number),
+      },
+    });
+  },
+);

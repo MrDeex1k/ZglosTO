@@ -8,7 +8,7 @@ Od 2026-11-13 projekt używa następujących przypiętych obrazów:
 | ----------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | minimalny runtime usług Bun                     | `alpine:3.24.4` + binarny Bun 1.4.4                                                            |
 | publiczny Nginx i runtime statycznego frontendu | `nginx:1.31.8-alpine3.24-slim`                                                                 |
-| opcjonalny model DMR                            | `ai/gemma3-qat:1B-Q4_K_M`                                                                      |
+| opcjonalny model DMR                            | `zglosto/basal-2.0-mini:q5_k_m`                                                                |
 | baza własnego obrazu database                   | `postgres:18.7-alpine3.24`                                                                     |
 | własny obraz poolera                            | `pgbouncer/Dockerfile` bazujący na `edoburu/pgbouncer:v1.26.1-p0`                              |
 | trwały broker bez panelu management             | `rabbitmq:4.4.0-alpine`                                                                        |
@@ -47,9 +47,9 @@ pgBackRest wraz z systemowym PostgreSQL wyłącznie na czas budowania. Do finaln
 trafiają tylko `pg_cron.so`, pliki kontrolne rozszerzenia, binarny pgBackRest oraz jego dwie
 brakujące biblioteki runtime, więc obraz nie zawiera drugiej instalacji serwera.
 
-Model DMR ma zweryfikowany digest
-`sha256:9f84c113e1f1085bddaffad1acb07c90e59487f0c7e25028f1811e71efba9599` i jest
-uruchamiany wyłącznie przez opcjonalny `docker-compose.llm.yml`. Nie jest obrazem
+Model DMR to oficjalny Basal 2.0 Mini 1,5B Q5_K_M, z przypiętą rewizją
+Hugging Face i SHA-256 GGUF. Przygotowanie przez `scripts/prepare-basal-dmr.sh` oraz
+wymagania opisuje [instrukcja DMR](docker-model-runner.md). Nie jest obrazem
 aplikacyjnym budowanym przez `build-images.sh`.
 
 Buildery używają Bun 1.4.4 z przypiętego digestem obrazu Alpine (musl, amd64/arm64), bez binarki Node. Bun wykonuje frozen install, CLI kompilatora, build Vite oraz skrypty stagingu. `scripts/stage-production.ts` zbiera wyłącznie produkcyjny graf workspace i ich dist do pustego katalogu. Osobna instalacja production/offline/frozen tworzy samodzielny store. Obraz zawiera ten graf w `/app`, a katalog roboczy usługi to `/app/backend`, `/app/authorization` lub `/app/llm_gateway`. Komendy `dist/...` i użytkownik non-root pozostają zachowane. Runtime Bun zastępuje Node; finalne obrazy usług nie zawierają binarki Node.

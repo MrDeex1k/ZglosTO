@@ -33,7 +33,37 @@ export interface LlmClassificationRequest {
   city: string | null;
 }
 
+// Internal gateway-to-backend metadata. Never include this in resident/admin API DTOs.
+const LlmClassificationDiagnosticsSchema = z
+  .object({
+    confidenceRaw: z.number().min(0).max(1).nullable(),
+    pEmergencyRaw: z.number().min(0).max(1).nullable(),
+    modelId: z.string().trim().min(1).max(256),
+    modelRevision: z
+      .string()
+      .regex(/^sha256:[0-9a-f]{64}$/)
+      .nullable(),
+    promptVersion: z.string().regex(/^[A-Za-z0-9._:-]{1,64}$/),
+    latencyMs: z.number().int().min(0).max(2_147_483_647),
+    calibrationVersion: z
+      .string()
+      .regex(/^[A-Za-z0-9._:-]{1,64}$/)
+      .nullable(),
+  })
+  .strict()
+  .refine((value) => {
+    if (value.confidenceRaw === null || value.pEmergencyRaw === null) {
+      return value.confidenceRaw === null && value.pEmergencyRaw === null;
+    }
+    return (
+      Math.abs(value.confidenceRaw - Math.max(value.pEmergencyRaw, 1 - value.pEmergencyRaw)) < 1e-9
+    );
+  }, 'Raw scores must form a consistent binary distribution');
+
+export type LlmClassificationDiagnostics = z.infer<typeof LlmClassificationDiagnosticsSchema>;
+
 export interface LlmClassificationResponse {
+  diagnostics?: LlmClassificationDiagnostics | null;
   classification: LlmClassification;
   serviceKey: string | null;
   confidence: number | null;
@@ -112,6 +142,16 @@ export function parseLlmClassificationResponse(
         response.reason === null))
   ) {
     throw new ContractValidationError(path, 'consistent model or fallback result');
+  }
+  // Optional diagnostics cannot turn a valid decision into a fallback.
+  // Older/external gateways may omit it; malformed metadata is discarded.
+  if (Object.hasOwn(record, 'diagnostics')) {
+    const parsed = LlmClassificationDiagnosticsSchema.safeParse(record.diagnostics);
+    const diagnostics = parsed.success ? parsed.data : null;
+    response.diagnostics =
+      diagnostics && (response.source !== 'fallback' || diagnostics.confidenceRaw === null)
+        ? diagnostics
+        : null;
   }
   return response;
 }

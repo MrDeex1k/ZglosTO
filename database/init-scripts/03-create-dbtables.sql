@@ -55,6 +55,13 @@ CREATE TABLE IF NOT EXISTS incydenty (
 	llm_model_available boolean NOT NULL DEFAULT FALSE,
 	llm_source text NOT NULL DEFAULT 'fallback' CHECK (llm_source IN ('model', 'fallback')),
 	llm_reason text DEFAULT 'unavailable' CHECK (llm_reason IS NULL OR llm_reason IN ('timeout', 'disabled', 'unavailable', 'invalid_response')),
+	llm_confidence_raw double precision,
+	llm_p_emergency_raw double precision,
+	llm_model_id varchar(256),
+	llm_model_revision varchar(71),
+	llm_prompt_version varchar(64),
+	llm_latency_ms integer,
+	llm_calibration_version varchar(64),
 	data_zgloszenia date DEFAULT now(),
 	godzina_zgloszenia time DEFAULT now(),
 	data_rozwiazania date DEFAULT NULL,
@@ -64,6 +71,24 @@ CREATE TABLE IF NOT EXISTS incydenty (
 		OR
 		(llm_source = 'fallback' AND llm_model_available = FALSE AND llm_reason IS NOT NULL AND llm_classification = 'unknown')
 	),
+	CONSTRAINT incydenty_llm_diagnostic_scores_valid CHECK (
+    (llm_confidence_raw IS NULL AND llm_p_emergency_raw IS NULL)
+    OR (llm_confidence_raw IS NOT NULL AND llm_p_emergency_raw IS NOT NULL
+      AND llm_source = 'model' AND llm_model_id IS NOT NULL
+      AND llm_confidence_raw BETWEEN 0 AND 1 AND llm_p_emergency_raw BETWEEN 0 AND 1
+      AND abs(llm_confidence_raw - greatest(llm_p_emergency_raw, 1 - llm_p_emergency_raw)) <= 0.000000001)
+  ),
+	CONSTRAINT incydenty_llm_diagnostic_metadata_valid CHECK (
+    (llm_model_id IS NULL AND llm_model_revision IS NULL AND llm_prompt_version IS NULL
+      AND llm_latency_ms IS NULL AND llm_calibration_version IS NULL)
+    OR (llm_model_id IS NOT NULL AND length(btrim(llm_model_id)) BETWEEN 1 AND 256
+      AND llm_prompt_version IS NOT NULL AND length(llm_prompt_version) BETWEEN 1 AND 64
+      AND llm_prompt_version ~ '^[A-Za-z0-9._:-]+$'
+      AND llm_latency_ms IS NOT NULL AND llm_latency_ms >= 0
+      AND (llm_model_revision IS NULL OR llm_model_revision ~ '^sha256:[0-9a-f]{64}$')
+      AND (llm_calibration_version IS NULL OR (length(llm_calibration_version) BETWEEN 1 AND 64
+        AND llm_calibration_version ~ '^[A-Za-z0-9._:-]+$')))
+  ),
 	CONSTRAINT incydenty_latitude_range_check CHECK (latitude IS NULL OR latitude BETWEEN -90 AND 90),
 	CONSTRAINT incydenty_longitude_range_check CHECK (longitude IS NULL OR longitude BETWEEN -180 AND 180),
 	CONSTRAINT incydenty_coordinates_pair_check CHECK ((latitude IS NULL) = (longitude IS NULL))

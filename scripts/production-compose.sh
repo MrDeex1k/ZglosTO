@@ -265,17 +265,13 @@ smoke() {
   curl --fail --silent --show-error "$base_url/llm/health" >/dev/null
 }
 
-run_migrations() {
+provision_runtime_roles() {
   configure_compose
-  log "Stopping database writers and PgBouncer before administrative migrations"
+  log "Stopping database writers and PgBouncer before runtime credential provisioning"
   "${compose[@]}" stop --timeout 120 nginx authorization backend media_worker pgbouncer || return
-  log "Applying versioned database migrations"
+  log "Provisioning current database runtime grants and credentials"
   "${compose[@]}" exec -T database /usr/local/bin/load-container-secrets sh -ceu '
-    for migration in /opt/zglosto/migrations/*.sql; do
-      psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" < "$migration"
-    done
-    # Explicit deployment migration step, never an automatic existing-volume startup action.
-    DATABASE_ROLES_EXISTING_INSTALLATION=true sh /docker-entrypoint-initdb.d/06-runtime-roles.sh
+    DATABASE_ROLES_DIRECT_CONNECTION=true sh /docker-entrypoint-initdb.d/06-runtime-roles.sh
   '
 }
 
@@ -348,9 +344,9 @@ automatic_backup() {
 deploy_candidate_steps() {
   pull_external_images || return
   automatic_backup || return
-  log "Starting PostgreSQL before migrations"
+  log "Starting PostgreSQL with the current initialization schema"
   "${compose[@]}" up --detach --wait --wait-timeout "$WAIT_TIMEOUT_SECONDS" database || return
-  run_migrations || return
+  provision_runtime_roles || return
   log "Starting the complete production profile"
   "${compose[@]}" up --detach --wait --wait-timeout "$WAIT_TIMEOUT_SECONDS" \
     --remove-orphans || return
@@ -376,7 +372,7 @@ recover_current_release() {
   "${compose[@]}" up --detach --wait --wait-timeout "$WAIT_TIMEOUT_SECONDS" \
     --remove-orphans
   smoke
-  log 'Last promoted release recovered; database migrations were not reversed'
+  log 'Last promoted release recovered; existing database contents were preserved'
 }
 
 prune_inactive_images() {
@@ -410,7 +406,7 @@ deploy_release() {
 }
 
 rollback_release() {
-  fail 'Previous images are not retained. Rebuild the required exact Git tag and deploy it; database migrations are never reversed automatically.'
+  fail 'Previous images are not retained. Rebuild the required exact Git tag and deploy it; database contents are not restored automatically.'
 }
 
 rotate_certificates() {
@@ -460,13 +456,13 @@ usage() {
     '  validate              validate local images, modes, secrets and rendered Compose' \
     '  pull                  pull only enabled external component images' \
     '  up                    start the current release after host restart' \
-    '  deploy                pull, migrate, start, smoke and promote release state' \
+    '  deploy                pull, initialize, provision, start, smoke and promote release state' \
     '  rollback              explain the exact-tag rebuild rollback procedure' \
     '  smoke                 verify public HTTPS routes' \
     '  rotate-certs          recreate TLS consumers after atomic secret replacement' \
     '  backup DIRECTORY      create a consistent database/Object Storage backup' \
     '  restore DIRECTORY     restore with ALLOW_PRODUCTION_RESTORE=1' \
-    '  recover-current       recreate the last promoted release without reverting migrations' \
+    '  recover-current       recreate the last promoted release without restoring database contents' \
     '  prune-images          retain only images from the promoted release' \
     '  verify-host           verify Linux, Docker, nftables and private state directories' \
     '  status                show service status' \

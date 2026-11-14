@@ -35,7 +35,7 @@
     "verified-candidate-images",
     "compose-config",
     "mandatory-pre-deploy-backup",
-    "forward-only-migrations",
+    "fresh-schema-and-runtime-provisioning",
     "health-wait",
     "public-smoke",
     "host-restart-recovery",

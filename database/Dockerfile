@@ -28,7 +28,6 @@ COPY --from=extensions /usr/share/postgresql18/extension/pg_cron* /usr/local/sha
 COPY database/pgbackrest.conf /etc/pgbackrest/pgbackrest.conf
 COPY database/pg_hba.conf /etc/postgresql/pg_hba.conf
 COPY database/init-scripts /docker-entrypoint-initdb.d
-COPY database/migrations /opt/zglosto/migrations
 
 COPY database/start_db.sh /usr/local/bin/start_db.sh
 COPY database/run_pgbackrest_backup.sh /usr/local/bin/run_pgbackrest_backup.sh

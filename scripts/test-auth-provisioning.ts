@@ -19,8 +19,8 @@ const sql = (input: string) =>
     ['exec', '-i', name, 'psql', '-XAt', '-U', 'postgres', '-v', 'ON_ERROR_STOP=1'],
     input,
   ).trim();
-const migration = readFileSync(
-  resolve(root, 'database/migrations/015-atomic-user-provisioning.sql'),
+const provisioning = readFileSync(
+  resolve(root, 'database/init-scripts/05-user-provisioning.sql'),
   'utf8',
 );
 const createUser = (id: string) =>
@@ -39,8 +39,6 @@ try {
     '/var/lib/postgresql',
     '-e',
     'POSTGRES_HOST_AUTH_METHOD=trust',
-    '--mount',
-    `type=bind,src=${root}/database/migrations,dst=/opt/zglosto/migrations,readonly`,
     'postgres:18.7-alpine3.24',
   ]);
   started = true;
@@ -60,19 +58,19 @@ try {
     await setTimeout(500);
   }
   assert.ok(ready, 'temporary PostgreSQL did not become ready');
-  for (const file of ['02-create-auth.sql', '03-create-dbtables.sql']) {
+  for (const file of ['02-create-auth.sql', '03-create-dbtables.sql', '05-user-provisioning.sql']) {
     sql(readFileSync(resolve(root, 'database/init-scripts', file), 'utf8'));
   }
-  sql(`${createUser('missing')} ${createUser('admin')} ${createUser('service')}
-    INSERT INTO uzytkownicy (id_uzytkownika,uprawnienia,service_key) VALUES
-    ('admin','admin',NULL), ('service','sluzby','roads');`);
-  sql(migration);
-  sql(migration);
+  sql(`${createUser('resident')} ${createUser('admin')} ${createUser('service')}
+    UPDATE uzytkownicy SET uprawnienia='admin' WHERE id_uzytkownika='admin';
+    UPDATE uzytkownicy SET uprawnienia='sluzby', service_key='roads' WHERE id_uzytkownika='service';`);
+  sql(provisioning);
+  sql(provisioning);
   assert.equal(
     sql(
       "SELECT id_uzytkownika || ':' || uprawnienia || ':' || COALESCE(service_key,'-') FROM uzytkownicy ORDER BY id_uzytkownika",
     ),
-    'admin:admin:-\nmissing:mieszkaniec:-\nservice:sluzby:roads',
+    'admin:admin:-\nresident:mieszkaniec:-\nservice:sluzby:roads',
   );
   sql(`CREATE FUNCTION fail_test_role() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'injected role failure'; END; $$;
     CREATE TRIGGER test_fail_role BEFORE INSERT ON uzytkownicy FOR EACH ROW EXECUTE FUNCTION fail_test_role();`);
@@ -91,7 +89,7 @@ try {
   assert.equal(sql("SELECT count(*) FROM uzytkownicy WHERE id_uzytkownika='rollback'"), '0');
   sql('DELETE FROM public."user" WHERE id=\'retry\';');
   assert.equal(sql("SELECT count(*) FROM uzytkownicy WHERE id_uzytkownika='retry'"), '0');
-  // Exercise the actual fresh-install entrypoint too, independently of migrated tables.
+  // Recreate a clean schema to ensure provisioning has no historical dependencies.
   sql('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
   for (const file of ['02-create-auth.sql', '03-create-dbtables.sql', '05-user-provisioning.sql']) {
     sql(readFileSync(resolve(root, 'database/init-scripts', file), 'utf8'));
@@ -102,7 +100,7 @@ try {
     'mieszkaniec',
   );
   console.log(
-    'PostgreSQL provisioning passed: backfill, preserved permissions, idempotence, failed insert/retry, rollback, cascade and fresh install.',
+    'Fresh PostgreSQL provisioning passed: default resident, preserved permissions, repeatable DDL, failed insert/retry, rollback and cascade.',
   );
 } finally {
   if (started) docker(['rm', '--force', name]);

@@ -14,13 +14,18 @@ TLS 1.3 na ścieżce aplikacje -> PgBouncer -> PostgreSQL oraz szyfrowany
 `DATABASE_DIRECT_URL` zostały wdrożone w krokach 11-12 Fazy 5. Produkcyjna automatyzacja
 certyfikatów zostanie domknięta w Fazach 9 i 12.
 
+Aktualizacja przed pierwszym wdrożeniem: historyczne migracje SQL usunięto. Pusta baza
+startuje z docelowym schematem w `database/init-scripts/`; bezpośrednie połączenie
+służy obecnie provisioningowi ról, backup/restore i administracji. Kroki wykonawcze
+poniżej opisują historię wdrożenia fazy.
+
 ## Granice architektury
 
 ### PostgreSQL
 
 - `DATABASE_URL` jest jedynym adresem bazy dostępnym dla backendu i authorization.
 - `DATABASE_URL` wskazuje PgBouncera na porcie `6432`.
-- `DATABASE_DIRECT_URL` zawsze wskazuje PostgreSQL i służy wyłącznie migracjom,
+- `DATABASE_DIRECT_URL` zawsze wskazuje PostgreSQL i służy wyłącznie provisioningowi ról,
   backup/restore oraz kontrolowanej administracji.
 - Usługi aplikacyjne nie otrzymują `DATABASE_DIRECT_URL`.
 - `DATABASE_DIRECT_URL` jest obowiązkowy i nie ma fallbacku do aplikacyjnego URL-u.
@@ -64,8 +69,8 @@ bucketu będzie wymagało osobnej procedury kopiowania i weryfikacji checksum.
 Obecna baza zawiera wyłącznie dane testowe poprzedniej wersji i może zostać wyczyszczona.
 Nie projektujemy migracji istniejących zdjęć z `bytea`, dual-write, fallbacku odczytu ani
 skryptu kopiującego dane. Wprowadzamy bezpośrednio docelowy schemat PostgreSQL przechowujący
-referencje i metadane Object Storage. Nadal potrzebna jest migracja DDL zmieniająca schemat,
-ale nie migracja danych użytkowników.
+referencje i metadane Object Storage. Aktualne skrypty inicjalizacyjne tworzą ten schemat
+od zera; nie jest potrzebna migracja istniejących danych ani dawnego DDL.
 
 Docelowa obróbka obrazu nie działa w procesie HTTP backendu. W tym samym monorepo powstanie
 mały proces `media_worker` w TypeScript, uruchamiany jako osobny kontener i korzystający ze
@@ -192,7 +197,7 @@ przez `null` albo wariant unii dyskryminowanej.
 ## Definicja ukończenia
 
 - aplikacje łączą się z PostgreSQL przez PgBouncer;
-- migracje i operacje administracyjne omijają pooler;
+- provisioning ról i operacje administracyjne omijają pooler;
 - zdjęcia nie są zapisywane w `bytea`;
 - PostgreSQL przechowuje tylko referencje i metadane obiektów;
 - wariant NoRustFS uruchamia się z zewnętrznym bucketem wskazanym przez `S3_*`;

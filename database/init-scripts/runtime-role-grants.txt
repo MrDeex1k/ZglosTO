@@ -1,4 +1,4 @@
--- Administrative migration only. Passwords are provisioned separately from secret files.
+-- Current runtime-role grants. Passwords are provisioned separately from secret files.
 BEGIN;
 DO $$
 DECLARE runtime_role text; membership record;
@@ -19,7 +19,7 @@ BEGIN
       WHERE refclassid = 'pg_authid'::regclass
         AND refobjid = (SELECT oid FROM pg_roles WHERE rolname = runtime_role)
         AND deptype = 'o') THEN
-      RAISE EXCEPTION 'Runtime role % owns objects; transfer ownership to the migration administrator first', runtime_role;
+      RAISE EXCEPTION 'Runtime role % owns objects; transfer ownership to the bootstrap administrator first', runtime_role;
     END IF;
   END LOOP;
 END$$;
@@ -69,7 +69,7 @@ GRANT SELECT, INSERT ON public.consumed_messages TO zglosto_media_worker;
 -- The identity transaction can create only the fixed resident application role through this trigger.
 ALTER FUNCTION public.provision_application_user() SECURITY DEFINER;
 ALTER FUNCTION public.provision_application_user() SET search_path = pg_catalog, public;
--- Future objects remain inaccessible until an administrative migration grants access explicitly.
+-- Future objects remain inaccessible until the administrator grants access explicitly.
 -- The built-in PUBLIC EXECUTE default is global; a schema-only REVOKE cannot override it.
 ALTER DEFAULT PRIVILEGES REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
 COMMIT;

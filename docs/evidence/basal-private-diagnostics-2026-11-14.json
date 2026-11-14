@@ -1,0 +1,51 @@
+{
+  "passed": true,
+  "realDmr": true,
+  "realPostgres": true,
+  "fullMtlsHttpStack": false,
+  "publicResponsesExcludeDiagnostics": true,
+  "rows": [
+    {
+      "llm_classification": "municipal",
+      "llm_confidence_raw": 0.9950376241882423,
+      "llm_p_emergency_raw": 0.004962375811757629,
+      "llm_model_id": "zglosto/basal-2.0-mini:q5_k_m",
+      "llm_model_revision": "sha256:195c15dd8531bebec9b535c8fc5ead1f7370fd4c9896a414dfc71179c1b930ad",
+      "llm_prompt_version": "municipal-emergency-v1",
+      "llm_latency_ms": 207,
+      "llm_calibration_version": null
+    },
+    {
+      "llm_classification": "emergency",
+      "llm_confidence_raw": 0.9980137579200925,
+      "llm_p_emergency_raw": 0.9980137579200925,
+      "llm_model_id": "zglosto/basal-2.0-mini:q5_k_m",
+      "llm_model_revision": "sha256:195c15dd8531bebec9b535c8fc5ead1f7370fd4c9896a414dfc71179c1b930ad",
+      "llm_prompt_version": "municipal-emergency-v1",
+      "llm_latency_ms": 15,
+      "llm_calibration_version": null
+    }
+  ],
+  "capturedAt": "2026-11-14T08:29:11.875935+00:00",
+  "environment": "disposable PostgreSQL 18.7; synthetic descriptions; no production database touched",
+  "validation": {
+    "contractsPassed": 75,
+    "gatewayPassed": 66,
+    "backendPassed": 136,
+    "backendSkipped": 3,
+    "typecheckAndBuild": ["contracts", "gateway", "backend"],
+    "publicIncidentDtosUnchanged": true,
+    "scoreBasedDecisionThresholdsAdded": false,
+    "postgresFreshInitPassed": 3,
+    "postgresFreshInitAssertions": 22,
+    "postgresFreshInitCoverage": [
+      "automatic PostgreSQL entrypoint initialization: 01/02/03/05/06 and current runtime-role-grants.txt",
+      "private diagnostic fields, score constraints and fallback invariants",
+      "backend runtime role can write diagnostics; auth runtime role cannot read them"
+    ]
+  },
+  "historicalValidation": {
+    "postgresMigrationPassed": 4,
+    "note": "Earlier validation used historical migration files; these files were subsequently removed before first deployment. The validation section records the current fresh-init run. Captured DMR inference rows remain unchanged."
+  }
+}

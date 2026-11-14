@@ -131,8 +131,8 @@ i `OPTIONS`. PostgreSQL nie publikuje portu w profilu produkcyjnym; mapowanie de
 jest ograniczone do `127.0.0.1`.
 
 Usługę systemd zainstaluj dopiero po pierwszym udanym `deploy` i odbiorze opisanym niżej.
-Jej `ExecStart` wykonuje `up`, nie zastępuje budowania obrazów ani migracji pierwszego
-wdrożenia.
+Jej `ExecStart` wykonuje `up`, nie zastępuje budowania obrazów ani przygotowania pierwszego wdrożenia.
+Pusty wolumen PostgreSQL jest inicjalizowany od razu aktualnym schematem.
 
 ## Pierwsza instalacja i aktualizacja
 
@@ -193,15 +193,16 @@ Gdy oba kroki przejdą i masz uzgodnione okno utrzymaniowe:
 2. pobranie wyłącznie brakujących, przypiętych obrazów komponentów zewnętrznych;
 3. obowiązkowy backup działającego wcześniejszego wydania (pomijany tylko przy pierwszej
    instalacji bez bazy);
-4. migracje wyłącznie do przodu;
+4. inicjalizację świeżej bazy i jawny provisioning ról oraz poświadczeń runtime;
 5. start z `--wait` i ograniczonym czasem oczekiwania;
 6. smoke test publicznych tras HTTPS;
 7. atomową promocję prywatnych plików bieżącego wydania;
 8. usunięcie lokalnych obrazów ZgłosTO, które nie należą do aktywnego wydania.
 
 Jeśli kandydat nie przejdzie startu albo smoke testu, skrypt odtwarza ostatnio promowane
-obrazy i konfigurację. Migracji bazy nie cofa, dlatego każda migracja wydania musi być
-kompatybilna wstecz z poprzednią aplikacją. Po udanej promocji nie przechowujemy obrazów
+obrazy i konfigurację. Nie przepisuje schematu istniejącego wolumenu. Repozytorium
+nie utrzymuje migracji historycznych; zmiany schematu przed pierwszym wdrożeniem
+sprawdza się na nowej, pustej bazie. Po udanej promocji nie przechowujemy obrazów
 poprzedniej wersji; pełny rollback wymaga checkoutu jej tagu, ponownego builda i deployu.
 
 Po sukcesie usuń wybór kandydata z bieżącej sesji, aby polecenia administracyjne
@@ -341,4 +342,4 @@ Projekt nie używa GitHub-hosted runnera. Automatyzacja pozostaje lokalna, dopó
 powstanie rzeczywista infrastruktura self-hosted.
 
 `bun run check:docs` jest osobną bramką dokumentacji, włączoną w `bun run check`, a przez to
-również w `release:production:static`. Nie wykonuje deploya, migracji, backupu ani restore.
+również w `release:production:static`. Nie wykonuje deploya, inicjalizacji bazy, backupu ani restore.

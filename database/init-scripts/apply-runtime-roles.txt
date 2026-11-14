@@ -10,5 +10,5 @@ if [ -n "${DATABASE_DIRECT_URL_FILE:-}" ]; then
   export DATABASE_DIRECT_URL
 fi
 : "${DATABASE_DIRECT_URL:?Administrative direct URL is required}"
-export DATABASE_ROLES_EXISTING_INSTALLATION=true
+export DATABASE_ROLES_DIRECT_CONNECTION=true
 exec /docker-entrypoint-initdb.d/06-runtime-roles.sh

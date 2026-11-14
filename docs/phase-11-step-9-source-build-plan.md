@@ -90,7 +90,7 @@ fail-fast/readiness. Kod aplikacyjny pozostaje provider-neutralny.
    użyje
    dokładnie lokalnie zweryfikowanych obrazów, a nie nazw z publicznego registry.
 9. Skrypt nie uruchamia wdrożenia ani migracji. Build jest oddzielony od
-   operacji `backup -> migrate -> up -> smoke`.
+   operacji `backup -> initialize/provision -> up -> smoke`.
 10. Historyczny workflow GitHub-hosted został usunięty. Wszystkie bramki Fazy 9 pozostają
     wykonywalne lokalnie; konfigurację self-hosted dodamy dopiero razem z rzeczywistym
     runnerem.

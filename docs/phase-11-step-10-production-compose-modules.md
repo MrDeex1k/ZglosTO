@@ -60,7 +60,7 @@ lokalnego Collectora, a tylko Collector otrzymuje sieć egress oraz plik autoryz
 ### LLM
 
 - `disabled` zachowuje bezpieczny fallback gatewaya;
-- `local` włącza Docker Model Runner z Gemma 3 1B i ustalonymi parametrami;
+- `local` włącza Docker Model Runner z Basal 2.0 Mini 1,5B Q5_K_M i ustalonymi parametrami;
 - `external` uruchamia nowy adapter `openai-compatible`. URL i model są publiczną
   konfiguracją, a klucz API jest montowany wyłącznie do `llm_gateway` jako plik.
 
@@ -82,7 +82,7 @@ Domyślna ścieżka `images.env` to kandydat z kroku 9. Można ją wskazać jawn
 `PRODUCTION_IMAGES_ENV_FILE`, a manifest przez `PRODUCTION_BUILD_MANIFEST_FILE`.
 Po udanym deployu publiczna konfiguracja, `images.env` i manifest są kopiowane do katalogu
 stanu jako bieżące wydanie. Poprzednie obrazy nie są utrzymywane: rollback wymaga builda
-dokładnego wcześniejszego tagu Git i ponownego deployu, bez automatycznego cofania migracji.
+dokładnego wcześniejszego tagu Git i ponownego deployu, bez automatycznej zmiany schematu istniejącego wolumenu.
 
 Polecenie `pull` pobiera wyłącznie włączone komponenty zewnętrzne, na przykład RustFS,
 Redis lub lokalny stos observability. Nigdy nie próbuje pobierać obrazów ZgłosTO.
@@ -101,6 +101,6 @@ Redis lub lokalny stos observability. Nigdy nie próbuje pobierać obrazów Zgł
 - dotychczasowe limity i hardening rdzenia produkcyjnego.
 
 Kroki 11–14 domknęły hardening opcjonalnych kontenerów i hosta, procedurę
-`build -> validate -> backup -> migrate -> wait -> smoke -> promote`, lokalne bramki,
+`build -> validate -> backup -> initialize/provision -> wait -> smoke -> promote`, lokalne bramki,
 [runbook Compose](production-compose-runbook.md) oraz
 [handoff do K3s](k3s-local-images-handoff.md).

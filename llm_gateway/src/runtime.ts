@@ -8,6 +8,13 @@ import {
   type LlmHealthResponse,
 } from '@zglosto/contracts';
 import type { LlmGatewayEnvironment } from './environment.ts';
+import {
+  BASAL_LOGPROBS,
+  BASAL_PROMPT_VERSION,
+  basalCompletionPrompt,
+  basalProbabilities,
+  parseBasalClassification,
+} from './basal.ts';
 
 export interface ModelRuntime {
   readonly name: string;
@@ -96,7 +103,7 @@ function modelPrompt(request: LlmClassificationRequest): {
 
 function dockerModelRunnerEndpoint(
   environment: LlmGatewayEnvironment,
-  path: 'chat/completions' | 'models',
+  path: 'completions' | 'models',
 ): string {
   const baseUrl = environment.dockerModelRunnerUrl.replace(/\/+$/, '');
   if (baseUrl.endsWith('/v1')) return `${baseUrl}/${path}`;
@@ -112,32 +119,66 @@ export class DockerModelRunnerRuntime implements ModelRuntime {
 
   constructor(private readonly environment: LlmGatewayEnvironment) {}
 
+  private withDiagnostics(
+    result: LlmClassificationResponse,
+    startedAt: number,
+    payload?: unknown,
+  ): LlmClassificationResponse {
+    const probabilities = result.source === 'model' ? basalProbabilities(payload) : null;
+    const servedModel = isRecord(payload) && typeof payload.model === 'string' ? payload.model : '';
+    // Read the actually served immutable OCI bundle, never infer revision from a mutable tag.
+    const bundle = /^\/models\/bundles\/sha256\/([0-9a-f]{64})\/model\/[^/]+\.gguf$/.exec(
+      servedModel,
+    );
+    return {
+      ...result,
+      diagnostics: {
+        confidenceRaw: probabilities
+          ? Math.max(probabilities.municipal, probabilities.emergency)
+          : null,
+        pEmergencyRaw: probabilities?.emergency ?? null,
+        modelId: this.environment.dockerModelRunnerModel,
+        modelRevision: bundle ? `sha256:${bundle[1]}` : null,
+        promptVersion: BASAL_PROMPT_VERSION,
+        latencyMs: Math.min(2_147_483_647, Math.max(0, Math.round(performance.now() - startedAt))),
+        calibrationVersion: null,
+      },
+    };
+  }
+
   async classify(request: LlmClassificationRequest): Promise<LlmClassificationResponse> {
+    const startedAt = performance.now();
     let payload: unknown;
     try {
       payload = await fetchWithTimeout(
-        dockerModelRunnerEndpoint(this.environment, 'chat/completions'),
+        dockerModelRunnerEndpoint(this.environment, 'completions'),
         {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
             model: this.environment.dockerModelRunnerModel,
-            temperature: this.environment.dockerModelRunnerTemperature,
-            max_tokens: this.environment.dockerModelRunnerMaxTokens,
+            temperature: 1,
+            top_k: 0,
+            top_p: 1,
+            min_p: 0,
+            max_tokens: 1,
             stream: false,
-            response_format: { type: 'json_object' },
-            ...modelPrompt(request),
+            logprobs: BASAL_LOGPROBS,
+            prompt: basalCompletionPrompt(request.description),
           }),
         },
         this.environment.upstreamTimeoutMs,
       );
     } catch (error) {
-      return fallback(error instanceof SyntaxError ? 'invalid_response' : timeoutReason(error));
+      return this.withDiagnostics(
+        fallback(error instanceof SyntaxError ? 'invalid_response' : timeoutReason(error)),
+        startedAt,
+      );
     }
     try {
-      return parseDockerModelRunnerClassification(readDockerModelRunnerContent(payload));
+      return this.withDiagnostics(parseBasalClassification(payload), startedAt, payload);
     } catch {
-      return fallback('invalid_response');
+      return this.withDiagnostics(fallback('invalid_response'), startedAt, payload);
     }
   }
 

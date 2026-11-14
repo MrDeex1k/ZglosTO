@@ -6,7 +6,7 @@ const json = (response: ServerResponse, status: number, payload: unknown): void 
   response.end(JSON.stringify(payload));
 };
 
-const model = 'ai/gemma3-qat:1B-Q4_K_M';
+const model = 'zglosto/basal-2.0-mini:q5_k_m';
 
 const server = http.createServer(async (request, response) => {
   if (
@@ -16,7 +16,7 @@ const server = http.createServer(async (request, response) => {
     return json(response, 200, { object: 'list', data: [{ id: model, object: 'model' }] });
   }
 
-  if (request.method !== 'POST' || request.url !== '/engines/llama.cpp/v1/chat/completions') {
+  if (request.method !== 'POST' || request.url !== '/engines/llama.cpp/v1/completions') {
     return json(response, 404, { error: 'Not found' });
   }
 
@@ -26,18 +26,15 @@ const server = http.createServer(async (request, response) => {
   let prompt = '';
   try {
     const parsed: unknown = JSON.parse(body);
-    if (typeof parsed === 'object' && parsed !== null && 'messages' in parsed) {
-      const messages = Array.isArray(parsed.messages) ? parsed.messages : [];
-      prompt = messages
-        .filter(
-          (message): message is { content: string } =>
-            typeof message === 'object' &&
-            message !== null &&
-            'content' in message &&
-            typeof message.content === 'string',
-        )
-        .map((message) => message.content)
-        .join('\n');
+    if (
+      typeof parsed === 'object' &&
+      parsed !== null &&
+      'prompt' in parsed &&
+      typeof parsed.prompt === 'string'
+    ) {
+      prompt = parsed.prompt;
+    } else {
+      return json(response, 400, { error: 'Expected a Basal completion prompt' });
     }
   } catch {
     return json(response, 400, { error: 'Invalid JSON' });
@@ -53,15 +50,24 @@ const server = http.createServer(async (request, response) => {
   if (prompt.includes('[invalid]')) {
     return json(response, 200, { choices: [{ message: { content: 'invalid' } }] });
   }
-  if (prompt.includes('[emergency]')) {
-    return json(response, 200, {
-      choices: [{ message: { content: '{"classification":"emergency","confidence":0.99}' } }],
-    });
-  }
-
+  const emergency = prompt.includes('[emergency]');
   return json(response, 200, {
-    choices: [{ message: { content: '{"classification":"municipal","confidence":0.9}' } }],
+    choices: [
+      {
+        text: emergency ? 'B' : 'A',
+        logprobs: {
+          content: [
+            {
+              top_logprobs: [
+                { token: 'A', logprob: emergency ? -5 : -0.01 },
+                { token: 'B', logprob: emergency ? -0.01 : -5 },
+              ],
+            },
+          ],
+        },
+      },
+    ],
   });
 });
 
-server.listen(8123, '0.0.0.0');
+server.listen(Number(process.env.LLM_STUB_PORT ?? '8123'), '0.0.0.0');

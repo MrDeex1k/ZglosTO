@@ -14,7 +14,9 @@ database/
 │   ├── 02-create-auth.sql       # Tworzenie tabel autoryzacji (Better Auth)
 │   ├── 03-create-dbtables.sql  # Tworzenie tabel aplikacji (incydenty, użytkownicy rozszerzeni)
 │   ├── 04-setup-backup.sql     # Tworzenie backupu bazy danych
-├── migrations/           # Wersjonowane migracje 001-016 kontraktów bazy
+│   ├── 05-user-provisioning.sql # Atomowe tworzenie roli mieszkańca
+│   ├── 06-runtime-roles.sh    # Uprawnienia i hasła runtime
+│   └── runtime-role-grants.txt # Aktualny zestaw grantów runtime
 └── README_DATABASE.md             # Ten plik
 ```
 
@@ -192,6 +194,9 @@ Constraints:
 
 ## Inicjalizacja bazy danych
 
+[Aktualny dowód testów inicjalizacji od zera](../docs/evidence/database-fresh-init-2026-11-14.json)
+obejmuje diagnostykę, provisioning użytkownika oraz rozdzielenie ról przez PgBouncera.
+
 Skrypty w folderze `init-scripts/` są automatycznie wykonywane podczas pierwszego uruchomienia kontenera PostgreSQL. Pliki są wykonywane w **kolejności alfabetycznej**.
 
 Obecnie dostępne skrypty:
@@ -217,24 +222,27 @@ Obecnie dostępne skrypty:
    - Konfiguruje pełny backup w niedzielę o 02:00 i różnicowy codziennie o 03:00
    - Używa wrappera pgBackRest z dynamiczną rolą i portem PostgreSQL
 
+5. **`05-user-provisioning.sql`** - atomowe nadanie roli mieszkańca przy utworzeniu konta
+   - Tworzy funkcję i trigger provisioningu w transakcji Better Auth
+
+6. **`06-runtime-roles.sh`** - jawne uprawnienia i odrębne hasła runtime
+   - Wykonuje `runtime-role-grants.txt` po utworzeniu aktualnego schematu
+   - Wczytuje trzy hasła z plików sekretów dla auth, backendu i workera
+
 #### Jak dodać nowy skrypt?
 
 1. **Utwórz plik** w folderze `init-scripts/` z nazwą zaczynającą się od liczby (np. `03-moj-skrypt.sql`)
 2. **Nazwa powinna być opisowa** i zaczynać się od kolejnego numeru
-3. **Skrypt zostanie automatycznie wykonany** przy następnym uruchomieniu kontenera
+3. **Skrypt zostanie automatycznie wykonany** przy inicjalizacji nowego, pustego katalogu danych
 
-⚠️ **WAŻNE**: Skrypty są wykonywane tylko przy **pierwszym uruchomieniu** kontenera. Migracje istniejącego wolumenu są przechowywane osobno w `database/migrations/`.
+Skrypty inicjalizacyjne są wykonywane wyłącznie przy pierwszym uruchomieniu
+PostgreSQL na pustym katalogu danych. Tworzą od razu aktualny schemat, funkcje,
+triggery i uprawnienia. Aplikacja nie była wdrożona, dlatego repozytorium nie
+utrzymuje historycznych migracji ani narzędzi do aktualizowania dawnego schematu.
 
-Migrację kodów statusów ADR-007 można bezpiecznie uruchomić wielokrotnie:
-
-```bash
-./scripts/migrate-incident-statuses.sh
-```
-
-W przypadku innych zmian trzeba:
-
-- Zrestartować kontener z nową nazwą wolumenu
-- Lub wykonać skrypt ręcznie przez `docker-compose exec database psql -U user -d db -f /path/to/script.sql`
+Po zmianie schematu środowisko developerskie należy uruchomić z nowym, pustym
+wolumenem. Istniejącego wolumenu z potrzebnymi danymi nie usuwaj bez kopii i osobnego
+planu przeniesienia danych. Sam restart kontenera nie zmienia jego schematu.
 
 ## Uruchomienie
 
@@ -380,36 +388,20 @@ docker compose exec -e PGPASSWORD=admin_zglosto database psql -U zglosto_admin -
 
 ## Atomowe tworzenie uprawnień użytkownika
 
-Migracja `015-atomic-user-provisioning.sql` tworzy domyślną rolę mieszkańca w tej samej
-transakcji co konto Better Auth. Błąd zapisu roli wycofuje też zapis konta. Migracja
-uzupełnia brakujące role, zachowując istniejące uprawnienia i przypisania do służb.
-Nowa baza uruchamia ją przez `init-scripts/05-user-provisioning.sql`.
+`init-scripts/05-user-provisioning.sql` tworzy trigger nadający domyślną rolę
+mieszkańca w tej samej transakcji co konto Better Auth. Błąd zapisu roli wycofuje
+też zapis konta. Skrypt jest samodzielną częścią inicjalizacji świeżej bazy i nie
+odwołuje się do katalogu migracji. Zasady weryfikacji e-mail pozostają niezależne.
 
-Na istniejącej bazie zastosuj migrację 015 przez bezpośrednie połączenie PostgreSQL
-**przed uruchomieniem nowej wersji Authorization**, zgodnie z procedurą migracji
-wdrożenia. Sam restart kontenera z istniejącym wolumenem nie uruchamia init-scripts.
-Migracja nie zmienia zasad weryfikacji e-mail.
+`bun run test:auth-provisioning` sprawdza świeżą instalację na osobnym PostgreSQL
+w Dockerze: bez sieci, opublikowanych portów i trwałego wolumenu. Test obejmuje
+atomowe nadanie roli, błąd zapisu roli, retry i rollback.
 
-`bun run test:auth-provisioning` sprawdza migrację i świeżą instalację na osobnym
-PostgreSQL w Dockerze: bez sieci, opublikowanych portów i trwałego wolumenu. Test
-obejmuje błąd zapisu roli, retry, rollback, idempotencję i zachowanie istniejących ról.
+## Role runtime i provisioning poświadczeń
 
-## Bezpieczeństwo migracji historycznych
-
-Migracja `006-object-storage-images.sql` odmawia przejścia ze starego modelu `bytea`,
-jeżeli tabela `incydenty` zawiera dane. Wymaga wtedy osobnego, jawnego eksportu i migracji
-zdjęć; nie usuwa zgłoszeń przez `TRUNCATE CASCADE`. Nie obchodź tego warunku na bazie
-produkcyjnej. Pusta baza historyczna oraz ponowne zastosowanie migracji są obsługiwane.
-
-Regresję można sprawdzić przez `bun test database/tests/legacy-image-migration.test.ts`.
-Test wymaga Dockera i lokalnego obrazu `postgres:18.7-alpine3.24`; tworzy wyłącznie osobny,
-jednorazowy kontener bez sieci, opublikowanych portów i trwałych wolumenów.
-
-## Role runtime i kontrolowana aktualizacja istniejącej instalacji
-
-Od migracji 016 jedynym administratorem pozostaje bootstrapowy `POSTGRES_USER` (przykładowo
-`zglosto_admin`), dostępny tylko w kontenerze database oraz operacjach migracji/backup/restore.
-Runtime nie dostaje jego hasła ani bezpośredniego URL.
+Jedynym administratorem jest bootstrapowy `POSTGRES_USER` (przykładowo
+`zglosto_admin`), dostępny tylko w kontenerze database oraz operacjach
+administracji, backupu i restore. Runtime nie dostaje jego hasła ani bezpośredniego URL.
 
 | Rola                   | Uprawnienia aplikacyjne                                                                                                                                |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -421,39 +413,29 @@ Wszystkie trzy role są `NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS NOREPLI
 Nie mają CREATE w schemacie ani TEMP w bazie. Obiekty pozostają własnością administratora.
 Trigger `provision_application_user` używa SECURITY DEFINER z ustalonym search_path i zawsze
 nadaje wyłącznie `mieszkaniec`; jego bezpośrednie EXECUTE jest odebrane runtime/PUBLIC.
-Granty nie otwierają automatycznie przyszłych tabel ani funkcji. Nowe migracje muszą przyznać
-wymagane uprawnienia jawnie. PgBouncer nie zawiera `user=` ani hasła w wpisie upstream;
+Granty nie otwierają automatycznie przyszłych tabel ani funkcji. Zmiana aktualnego
+schematu musi uwzględniać jawne uprawnienia w `init-scripts/runtime-role-grants.txt`. PgBouncer nie zawiera `user=` ani hasła w wpisie upstream;
 łączy się z PostgreSQL jako uwierzytelniona rola klienta. Trzy hasła są w prywatnym pliku
 userlist na tmpfs w produkcji/Kubernetes, potrzebnym do SCRAM obu odcinków.
 
-Świeża baza wykonuje `06-runtime-roles.sh` po schemacie i triggerze. Ręczne ponowne
-uruchomienie kontenera z istniejącym wolumenem **nie** migruje poświadczeń ani grantów.
-Kontrolowana aktualizacja wymaga okna utrzymaniowego:
+Świeża baza wykonuje `06-runtime-roles.sh` po schemacie i triggerze. Skrypt
+stosuje aktualne granty z `runtime-role-grants.txt`, a następnie ustawia trzy
+odrębne hasła runtime z plików sekretów. To część inicjalizacji od zera, nie
+aktualizacja historycznego schematu.
 
-1. Zrób backup; zatrzymaj ingress i wszystkie procesy zapisujące, w tym authorization,
-   backend, worker oraz PgBouncer. Nie usuwaj istniejących wolumenów.
-2. Dostarcz trzy różne hasła runtime (minimum 24 znaki, różne od hasła admina), trzy URL
-   zakodowane zgodnie z URI i pasujące do tych haseł, przez pliki z kontraktu wdrożenia.
-   Zachowaj osobny `DATABASE_DIRECT_URL` obecnego administratora. Nowe role mają stałe nazwy.
-3. Użyj nowego obrazu database i odtwórz tylko jego kontener z nowymi mountami sekretów.
-   Zastosuj wymagane migracje schematu jako admin. Migracja 016 tworzy brakujące role
-   początkowo NOLOGIN, odbiera nadmiarowe granty/członkostwa i nadaje jawny zestaw uprawnień.
-4. Jawnie uruchom `database/apply-runtime-roles.sh --apply-runtime-role-separation`
-   z opcjami `docker compose` właściwej instalacji (np. `--env-file ... --file ...`).
-   Wrapper wewnątrz obrazu wymaga flagi, używa admin URL i pobiera nowe hasła z plików.
-   Można go powtarzać. Nie uruchamia się automatycznie na istniejących danych.
-   W Kubernetes/K3s równoważne wywołanie to `kubectl exec ... -- sh
-   /docker-entrypoint-initdb.d/apply-runtime-roles.txt --apply-runtime-role-separation`.
-5. Odtwórz PgBouncera i runtime z nowymi URL; potwierdź tożsamości oraz logowanie/CRUD.
-   Stary bootstrapowy administrator pozostaje wyłącznie kontem operacyjnym. Jeśli miał
-   inną nazwę, nie zmieniaj jej automatycznie — dopasuj pliki admina do istniejącej bazy.
+Ponowne zastosowanie grantów i rotacja poświadczeń wymagają zatrzymania ingressu,
+wszystkich procesów zapisujących oraz PgBouncera. Dostarcz trzy różne hasła runtime
+(minimum 24 znaki, różne od hasła administratora) i odpowiadające im URL z plików
+sekretów. Jawny wrapper `database/apply-runtime-roles.sh --apply-runtime-role-separation`
+korzysta z administracyjnego połączenia bezpośredniego i może zostać powtórzony.
+W Kubernetes/K3s równoważne wywołanie to `kubectl exec ... -- sh
+/docker-entrypoint-initdb.d/apply-runtime-roles.txt --apply-runtime-role-separation`.
+Po provisioningu odtwórz PgBouncera i runtime z nowymi URL oraz potwierdź logowanie
+oraz CRUD. Skrypt nie zmienia schematu ani nazwy administratora i odmawia obsługi
+roli runtime będącej właścicielem obiektów.
 
-Skrypt odmawia obsługi roli runtime będącej właścicielem obiektów. Taką niestandardową
-instalację trzeba najpierw kontrolowanie przepisać na właściciela administracyjnego.
-Zmiana przykładowego `POSTGRES_USER` nie przemianowuje kont w istniejącym wolumenie.
-Nie uruchamiaj starego runtime po migracji z poświadczeniami administratora.
-
-Produkcyjny wrapper wdrożenia stosuje provisioning jako jawny krok po migracjach.
+Produkcyjny wrapper wdrożenia stosuje provisioning jako jawny krok przed startem
+procesów aplikacji.
 Restore dumpa z `--no-privileges` ponownie nakłada granty przed uruchomieniem aplikacji.
 Test `bun test database/tests/runtime-roles.test.ts` używa osobnego PG18.7/PgBouncera,
 dedykowanej sieci, efemerycznych certyfikatów i losowego portu wyłącznie localhost; weryfikuje loginy,
@@ -465,3 +447,63 @@ właściwej aplikacji (GID 10001, np. root:10001 i 0440). Katalog źródłowy po
 dla administratora; kontener widzi wyłącznie wybrane mounty. Nie polegaj na `uid/gid/mode`
 w krótkiej deklaracji Compose secrets — bind mount zachowuje uprawnienia pliku hosta.
 Kubernetes stosuje kontrakt 0440 i fsGroup odpowiedniego workloadu.
+
+## Prywatna diagnostyka klasyfikacji LLM
+
+Pola diagnostyczne i ich ograniczenia są częścią schematu startowego
+`init-scripts/03-create-dbtables.sql`. Pierwsze uruchomienie na pustym katalogu danych
+PostgreSQL tworzy od razu aktualną tabelę `incydenty`; nie wymaga osobnej migracji
+diagnostyki. Nowe zgłoszenia bez diagnostyki mają wartości `NULL`.
+
+| Kolumna                   | Znaczenie                                                                                                                     |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `llm_confidence_raw`      | Surowy wynik wybranej klasy po ograniczeniu rozkładu do A/B; liczba 0–1, bez kalibracji na danych mieszkańców                 |
+| `llm_p_emergency_raw`     | Surowy wynik opcji `emergency`, niezależnie od wybranej klasy                                                                 |
+| `llm_model_id`            | Referencja modelu żądanego przez gateway                                                                                      |
+| `llm_model_revision`      | Dokładny digest OCI modelu faktycznie zwróconego przez DMR (`sha256:…`), jeżeli runtime go ujawnił; nie jest sumą samego GGUF |
+| `llm_prompt_version`      | Wersja pytania i definicji opcji                                                                                              |
+| `llm_latency_ms`          | Zmierzony czas wywołania runtime'u przez gateway, razem z odczytem odpowiedzi                                                 |
+| `llm_calibration_version` | Identyfikator zastosowanej kalibracji; w pierwszym etapie `NULL`                                                              |
+
+Dla fallbacku obie wartości surowe pozostają `NULL`. Gateway może zachować znaną
+referencję modelu, prompt i czas nieudanej próby; przy błędzie transportu backendu
+cała diagnostyka może być niedostępna. Ograniczenia bazy kontrolują zakres i parę
+wyników, zgodność confidence z większym wynikiem A/B oraz kompletność metadanych.
+Istniejący grant backendu na tabelę obejmuje nowe kolumny; role innych usług nie
+otrzymują dodatkowego dostępu.
+
+Dane te nie należą do publicznych DTO ani odpowiedzi list/create dla użytkownika,
+operatora czy administratora w aplikacji. Backend rozdziela wynik publiczny od
+metadanych prywatnych i przekazuje je tylko do zapisu SQL. Nie zmieniają klasy,
+wybranej służby ani progów działania aplikacji.
+
+Przykładowy przegląd diagnostyki przez uprawnione połączenie administracyjne:
+
+```sql
+SELECT llm_model_id, llm_model_revision, llm_prompt_version,
+       count(*) AS samples,
+       avg(llm_confidence_raw) AS mean_raw_score,
+       percentile_cont(0.95) WITHIN GROUP (ORDER BY llm_latency_ms) AS p95_latency_ms
+FROM incydenty
+WHERE llm_source = 'model' AND llm_confidence_raw IS NOT NULL
+GROUP BY llm_model_id, llm_model_revision, llm_prompt_version;
+
+SELECT id_zgloszenia, llm_classification, llm_confidence_raw, llm_p_emergency_raw
+FROM incydenty
+WHERE llm_source = 'model' AND llm_confidence_raw < 0.7
+ORDER BY llm_confidence_raw
+LIMIT 50;
+```
+
+Druga kwerenda jest wyłącznie przykładowym filtrem do ręcznego przeglądu, nie progiem
+produkcyjnej decyzji. Surowy score nie mierzy trafności: jej ocenę umożliwi dopiero
+osobno przygotowany zbiór zgłoszeń z potwierdzoną prawidłową klasą. W tym etapie nie
+powstaje workflow etykietowania ani API do ręcznej oceny.
+
+Test automatycznej inicjalizacji świeżego schematu:
+`bun test database/tests/llm-diagnostics.test.ts --timeout 30000`.
+Uruchamia osobny, jednorazowy PostgreSQL z pustym katalogiem danych i skryptami
+`01-init.sql`, `02-create-auth.sql`, `03-create-dbtables.sql`,
+`05-user-provisioning.sql` i `06-runtime-roles.sh` wykonywanymi przez oficjalny
+entrypoint wraz z aktualnymi grantami, bez migracji schematu. Bez sieci i portów hosta; wymaga lokalnie
+obrazu `postgres:18.7-alpine3.24` (test nie pobiera go automatycznie).

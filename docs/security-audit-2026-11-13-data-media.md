@@ -1,5 +1,9 @@
 # Audyt bezpieczeństwa danych i mediów — 2026-11-13
 
+Raport zachowuje historyczne ustalenia i ścieżki plików z dnia audytu. Przed pierwszym
+wdrożeniem usunięto katalog migracji oraz jego test legacy. Bieżący schemat i granty
+powstają od zera zgodnie z [dokumentacją bazy](../database/README_DATABASE.md).
+
 ## Wynik
 
 Naprawiono dwie potwierdzone ścieżki: wydawanie niezweryfikowanych oryginałów zdjęć oraz

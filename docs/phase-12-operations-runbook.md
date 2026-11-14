@@ -87,7 +87,7 @@ w zatwierdzonym oknie utrzymaniowym.
 - wynik kontroli źródeł, zależności i kontraktów docelowych obrazów;
 - log instalacji obu profili;
 - publiczny certyfikat oraz test DNS/HTTPS bez prywatnego klucza w raporcie;
-- wynik DMR z Gemma 3 1B;
+- wynik DMR z Basal 2.0 Mini 1,5B Q5_K_M;
 - backup przechowywany poza hostem oraz udany restore;
 - pomiary RPO i RTO;
 - test upgrade, błędu kandydata i restartu hosta;

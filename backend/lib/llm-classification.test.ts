@@ -24,11 +24,14 @@ test('normalizes a model classification', () => {
       'roads',
     ),
   ).toEqual({
-    classification: 'emergency',
-    serviceKey: 'roads',
-    modelAvailable: true,
-    source: 'model',
-    reason: null,
+    result: {
+      classification: 'emergency',
+      serviceKey: 'roads',
+      modelAvailable: true,
+      source: 'model',
+      reason: null,
+    },
+    diagnostics: null,
   });
 });
 
@@ -102,7 +105,7 @@ test('sends classification input through the QUERY contract', async () => {
   expect(captured.options.body).toBe(
     JSON.stringify({ description: 'description', address: null, city: null }),
   );
-  expect(result.serviceKey).toBe('roads');
+  expect(result.result.serviceKey).toBe('roads');
 });
 
 test('returns timeout fallback without throwing', async () => {
@@ -154,4 +157,62 @@ test('malformed JSON falls back without changing the selected service', async ()
     timeoutMs: 100,
   });
   expect(result).toEqual(fallbackClassification('invalid_response', 'roads'));
+});
+
+const privateDiagnostics = {
+  confidenceRaw: 0.9,
+  pEmergencyRaw: 0.9,
+  modelId: 'zglosto/basal-2.0-mini:q5_k_m',
+  modelRevision: `sha256:${'a'.repeat(64)}`,
+  promptVersion: 'municipal-emergency-v1',
+  latencyMs: 153,
+  calibrationVersion: null,
+};
+const diagnosedPayload = {
+  classification: 'emergency',
+  serviceKey: null,
+  confidence: null,
+  modelAvailable: true,
+  source: 'model',
+  reason: null,
+  diagnostics: privateDiagnostics,
+};
+
+test('preserves gateway diagnostics in a server-only wrapper around the public result', () => {
+  const classification = normalizeLlmResponse(diagnosedPayload, 'roads');
+  expect(classification.diagnostics).toEqual(privateDiagnostics);
+  expect(classification.result).toEqual({
+    classification: 'emergency',
+    serviceKey: 'roads',
+    modelAvailable: true,
+    source: 'model',
+    reason: null,
+  });
+  expect(classification.result).not.toHaveProperty('diagnostics');
+});
+
+test.each([
+  { ...privateDiagnostics, confidenceRaw: 1.1 },
+  { ...privateDiagnostics, pEmergencyRaw: null },
+  { ...privateDiagnostics, modelRevision: 'not-a-digest' },
+  { ...privateDiagnostics, latencyMs: -1 },
+])('invalid optional diagnostics never change a valid decision: %j', (diagnostics) => {
+  const classification = normalizeLlmResponse({ ...diagnosedPayload, diagnostics }, 'roads');
+  expect(classification.result.classification).toBe('emergency');
+  expect(classification.diagnostics).toBeNull();
+});
+
+test('keeps fallback timing and provenance but never persists a fallback score', () => {
+  const fallback = {
+    ...diagnosedPayload,
+    classification: 'unknown',
+    modelAvailable: false,
+    source: 'fallback',
+    reason: 'timeout',
+  };
+  expect(normalizeLlmResponse(fallback, 'roads').diagnostics).toBeNull();
+  const diagnostics = { ...privateDiagnostics, confidenceRaw: null, pEmergencyRaw: null };
+  const result = normalizeLlmResponse({ ...fallback, diagnostics }, 'roads');
+  expect(result.result).toEqual(fallbackClassification('timeout', 'roads').result);
+  expect(result.diagnostics).toEqual(diagnostics);
 });

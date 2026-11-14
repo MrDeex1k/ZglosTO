@@ -164,20 +164,20 @@ cache i liczniki są odtwarzalne; utrata poda powoduje jedynie kontrolowaną deg
 
 ## Wspólne i bazodanowe
 
-| Zmienna                          | Wymagana | Sekret | Używana przez                             | Opis                                                               |
-| -------------------------------- | -------- | ------ | ----------------------------------------- | ------------------------------------------------------------------ |
-| `NODE_ENV`                       | nie      | nie    | backend, authorization, media_worker      | `development`, `test` albo `production`; domyślnie `development`.  |
-| `POSTGRES_USER`                  | tak      | nie    | database                                  | Użytkownik inicjalnej bazy.                                        |
-| `POSTGRES_PASSWORD`              | tak      | tak    | database                                  | Hasło bazy; w produkcji z Secret.                                  |
-| `POSTGRES_DB`                    | tak      | nie    | database                                  | Nazwa bazy, obecnie `zglosto_db`.                                  |
-| `POSTGRES_PORT`                  | tak      | nie    | database/Compose                          | Port PostgreSQL wewnątrz kontenera i opcjonalne mapowanie lokalne. |
-| `DATABASE_URL`                   | tak      | tak    | backend, authorization, media_worker      | URL osobnej roli runtime; w kontenerze z `DATABASE_URL_FILE`.      |
-| `DATABASE_DIRECT_URL`            | tak      | tak    | database, migracje, backup, administracja | Bezpośredni URL PostgreSQL omijający pooler.                       |
-| `DATABASE_TLS_CA_PATH`           | tak      | nie    | backend, authorization, media_worker      | Ścieżka Database CA używanego do weryfikacji DNS `pgbouncer`.      |
-| `DATABASE_POOL_MAX`              | nie      | nie    | backend, authorization                    | Maksymalna liczba połączeń stałej puli procesu; domyślnie `10`.    |
-| `DATABASE_IDLE_TIMEOUT_MS`       | nie      | nie    | backend, authorization                    | Zamknięcie bezczynnego połączenia; domyślnie `30000`.              |
-| `DATABASE_CONNECTION_TIMEOUT_MS` | nie      | nie    | backend, authorization                    | Limit zestawienia połączenia; domyślnie `5000`.                    |
-| `PGBOUNCER_PORT`                 | nie      | nie    | pgbouncer, Compose                        | Port poolera w sieci wewnętrznej; domyślnie `6432`.                |
+| Zmienna                          | Wymagana | Sekret | Używana przez                                     | Opis                                                               |
+| -------------------------------- | -------- | ------ | ------------------------------------------------- | ------------------------------------------------------------------ |
+| `NODE_ENV`                       | nie      | nie    | backend, authorization, media_worker              | `development`, `test` albo `production`; domyślnie `development`.  |
+| `POSTGRES_USER`                  | tak      | nie    | database                                          | Użytkownik inicjalnej bazy.                                        |
+| `POSTGRES_PASSWORD`              | tak      | tak    | database                                          | Hasło bazy; w produkcji z Secret.                                  |
+| `POSTGRES_DB`                    | tak      | nie    | database                                          | Nazwa bazy, obecnie `zglosto_db`.                                  |
+| `POSTGRES_PORT`                  | tak      | nie    | database/Compose                                  | Port PostgreSQL wewnątrz kontenera i opcjonalne mapowanie lokalne. |
+| `DATABASE_URL`                   | tak      | tak    | backend, authorization, media_worker              | URL osobnej roli runtime; w kontenerze z `DATABASE_URL_FILE`.      |
+| `DATABASE_DIRECT_URL`            | tak      | tak    | database, provisioning ról, backup, administracja | Bezpośredni URL PostgreSQL omijający pooler.                       |
+| `DATABASE_TLS_CA_PATH`           | tak      | nie    | backend, authorization, media_worker              | Ścieżka Database CA używanego do weryfikacji DNS `pgbouncer`.      |
+| `DATABASE_POOL_MAX`              | nie      | nie    | backend, authorization                            | Maksymalna liczba połączeń stałej puli procesu; domyślnie `10`.    |
+| `DATABASE_IDLE_TIMEOUT_MS`       | nie      | nie    | backend, authorization                            | Zamknięcie bezczynnego połączenia; domyślnie `30000`.              |
+| `DATABASE_CONNECTION_TIMEOUT_MS` | nie      | nie    | backend, authorization                            | Limit zestawienia połączenia; domyślnie `5000`.                    |
+| `PGBOUNCER_PORT`                 | nie      | nie    | pgbouncer, Compose                                | Port poolera w sieci wewnętrznej; domyślnie `6432`.                |
 
 `DATABASE_URL_FILE` wskazuje plik URL właściwej roli runtime (`zglosto_auth`,
 `zglosto_backend` albo `zglosto_media_worker`), z hostem `pgbouncer:6432`.
@@ -420,10 +420,8 @@ jest sekretem i nie może trafić do ENV, White-Label YAML, obrazu ani repozytor
 | `LLM_RUNTIME`                                | nie      | nie    | llm_gateway   | Wynik selektora: `disabled`, `docker-model-runner` lub `openai-compatible`. |
 | `LLM_UPSTREAM_TIMEOUT_MS`                    | nie      | nie    | llm_gateway   | Timeout adaptera DMR, domyślnie `5000`.                                     |
 | `DOCKER_MODEL_RUNNER_URL`                    | dla DMR  | nie    | llm_gateway   | OpenAI-compatible URL wstrzykiwany przez Compose `models`.                  |
-| `DOCKER_MODEL_RUNNER_MODEL`                  | dla DMR  | nie    | llm_gateway   | `ai/gemma3-qat:1B-Q4_K_M`; backend go nie zna.                              |
+| `DOCKER_MODEL_RUNNER_MODEL`                  | dla DMR  | nie    | llm_gateway   | `zglosto/basal-2.0-mini:q5_k_m`; backend go nie zna.                        |
 | `DOCKER_MODEL_RUNNER_ENGINE`                 | dla DMR  | nie    | llm_gateway   | Silnik ścieżki OpenAI-compatible, domyślnie `llama.cpp`.                    |
-| `DOCKER_MODEL_RUNNER_TEMPERATURE`            | dla DMR  | nie    | llm_gateway   | Temperatura inferencji, domyślnie `0.1`.                                    |
-| `DOCKER_MODEL_RUNNER_MAX_TOKENS`             | dla DMR  | nie    | llm_gateway   | Limit tokenów odpowiedzi klasyfikatora, domyślnie `64`.                     |
 | `LLM_EXTERNAL_URL`                           | external | nie    | selektor      | Bazowy URL API zgodnego z OpenAI, zawierający właściwą ścieżkę `/v1`.       |
 | `LLM_EXTERNAL_MODEL`                         | external | nie    | selektor      | Dokładny identyfikator modelu zewnętrznego providera.                       |
 | `LLM_EXTERNAL_API_KEY_FILE`                  | external | tak    | Compose       | Hostowy plik klucza montowany wyłącznie do `llm_gateway`.                   |

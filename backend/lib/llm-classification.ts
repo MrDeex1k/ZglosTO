@@ -6,8 +6,14 @@ import {
   parseLlmClassificationResponse,
   type CurrentLlmClassificationResult,
   type LlmClassification,
+  type LlmClassificationDiagnostics,
   type LlmFallbackReason,
 } from '@zglosto/contracts';
+
+export interface IncidentClassification {
+  result: CurrentLlmClassificationResult;
+  diagnostics: LlmClassificationDiagnostics | null;
+}
 
 export interface ClassifyIncidentOptions {
   fetchImpl: typeof fetch;
@@ -22,13 +28,16 @@ function isFallbackReason(value: unknown): value is LlmFallbackReason {
 export function fallbackClassification(
   reason: unknown,
   requestedServiceKey: string,
-): CurrentLlmClassificationResult {
+): IncidentClassification {
   return {
-    classification: 'unknown',
-    serviceKey: requestedServiceKey,
-    modelAvailable: false,
-    source: 'fallback',
-    reason: isFallbackReason(reason) ? reason : 'unavailable',
+    result: {
+      classification: 'unknown',
+      serviceKey: requestedServiceKey,
+      modelAvailable: false,
+      source: 'fallback',
+      reason: isFallbackReason(reason) ? reason : 'unavailable',
+    },
+    diagnostics: null,
   };
 }
 
@@ -48,14 +57,20 @@ function modelClassification(
 export function normalizeLlmResponse(
   payload: unknown,
   requestedServiceKey: string,
-): CurrentLlmClassificationResult {
+): IncidentClassification {
   try {
     const response = parseLlmClassificationResponse(payload);
     if (response.classification === 'unknown') {
       const reason = isFallbackReason(response.reason) ? response.reason : 'invalid_response';
-      return fallbackClassification(reason, requestedServiceKey);
+      return {
+        ...fallbackClassification(reason, requestedServiceKey),
+        diagnostics: response.diagnostics ?? null,
+      };
     }
-    return modelClassification(response.classification, requestedServiceKey);
+    return {
+      result: modelClassification(response.classification, requestedServiceKey),
+      diagnostics: response.diagnostics ?? null,
+    };
   } catch {
     return fallbackClassification('invalid_response', requestedServiceKey);
   }
@@ -65,17 +80,17 @@ export async function classifyIncident(
   description: string,
   requestedServiceKey: string,
   options: ClassifyIncidentOptions,
-): Promise<CurrentLlmClassificationResult> {
+): Promise<IncidentClassification> {
   const controller = new AbortController();
   let timeout: ReturnType<typeof setTimeout> | null = null;
-  const deadline = new Promise<CurrentLlmClassificationResult>((resolve) => {
+  const deadline = new Promise<IncidentClassification>((resolve) => {
     timeout = setTimeout(() => {
       resolve(fallbackClassification('timeout', requestedServiceKey));
       controller.abort();
     }, options.timeoutMs);
   });
 
-  const classify = async (): Promise<CurrentLlmClassificationResult> => {
+  const classify = async (): Promise<IncidentClassification> => {
     try {
       const response = await options.fetchImpl(`${options.gatewayUrl}${LLM_CLASSIFICATION_PATH}`, {
         method: LLM_CLASSIFICATION_HTTP_METHOD,

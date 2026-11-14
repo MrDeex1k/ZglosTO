@@ -79,7 +79,7 @@ klastrowe są jawnie oznaczone jako planowane, a nie pozorowane w baseline. Szcz
    oraz hardening `read_only`, `tmpfs`, `cap_drop` i `no-new-privileges`, gdzie są możliwe.
 6. Wystawić publicznie wyłącznie HTTPS przez Nginx; PostgreSQL, RabbitMQ, PgBouncer i RustFS
    pozostają w sieciach wewnętrznych.
-7. Dodać automatyzację hosta: start po restarcie, `pull -> migrate -> up -> smoke`, rollback,
+7. Dodać automatyzację hosta: start po restarcie, `pull -> initialize/provision -> up -> smoke`, rollback,
    backup, restore i rotację certyfikatów.
 8. Udokumentować, że awaria całego hosta powoduje przerwę do czasu odtworzenia zgodnie z RTO.
 
@@ -90,7 +90,7 @@ Wynik: powstał dziewięciousługowy override bez lokalnych buildów i RustFS, w
 obrazów z registry przypiętych digestem. Sekrety są plikami Compose secrets, tylko Nginx
 publikuje HTTPS, a usługi mają limity, restart, rotację logów i hardening. Dodano
 maszynową politykę `pnpm check:production-compose`, atomowo blokowaną procedurę
-`pull -> migrate -> up -> smoke`, rollback bez cofania migracji, backup/restore, rotację
+`pull -> initialize/provision -> up -> smoke`, odtwarzanie wydania bez zmiany schematu wolumenu, backup/restore, rotację
 certyfikatów oraz start systemd po restarcie hosta. Pełny test na świeżej maszynie i
 certyfikacja RTO/RPO pozostają w Fazie 12. Szczegóły:
 [produkcyjny Compose kroku 2](phase-9-step-2-production-compose.md).
@@ -137,7 +137,7 @@ read-only `0440`, a wszystkie wolumeny są nieopcjonalne. Usunięto zbiorczy
 1. PostgreSQL otrzymuje trwały wolumen, politykę retencji i ścieżkę backupu pgBackRest.
 2. RabbitMQ otrzymuje trwały wolumen i kontrolowany restart bez utraty zaakceptowanych zadań.
 3. PgBouncer staje się jedynym adresem DB dla aplikacji; bezpośredni PostgreSQL pozostaje
-   wyłącznie dla migracji, backupu i administracji.
+   wyłącznie dla provisioningu ról, backupu i administracji.
 4. RustFS działa jako opcjonalny profil/overlay. Zewnętrzny S3/R2 wymaga tylko zmiany `S3_*`
    i nie uruchamia RustFS.
 5. Compose używa kontrolowanych wolumenów hosta, a overlay K3s jawnie wybiera storage class.

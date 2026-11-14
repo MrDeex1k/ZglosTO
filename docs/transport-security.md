@@ -101,7 +101,7 @@ Wdrożone wymagania Compose:
 - SCRAM-SHA-256 pozostaje wymagane niezależnie od szyfrowania;
 - backend, authorization i worker używają osobnych ról DB `NOSUPERUSER NOCREATEDB
   NOCREATEROLE NOBYPASSRLS`; PgBouncer zachowuje tożsamość klienta i nie ma poświadczeń admina;
-- `DATABASE_DIRECT_URL` używa TLS w migracjach, backupie i administracji;
+- `DATABASE_DIRECT_URL` używa TLS w provisioningu ról, backupie i administracji;
 - aplikacje nadal nie otrzymują `DATABASE_DIRECT_URL`.
 
 Bieżąca konfiguracja PgBouncera odpowiada następującej polityce:

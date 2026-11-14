@@ -342,25 +342,18 @@ compose exec -T backend bun -e \
   "if (new URL(process.env.S3_ENDPOINT).hostname !== 'rustfs') process.exit(1); if (Object.keys(process.env).some((name) => name.startsWith('RUSTFS_'))) process.exit(2)"
 compose exec -T backend bun dist/storage/verify-storage.js
 
-log "Reapplying migrations to verify idempotence"
-for migration in "$ROOT_DIR"/database/migrations/*.sql; do
-  compose exec -T database /usr/local/bin/load-container-secrets sh -c \
-    'psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL"' \
-    < "$migration" >/dev/null
-done
-
+log "Checking the current fresh database bootstrap and private diagnostics"
 compose exec -T database /usr/local/bin/load-container-secrets sh -c \
-  'psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" -tAc "
-    SELECT CASE
-      WHEN to_regclass('\''public.incident_images'\'') IS NOT NULL
-       AND NOT EXISTS (
-         SELECT 1 FROM information_schema.columns
-         WHERE table_schema = '\''public'\''
-           AND table_name = '\''incydenty'\''
-           AND column_name IN ('\''zdjecie_incydentu_zglaszanego'\'', '\''zdjecie_incydentu_rozwiazanego'\'')
-       )
-      THEN 1 ELSE 0 END
-  "' | grep -qx '1'
+  'psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" -At' <<'SQL' | grep -qx 't'
+SELECT to_regclass('public.incident_images') IS NOT NULL
+  AND to_regprocedure('public.provision_application_user()') IS NOT NULL
+  AND (SELECT count(*) = 7 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'incydenty'
+      AND column_name IN ('llm_confidence_raw', 'llm_p_emergency_raw', 'llm_model_id',
+        'llm_model_revision', 'llm_prompt_version', 'llm_latency_ms', 'llm_calibration_version'))
+  AND has_table_privilege('zglosto_backend', 'public.incydenty', 'INSERT')
+  AND NOT has_column_privilege('zglosto_auth', 'public.incydenty', 'llm_confidence_raw', 'SELECT');
+SQL
 
 log "Verifying the partial index for the public resolved-incident query"
 compose exec -T database /usr/local/bin/load-container-secrets sh -c \
