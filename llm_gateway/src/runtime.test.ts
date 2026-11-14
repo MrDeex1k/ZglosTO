@@ -317,3 +317,84 @@ test('continues accepting JSON markdown fences from an external provider', async
     }).classify(request),
   ).resolves.toMatchObject({ classification: 'municipal', confidence: 0.95 });
 });
+
+test.each([
+  { a: -3, b: -1, expected: 'emergency', probability: 0.8807970779778823 },
+  { a: -1, b: -3, expected: 'municipal', probability: 0.11920292202211755 },
+])(
+  'records private raw diagnostics for $expected without replacing calibrated confidence',
+  async ({ a, b, expected, probability }) => {
+    const digest = 'a'.repeat(64);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        Response.json({
+          model: `/models/bundles/sha256/${digest}/model/model.gguf`,
+          choices: [{ logprobs: { top_logprobs: [{ A: a, B: b }] } }],
+        }),
+      ),
+    );
+    const result = await new DockerModelRunnerRuntime(
+      dockerEnvironment('http://runner:12434'),
+    ).classify(request);
+    expect(result.classification).toBe(expected);
+    expect(result.confidence).toBeNull();
+    expect(result.diagnostics).toMatchObject({
+      modelId: 'zglosto/basal-2.0-mini:q5_k_m',
+      modelRevision: `sha256:${digest}`,
+      promptVersion: 'municipal-emergency-v1',
+      calibrationVersion: null,
+      latencyMs: expect.any(Number),
+    });
+    expect(result.diagnostics?.pEmergencyRaw).toBeCloseTo(probability, 12);
+    expect(result.diagnostics?.confidenceRaw).toBeCloseTo(
+      Math.max(probability, 1 - probability),
+      12,
+    );
+    expect(Number.isInteger(result.diagnostics?.latencyMs)).toBe(true);
+  },
+);
+
+test('never invents an immutable model revision from a model tag', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () =>
+      Response.json({
+        model: 'zglosto/basal-2.0-mini:q5_k_m',
+        choices: [{ logprobs: { top_logprobs: [{ A: -1, B: -2 }] } }],
+      }),
+    ),
+  );
+  const result = await new DockerModelRunnerRuntime(
+    dockerEnvironment('http://runner:12434'),
+  ).classify(request);
+  expect(result.diagnostics?.modelRevision).toBeNull();
+});
+
+test.each(['unavailable', 'timeout', 'invalid_response'] as const)(
+  'keeps raw diagnostics null on %s',
+  async (reason) => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        if (reason === 'timeout') throw new DOMException('deadline', 'AbortError');
+        if (reason === 'unavailable') return new Response(null, { status: 503 });
+        return Response.json({ choices: [] });
+      }),
+    );
+    const result = await new DockerModelRunnerRuntime(
+      dockerEnvironment('http://runner:12434'),
+    ).classify(request);
+    expect(result).toMatchObject({
+      source: 'fallback',
+      reason,
+      diagnostics: {
+        confidenceRaw: null,
+        pEmergencyRaw: null,
+        modelRevision: null,
+        modelId: 'zglosto/basal-2.0-mini:q5_k_m',
+        latencyMs: expect.any(Number),
+      },
+    });
+  },
+);

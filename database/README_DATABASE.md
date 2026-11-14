@@ -14,7 +14,7 @@ database/
 │   ├── 02-create-auth.sql       # Tworzenie tabel autoryzacji (Better Auth)
 │   ├── 03-create-dbtables.sql  # Tworzenie tabel aplikacji (incydenty, użytkownicy rozszerzeni)
 │   ├── 04-setup-backup.sql     # Tworzenie backupu bazy danych
-├── migrations/           # Wersjonowane migracje 001-016 kontraktów bazy
+├── migrations/           # Wersjonowane migracje 001-017 kontraktów bazy
 └── README_DATABASE.md             # Ten plik
 ```
 
@@ -465,3 +465,61 @@ właściwej aplikacji (GID 10001, np. root:10001 i 0440). Katalog źródłowy po
 dla administratora; kontener widzi wyłącznie wybrane mounty. Nie polegaj na `uid/gid/mode`
 w krótkiej deklaracji Compose secrets — bind mount zachowuje uprawnienia pliku hosta.
 Kubernetes stosuje kontrakt 0440 i fsGroup odpowiedniego workloadu.
+
+## Prywatna diagnostyka klasyfikacji LLM
+
+Migracja `017-private-llm-diagnostics.sql` dodaje do `incydenty` pola diagnostyczne.
+Należy zastosować ją jako administrator przez bezpośrednie połączenie PostgreSQL
+przed uruchomieniem nowego backendu na istniejącym wolumenie. Świeża instalacja ma
+te same kolumny i ograniczenia w `03-create-dbtables.sql`. Dotychczasowe rekordy
+zachowują `NULL`; migracja nie wylicza historycznych wyników ponownie.
+
+| Kolumna                   | Znaczenie                                                                                                                     |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `llm_confidence_raw`      | Surowy wynik wybranej klasy po ograniczeniu rozkładu do A/B; liczba 0–1, bez kalibracji na danych mieszkańców                 |
+| `llm_p_emergency_raw`     | Surowy wynik opcji `emergency`, niezależnie od wybranej klasy                                                                 |
+| `llm_model_id`            | Referencja modelu żądanego przez gateway                                                                                      |
+| `llm_model_revision`      | Dokładny digest OCI modelu faktycznie zwróconego przez DMR (`sha256:…`), jeżeli runtime go ujawnił; nie jest sumą samego GGUF |
+| `llm_prompt_version`      | Wersja pytania i definicji opcji                                                                                              |
+| `llm_latency_ms`          | Zmierzony czas wywołania runtime'u przez gateway, razem z odczytem odpowiedzi                                                 |
+| `llm_calibration_version` | Identyfikator zastosowanej kalibracji; w pierwszym etapie `NULL`                                                              |
+
+Dla fallbacku obie wartości surowe pozostają `NULL`. Gateway może zachować znaną
+referencję modelu, prompt i czas nieudanej próby; przy błędzie transportu backendu
+cała diagnostyka może być niedostępna. Ograniczenia bazy kontrolują zakres i parę
+wyników, zgodność confidence z większym wynikiem A/B oraz kompletność metadanych.
+Istniejący grant backendu na tabelę obejmuje nowe kolumny; role innych usług nie
+otrzymują dodatkowego dostępu.
+
+Dane te nie należą do publicznych DTO ani odpowiedzi list/create dla użytkownika,
+operatora czy administratora w aplikacji. Backend rozdziela wynik publiczny od
+metadanych prywatnych i przekazuje je tylko do zapisu SQL. Nie zmieniają klasy,
+wybranej służby ani progów działania aplikacji.
+
+Przykładowy przegląd diagnostyki przez uprawnione połączenie administracyjne:
+
+```sql
+SELECT llm_model_id, llm_model_revision, llm_prompt_version,
+       count(*) AS samples,
+       avg(llm_confidence_raw) AS mean_raw_score,
+       percentile_cont(0.95) WITHIN GROUP (ORDER BY llm_latency_ms) AS p95_latency_ms
+FROM incydenty
+WHERE llm_source = 'model' AND llm_confidence_raw IS NOT NULL
+GROUP BY llm_model_id, llm_model_revision, llm_prompt_version;
+
+SELECT id_zgloszenia, llm_classification, llm_confidence_raw, llm_p_emergency_raw
+FROM incydenty
+WHERE llm_source = 'model' AND llm_confidence_raw < 0.7
+ORDER BY llm_confidence_raw
+LIMIT 50;
+```
+
+Druga kwerenda jest wyłącznie przykładowym filtrem do ręcznego przeglądu, nie progiem
+produkcyjnej decyzji. Surowy score nie mierzy trafności: jej ocenę umożliwi dopiero
+osobno przygotowany zbiór zgłoszeń z potwierdzoną prawidłową klasą. W tym etapie nie
+powstaje workflow etykietowania ani API do ręcznej oceny.
+
+Test migracji i świeżego schematu:
+`bun test database/tests/llm-diagnostics.test.ts --timeout 30000`.
+Uruchamia osobny, jednorazowy PostgreSQL bez sieci i portów hosta; wymaga lokalnie
+obrazu `postgres:18.7-alpine3.24` (test nie pobiera go automatycznie).

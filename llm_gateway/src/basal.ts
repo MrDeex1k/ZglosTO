@@ -3,6 +3,8 @@ import { isRecord, type LlmClassificationResponse } from '@zglosto/contracts';
 // Mini can rank the weaker option below the first 20 tokens (observed rank 26).
 // Read a larger window without changing logits, sampling or strict A/B validation.
 export const BASAL_LOGPROBS = 100;
+// Bump when the question, option meanings, ordering or prompt framing changes.
+export const BASAL_PROMPT_VERSION = 'municipal-emergency-v1';
 
 export type BasalVariant = 'basal-2.0-mini' | 'basal-2.0-4.5b' | 'basal-omni-1.0-mini';
 export type BasalOptionOrder = 'forward' | 'reverse';

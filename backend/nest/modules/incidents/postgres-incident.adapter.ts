@@ -71,7 +71,7 @@ export class PostgresIncidentAdapter extends IncidentDomainPort {
 
   async createIncident(command: CreateIncidentCommand): Promise<CurrentCreateIncidentResponse> {
     await this.ready();
-    const classification = await this.classifier.classify(
+    const { result: classification, diagnostics } = await this.classifier.classify(
       command.description,
       command.requestedServiceKey,
     );
@@ -79,8 +79,11 @@ export class PostgresIncidentAdapter extends IncidentDomainPort {
       `INSERT INTO incydenty (
          opis_zgloszenia, mail_zglaszajacego, reporter_user_id, adres_zgloszenia,
          latitude, longitude, service_key, llm_odpowiedz, llm_classification,
-         llm_model_available, llm_source, llm_reason
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+         llm_model_available, llm_source, llm_reason,
+         llm_confidence_raw, llm_p_emergency_raw, llm_model_id, llm_model_revision,
+         llm_prompt_version, llm_latency_ms, llm_calibration_version
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
+         $13, $14, $15, $16, $17, $18, $19)
        RETURNING id_zgloszenia`,
       [
         command.description,
@@ -95,6 +98,13 @@ export class PostgresIncidentAdapter extends IncidentDomainPort {
         classification.modelAvailable,
         classification.source,
         classification.reason,
+        diagnostics?.confidenceRaw ?? null,
+        diagnostics?.pEmergencyRaw ?? null,
+        diagnostics?.modelId ?? null,
+        diagnostics?.modelRevision ?? null,
+        diagnostics?.promptVersion ?? null,
+        diagnostics?.latencyMs ?? null,
+        diagnostics?.calibrationVersion ?? null,
       ],
     );
     const row = result.rows[0] ?? null;

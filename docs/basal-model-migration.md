@@ -181,3 +181,65 @@ infrastruktury, typecheck gatewaya i integracji, build gatewaya, lint zmienioneg
 rzeczywisty transport HTTP stubu (obie klasy, timeout, niedostępność, błędna
 odpowiedź i readiness). Skrypt przygotowania sprawdzono na istniejącym poprawnym
 GGUF; świeżą konwersję wykonano wcześniej tymi samymi poleceniami i narzędziami.
+
+## Prywatna diagnostyka klasyfikacji
+
+Gateway zapisuje surowy rozkład odczytany z kodów A/B jako diagnostykę wewnętrzną.
+`confidence` pozostaje `null` (brak kalibracji dla naszych zgłoszeń). Pola bazy:
+
+| Kolumna                   | Znaczenie                                                               |
+| ------------------------- | ----------------------------------------------------------------------- |
+| `llm_confidence_raw`      | Większa z dwóch surowych wartości po softmax A/B                        |
+| `llm_p_emergency_raw`     | Surowy wynik opcji `emergency`, niezależnie od wybranej klasy           |
+| `llm_model_id`            | Referencja modelu podana w żądaniu DMR                                  |
+| `llm_model_revision`      | Digest SHA-256 faktycznie obsłużonego pakietu OCI DMR                   |
+| `llm_prompt_version`      | Wersja pytania, opcji i sposobu budowania promptu                       |
+| `llm_latency_ms`          | Czas od rozpoczęcia klasyfikacji w gatewayu do odczytu odpowiedzi, w ms |
+| `llm_calibration_version` | Wersja zastosowanej kalibracji; obecnie `NULL`                          |
+
+Digest pakietu pochodzi z odpowiedzi DMR (`model`, ścieżka bundle), a nie z nazwy
+tagu ani założenia o zawartości lokalnego magazynu. Nie jest tym samym identyfikatorem
+co SHA-256 pliku GGUF. Jeśli serwer nie podaje rozpoznawalnego digestu, rewizja jest
+`NULL`. Wersję promptu `municipal-emergency-v1` należy zmienić wraz ze zmianą pytania,
+znaczenia opcji, ich kolejności lub szablonu. Sama zmiana modelu jest identyfikowana
+osobno przez jego referencję i digest.
+
+Wynik backendu rozdziela publiczny kontrakt klasyfikacji od prywatnej diagnostyki.
+Pola są zapisywane przy `INSERT INTO incydenty`; nie są dodawane do DTO odpowiedzi
+ani endpointów listowania, także administracyjnych. Frontend pozostaje bez zmian.
+Nie wprowadzono progów confidence ani zmiany decyzji klasyfikatora. Niepoprawna
+opcjonalna diagnostyka jest pomijana bez odrzucenia prawidłowej klasyfikacji.
+
+Przy fallbacku oba surowe wyniki są `NULL`. Jeśli gateway zdołał ustalić czas i znaną
+konfigurację, te metadane mogą pozostać zapisane; przy awarii transportu do gatewaya
+cała diagnostyka jest `NULL`. Starsze rekordy i zewnętrzne modele bez tego protokołu
+również mają `NULL`, a nie wymyślone wartości historyczne.
+
+Migracja istniejących wolumenów: `database/migrations/017-private-llm-diagnostics.sql`.
+Należy zastosować ją przed uruchomieniem nowego backendu. Produkcyjne i integracyjne
+skrypty wykonują migracje przez istniejącą listę `migrations/*.sql`. Schemat inicjalny
+zawiera te same kolumny i ograniczenia. Wyniki muszą należeć do [0,1], tworzyć spójną
+parę i nie mogą występować dla fallbacków; czas nie może być ujemny.
+
+Surowy wynik nie jest miarą trafności. Do sprawdzania jakości potrzebna jest także
+próbka zgłoszeń z prawidłową klasą potwierdzoną przez człowieka; workflow zbierania
+etykiet oraz dopasowanie kalibracji pozostają kolejnym etapem. Obecna zmiana dostarcza
+prywatny materiał diagnostyczny bez wpływu na mieszkańca.
+
+### Weryfikacja prywatnego zapisu
+
+Przeszło 75 testów kontraktów, 66 gatewaya, 136 backendu (3 pominięte) oraz
+4 testy rzeczywistego PostgreSQL: ponowienie migracji, stare rekordy, świeży schemat,
+zakresy wartości, fallbacki i niepoprawne metadane. Typecheck i build tych trzech
+workspace również przeszły. Testy HTTP backendu uruchomiono z dostępem do lokalnych
+portów testowych.
+
+Osobny test ręczny wykonał rzeczywistą inferencję DMR dla obu klas, serializację
+wyniku gatewaya, normalizację backendu i `PostgresIncidentAdapter.createIncident`
+z rzeczywistym klientem `pg`. Zapytania `INSERT` i `SELECT` wykonywały się w
+jednorazowym PostgreSQL. Sprawdzono zapis siedmiu pól oraz brak diagnostyki w
+odpowiedziach create/list. Po teście kontener usunięto. Transport HTTP/mTLS/Redis
+między usługami w tym teście nie był uruchamiany; dotychczasowych baz nie zmieniano.
+
+[Dowód rzeczywistego zapisu](evidence/basal-private-diagnostics-2026-11-14.json).
+Przykłady zapytań analitycznych są w [README bazy](../database/README_DATABASE.md).

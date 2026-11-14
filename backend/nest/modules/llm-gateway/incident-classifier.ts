@@ -1,15 +1,14 @@
 import { Injectable, type OnModuleDestroy } from '@nestjs/common';
-import type { CurrentLlmClassificationResult } from '@zglosto/contracts';
 import { addCounter, recordHistogram } from '@zglosto/observability';
 import { validateLlmEnvironment } from '../../../config/env.ts';
-import { classifyIncident } from '../../../lib/llm-classification.ts';
+import { classifyIncident, type IncidentClassification } from '../../../lib/llm-classification.ts';
 import { createLlmGatewayClient, type LlmGatewayClient } from '../../../lib/llm-gateway-client.ts';
 
 export abstract class IncidentClassifier {
   abstract classify(
     description: string,
     requestedServiceKey: string,
-  ): Promise<CurrentLlmClassificationResult>;
+  ): Promise<IncidentClassification>;
 }
 
 @Injectable()
@@ -24,7 +23,7 @@ export class LlmGatewayIncidentClassifier extends IncidentClassifier implements 
   async classify(
     description: string,
     requestedServiceKey: string,
-  ): Promise<CurrentLlmClassificationResult> {
+  ): Promise<IncidentClassification> {
     const environment = validateLlmEnvironment();
     this.#client ??= createLlmGatewayClient(environment);
     const startedAt = performance.now();
@@ -35,7 +34,7 @@ export class LlmGatewayIncidentClassifier extends IncidentClassifier implements 
         timeoutMs: environment.timeoutMs,
       });
       addCounter('zglosto_llm_backend_requests', 1, {
-        result: result.source,
+        result: result.result.source,
       });
       return result;
     } catch (error: unknown) {
