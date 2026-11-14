@@ -186,12 +186,18 @@ compose exec -T backend bun -e \
   "if (Object.keys(process.env).some((name) => name.startsWith('RUSTFS_'))) process.exit(1)"
 compose exec -T backend bun dist/storage/verify-storage.js
 
-log "Checking that Phase 0 database migrations are repeatable"
-for migration in "$ROOT_DIR"/database/migrations/*.sql; do
-  compose exec -T database /usr/local/bin/load-container-secrets sh -c \
-    'psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL"' \
-    < "$migration" >/dev/null
-done
+log "Checking the current fresh database bootstrap and private diagnostics"
+compose exec -T database /usr/local/bin/load-container-secrets sh -c \
+  'psql -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" -At' <<'SQL' | grep -qx 't'
+SELECT to_regclass('public.incident_images') IS NOT NULL
+  AND to_regprocedure('public.provision_application_user()') IS NOT NULL
+  AND (SELECT count(*) = 7 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'incydenty'
+      AND column_name IN ('llm_confidence_raw', 'llm_p_emergency_raw', 'llm_model_id',
+        'llm_model_revision', 'llm_prompt_version', 'llm_latency_ms', 'llm_calibration_version'))
+  AND has_table_privilege('zglosto_backend', 'public.incydenty', 'INSERT')
+  AND NOT has_column_privilege('zglosto_auth', 'public.incydenty', 'llm_confidence_raw', 'SELECT');
+SQL
 
 log "Checking that internal API ports are not published"
 assert_not_published backend 3000

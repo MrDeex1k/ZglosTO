@@ -46,6 +46,6 @@ Nie oznaczaj całej fazy jako odebranej, gdy którykolwiek wymagany wynik jest b
 
 ## Powrót do poprzedniego wydania
 
-Zachowaj dokładny tag i konfigurację poprzedniego wydania. Odbuduj jego cały zestaw artefaktów narzędziami zapisanymi w tym tagu na natywnym hoście; dla Node/pnpm użyj jego przypiętych wersji. Przed przełączeniem zachowaj backup. Wdróż komplet odtworzonych obrazów i konfiguracji, sprawdź readiness, logowanie/sesje, mTLS, media/kolejkę oraz telemetrię. Nie cofaj automatycznie migracji bazy.
+Zachowaj dokładny tag i konfigurację poprzedniego wydania. Odbuduj jego cały zestaw artefaktów narzędziami zapisanymi w tym tagu na natywnym hoście; dla Node/pnpm użyj jego przypiętych wersji. Przed przełączeniem zachowaj backup. Wdróż komplet odtworzonych obrazów i konfiguracji, sprawdź readiness, logowanie/sesje, mTLS, media/kolejkę oraz telemetrię. Odtwarzanie obrazów nie zmienia automatycznie schematu istniejącego wolumenu.
 
 Pozostaje kontrakt `exact-git-tag-rebuild`: aktywne wydanie jest zachowane do przejścia smoke kandydata, a późniejszy rollback wymaga odbudowy tagu. Nie wprowadzono stałej retencji poprzednich obrazów ani wyłączenia istniejących bramek bezpieczeństwa.

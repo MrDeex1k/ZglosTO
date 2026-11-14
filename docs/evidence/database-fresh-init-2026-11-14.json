@@ -1,0 +1,57 @@
+{
+  "date": "2026-11-14",
+  "passed": true,
+  "scope": "Current database initialization from an empty data directory before first deployment",
+  "schemaInitialization": {
+    "historicalMigrationsDirectoryRemoved": true,
+    "historicalMigrationCommandsRemoved": true,
+    "userProvisioningScript": "database/init-scripts/05-user-provisioning.sql",
+    "runtimeRoleEntrypoint": "database/init-scripts/06-runtime-roles.sh",
+    "currentRuntimeGrants": "database/init-scripts/runtime-role-grants.txt",
+    "runtimeCredentialRefreshChangesSchema": false
+  },
+  "validation": {
+    "privateDiagnosticsFreshInit": {
+      "command": "bun test database/tests/llm-diagnostics.test.ts --timeout 120000",
+      "passed": 3,
+      "failed": 0,
+      "assertions": 22,
+      "postgresImage": "postgres:18.7-alpine3.24",
+      "coverage": [
+        "Automatic entrypoint initializes the current schema, provisioning trigger and runtime roles without historical migrations",
+        "Private diagnostic writes, score constraints and fallback invariants",
+        "Backend runtime role can write diagnostics; auth runtime role cannot read them"
+      ]
+    },
+    "runtimeRolesAndPgBouncer": {
+      "command": "bun test database/tests/runtime-roles.test.ts --timeout 120000",
+      "passed": 7,
+      "failed": 0,
+      "assertions": 73,
+      "coverage": [
+        "Three distinct SCRAM identities through PgBouncer; invalid and administrative credentials rejected",
+        "Restricted CRUD and denied OS, DDL, role and cross-service access",
+        "Repeatable current grants, confirmed direct credential refresh and owner-bypass refusal",
+        "Real Better Auth signup, login and custom session"
+      ]
+    },
+    "atomicUserProvisioning": {
+      "command": "bun run test:auth-provisioning",
+      "passed": true
+    },
+    "infrastructure": {
+      "command": "bun test scripts/test-infrastructure.ts --timeout 30000",
+      "passed": 17,
+      "failed": 0
+    },
+    "productionStaticChecks": [
+      "Shell syntax",
+      "Deployment baseline",
+      "Image contract",
+      "Production source build contract",
+      "Negative production deployment policies"
+    ]
+  },
+  "isolation": "Disposable test containers and network were removed; no existing application data was modified",
+  "modelAndDiagnostics": "Basal 2.0 Mini 1.5B Q5 and private diagnostic behavior remain unchanged"
+}

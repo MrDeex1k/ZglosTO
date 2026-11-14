@@ -215,10 +215,11 @@ konfigurację, te metadane mogą pozostać zapisane; przy awarii transportu do g
 cała diagnostyka jest `NULL`. Starsze rekordy i zewnętrzne modele bez tego protokołu
 również mają `NULL`, a nie wymyślone wartości historyczne.
 
-Migracja istniejących wolumenów: `database/migrations/017-private-llm-diagnostics.sql`.
-Należy zastosować ją przed uruchomieniem nowego backendu. Produkcyjne i integracyjne
-skrypty wykonują migracje przez istniejącą listę `migrations/*.sql`. Schemat inicjalny
-zawiera te same kolumny i ograniczenia. Wyniki muszą należeć do [0,1], tworzyć spójną
+Aktualny schemat od zera zawiera te kolumny i ograniczenia w
+`database/init-scripts/03-create-dbtables.sql`. Aplikacja nie jest jeszcze wdrożona,
+więc usunięto wszystkie historyczne migracje schematu. Inicjalizacja pustej bazy
+tworzy od razu docelową tabelę, trigger provisioningu i uprawnienia runtime.
+Wyniki muszą należeć do [0,1], tworzyć spójną
 parę i nie mogą występować dla fallbacków; czas nie może być ujemny.
 
 Surowy wynik nie jest miarą trafności. Do sprawdzania jakości potrzebna jest także
@@ -228,9 +229,13 @@ prywatny materiał diagnostyczny bez wpływu na mieszkańca.
 
 ### Weryfikacja prywatnego zapisu
 
+[Dowód aktualnej inicjalizacji od zera](evidence/database-fresh-init-2026-11-14.json)
+potwierdza także provisioning kont oraz uprawnienia runtime przez PgBouncera.
+
 Przeszło 75 testów kontraktów, 66 gatewaya, 136 backendu (3 pominięte) oraz
-4 testy rzeczywistego PostgreSQL: ponowienie migracji, stare rekordy, świeży schemat,
-zakresy wartości, fallbacki i niepoprawne metadane. Typecheck i build tych trzech
+3 testy rzeczywistego PostgreSQL uruchamianego od zera: automatyczna inicjalizacja
+schematu bez migracji, zapis diagnostyki, zakresy wartości, fallbacki, niepoprawne metadane
+oraz zapis przez rolę backendu i odmowa odczytu przez rolę auth. Typecheck i build tych trzech
 workspace również przeszły. Testy HTTP backendu uruchomiono z dostępem do lokalnych
 portów testowych.
 

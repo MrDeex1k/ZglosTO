@@ -56,7 +56,7 @@ printf '[restore] Restoring PostgreSQL through the direct connection\n'
   < "$backup_directory/database.dump"
 
 printf '[restore] Reapplying database runtime role grants after no-privileges restore\n'
-"${compose[@]}" exec -T -e DATABASE_ROLES_EXISTING_INSTALLATION=true database \
+"${compose[@]}" exec -T -e DATABASE_ROLES_DIRECT_CONNECTION=true database \
   /usr/local/bin/load-container-secrets sh /docker-entrypoint-initdb.d/06-runtime-roles.sh
 
 printf '[restore] Restoring Object Storage through the active S3-compatible provider\n'

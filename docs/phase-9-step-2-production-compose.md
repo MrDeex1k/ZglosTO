@@ -101,12 +101,13 @@ PRODUCTION_ENV_FILE=/etc/zglosto/production.env \
 ALLOW_PRODUCTION_RESTORE=1 ./scripts/production-compose.sh restore /bezpieczny/katalog
 ```
 
-`deploy` wykonuje kolejno: walidację, pobranie obrazów, start PostgreSQL, migracje,
+`deploy` wykonuje kolejno: walidację, pobranie obrazów, start PostgreSQL z aktualnym schematem od zera, provisioning ról,
 uruchomienie całego profilu, smoke test i zapisanie zestawu digestów jako bieżącego
 wydania. Blokada operacyjna zapobiega równoczesnemu deployowi, rollbackowi lub restore.
 
-Rollback odtwarza poprzedni zestaw obrazów, ale celowo nie cofa migracji bazy. Każda migracja
-musi więc być kompatybilna wstecz z poprzednim wydaniem aplikacji. Backup i restore
+Rollback odtwarza poprzedni zestaw obrazów i nie przepisuje schematu wolumenu.
+Historyczne migracje usunięto przed pierwszym wdrożeniem; świeża baza startuje
+bezpośrednio z aktualnego schematu inicjalizacyjnego. Backup i restore
 delegują istniejącym, wersjonowanym procedurom projektu; produkcyjny restore wymaga jawnego
 potwierdzenia zmienną `ALLOW_PRODUCTION_RESTORE=1`.
 

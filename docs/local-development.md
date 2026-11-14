@@ -63,7 +63,7 @@ Bazowy <code>docker-compose.yml</code> składa się z następujących elementów
 | <code>frontend</code>      | Zbudowany WEB serwowany przez Nginx           |
 | <code>backend</code>       | Główne API domenowe NestJS                    |
 | <code>authorization</code> | Better Auth, sesje, cookies i role            |
-| <code>database</code>      | PostgreSQL z migracjami i TLS                 |
+| <code>database</code>      | PostgreSQL z aktualnym schematem i TLS        |
 | <code>pgbouncer</code>     | Pooling połączeń aplikacyjnych do PostgreSQL  |
 | <code>rabbitmq</code>      | Trwała kolejka zadań asynchronicznych         |
 | <code>media_worker</code>  | Walidacja i konwersja zdjęć przez Sharp       |
@@ -112,7 +112,7 @@ docker compose logs --tail=200 media_worker
 docker compose logs -f backend
 ```
 
-Jeśli chcesz zweryfikować również routing, healthchecki, migracje i podstawowy przepływ
+Jeśli chcesz zweryfikować również routing, healthchecki, inicjalizację bazy i podstawowy przepływ
 bez dotykania zwykłych wolumenów, uruchom izolowany smoke test:
 
 ```bash

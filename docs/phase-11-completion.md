@@ -6,6 +6,11 @@ Faza 11 została zakończona 2026-07-26: wykonano **14/14 kroków**. ZgłosTO ma
 modułowy profil Docker Compose budowany natywnie ze źródeł na serwerze instalacji, bez
 własnego registry i bez GitHub-hosted runnera.
 
+Przed pierwszym wdrożeniem historyczne migracje bazy usunięto. Bieżący deploy
+inicjalizuje pustą bazę i jawnie provisionuje role runtime; obowiązuje
+[aktualny runbook Compose](production-compose-runbook.md). Poniższa lista zachowuje
+historyczny zakres fazy.
+
 ## Dostarczone elementy
 
 - audyt i docelowe budżety ośmiu obrazów;

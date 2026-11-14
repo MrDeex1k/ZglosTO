@@ -1,5 +1,5 @@
 #!/bin/sh
-# Runs automatically only on a fresh database; existing installations use the explicit wrapper.
+# Runs automatically only on a fresh database; credential refreshes use the explicit wrapper.
 set -eu
 if [ -n "${POSTGRES_PASSWORD_FILE:-}" ]; then
   POSTGRES_PASSWORD=$(cat "$POSTGRES_PASSWORD_FILE")
@@ -31,11 +31,11 @@ if [ -n "${DATABASE_DIRECT_URL:-}" ]; then
 else
   set -- -U "$POSTGRES_USER" -d "$POSTGRES_DB" -p "${POSTGRES_PORT:-5432}"
 fi
-# The init server listens only on its local socket, so the bootstrap path must bypass the URL.
-if [ "${DATABASE_ROLES_EXISTING_INSTALLATION:-false}" != true ]; then
+# The init server listens only on its local socket, so the bootstrap path must bypass the direct TCP URL.
+if [ "${DATABASE_ROLES_DIRECT_CONNECTION:-false}" != true ]; then
   set -- -U "$POSTGRES_USER" -d "$POSTGRES_DB"
 fi
-psql -X -v ON_ERROR_STOP=1 "$@" -f /opt/zglosto/migrations/016-runtime-role-grants.sql
+psql -X -v ON_ERROR_STOP=1 "$@" -f /docker-entrypoint-initdb.d/runtime-role-grants.txt
 psql -X -v ON_ERROR_STOP=1 "$@" <<'SQL'
 \getenv auth_password DATABASE_AUTH_PASSWORD
 \getenv backend_password DATABASE_BACKEND_PASSWORD

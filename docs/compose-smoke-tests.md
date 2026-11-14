@@ -95,8 +95,8 @@ Skrypt sprawdza:
 5. aplikacyjny `DATABASE_URL` wskazuje PgBouncera, a rzeczywiste zapytania potwierdzają TLS
    1.3 na odcinku przez pooler i na bezpośrednim `DATABASE_DIRECT_URL`;
 6. backend i authorization nie otrzymuja `DATABASE_DIRECT_URL`;
-7. PostgreSQL i PgBouncer odrzucają klientów plaintext, a wszystkie migracje są powtarzalne
-   przez bezpośredni URL z `verify-full`;
+7. PostgreSQL i PgBouncer odrzucają klientów plaintext, a świeża baza ma aktualny
+   schemat i właściwe uprawnienia runtime;
 8. rzeczywisty zapis, odczyt, sprawdzenie i usunięcie obiektu przez `S3ObjectStorage`;
 9. health RabbitMQ, jedyny listener AMQPS `5671`, brak plaintext `5672`, brak listenera
    management `15672` oraz brak publikacji AMQPS na hoście;

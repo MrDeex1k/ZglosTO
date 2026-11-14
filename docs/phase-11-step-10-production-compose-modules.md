@@ -82,7 +82,7 @@ Domyślna ścieżka `images.env` to kandydat z kroku 9. Można ją wskazać jawn
 `PRODUCTION_IMAGES_ENV_FILE`, a manifest przez `PRODUCTION_BUILD_MANIFEST_FILE`.
 Po udanym deployu publiczna konfiguracja, `images.env` i manifest są kopiowane do katalogu
 stanu jako bieżące wydanie. Poprzednie obrazy nie są utrzymywane: rollback wymaga builda
-dokładnego wcześniejszego tagu Git i ponownego deployu, bez automatycznego cofania migracji.
+dokładnego wcześniejszego tagu Git i ponownego deployu, bez automatycznej zmiany schematu istniejącego wolumenu.
 
 Polecenie `pull` pobiera wyłącznie włączone komponenty zewnętrzne, na przykład RustFS,
 Redis lub lokalny stos observability. Nigdy nie próbuje pobierać obrazów ZgłosTO.
@@ -101,6 +101,6 @@ Redis lub lokalny stos observability. Nigdy nie próbuje pobierać obrazów Zgł
 - dotychczasowe limity i hardening rdzenia produkcyjnego.
 
 Kroki 11–14 domknęły hardening opcjonalnych kontenerów i hosta, procedurę
-`build -> validate -> backup -> migrate -> wait -> smoke -> promote`, lokalne bramki,
+`build -> validate -> backup -> initialize/provision -> wait -> smoke -> promote`, lokalne bramki,
 [runbook Compose](production-compose-runbook.md) oraz
 [handoff do K3s](k3s-local-images-handoff.md).

@@ -57,9 +57,9 @@ INTEGRATION_KEEP_RUNNING=1 \
 14. backend i authorization używają `DATABASE_URL` z hostem `pgbouncer`, nie otrzymują
     `DATABASE_DIRECT_URL`, mają wyłącznie Database CA, a rzeczywiste zapytanie potwierdza TLS
     1.3 przez pooler;
-15. wszystkie migracje można zastosować ponownie bez błędu przez bezpośredni URL; schemat nie
-    zawiera już kolumn zdjęć `bytea`, tabela `incident_images` istnieje, a połączenie używa
-    TLS 1.3 z `verify-full`;
+15. świeża baza tworzy aktualny schemat bez historycznych migracji; nie zawiera kolumn
+    zdjęć `bytea`, tabela `incident_images` istnieje, a bezpośrednie połączenie administracyjne
+    używa TLS 1.3 z `verify-full`;
 16. backend nie otrzymuje `RUSTFS_*`, inicjalizuje prywatny bucket przez neutralne `S3_*`, a
     `S3ObjectStorage` wykonuje rzeczywiste `put`, `head`, `get` i `delete`.
 17. konfiguracja PgBouncera wymaga TLS 1.3 i `verify-full` upstream, a PostgreSQL i PgBouncer

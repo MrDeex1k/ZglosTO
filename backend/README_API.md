@@ -292,11 +292,9 @@ console.log(data);
 }
 ```
 
-Migracje istniejacej bazy dla statusow, tozsamosci i LLM uruchamia:
-
-```bash
-./scripts/migrate-phase-0-contracts.sh
-```
+Pusta baza jest inicjalizowana od razu z aktualnymi statusami, tozsamoscia i kolumnami LLM
+przez `database/init-scripts/`. Aplikacja nie byla wdrozona, dlatego nie utrzymujemy
+historycznych migracji schematu. [Uruchomienie i inicjalizacja bazy](../database/README_DATABASE.md).
 
 #### Wewnętrzny kontrakt klasyfikacji LLM
 

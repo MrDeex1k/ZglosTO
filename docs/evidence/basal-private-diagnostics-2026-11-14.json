@@ -33,9 +33,19 @@
     "gatewayPassed": 66,
     "backendPassed": 136,
     "backendSkipped": 3,
-    "postgresMigrationPassed": 4,
     "typecheckAndBuild": ["contracts", "gateway", "backend"],
     "publicIncidentDtosUnchanged": true,
-    "scoreBasedDecisionThresholdsAdded": false
+    "scoreBasedDecisionThresholdsAdded": false,
+    "postgresFreshInitPassed": 3,
+    "postgresFreshInitAssertions": 22,
+    "postgresFreshInitCoverage": [
+      "automatic PostgreSQL entrypoint initialization: 01/02/03/05/06 and current runtime-role-grants.txt",
+      "private diagnostic fields, score constraints and fallback invariants",
+      "backend runtime role can write diagnostics; auth runtime role cannot read them"
+    ]
+  },
+  "historicalValidation": {
+    "postgresMigrationPassed": 4,
+    "note": "Earlier validation used historical migration files; these files were subsequently removed before first deployment. The validation section records the current fresh-init run. Captured DMR inference rows remain unchanged."
   }
 }
