@@ -8,7 +8,7 @@ import {
   type LlmHealthResponse,
 } from '@zglosto/contracts';
 import type { LlmGatewayEnvironment } from './environment.ts';
-import { basalCompletionPrompt, parseBasalClassification } from './basal.ts';
+import { BASAL_LOGPROBS, basalCompletionPrompt, parseBasalClassification } from './basal.ts';
 
 export interface ModelRuntime {
   readonly name: string;
@@ -129,7 +129,7 @@ export class DockerModelRunnerRuntime implements ModelRuntime {
             min_p: 0,
             max_tokens: 1,
             stream: false,
-            logprobs: 20,
+            logprobs: BASAL_LOGPROBS,
             prompt: basalCompletionPrompt(request.description),
           }),
         },

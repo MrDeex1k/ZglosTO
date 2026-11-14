@@ -406,7 +406,7 @@ services:
       LLM_RUNTIME: ${LLM_RUNTIME:-disabled}
       LLM_UPSTREAM_TIMEOUT_MS: ${LLM_UPSTREAM_TIMEOUT_MS:-5000}
       DOCKER_MODEL_RUNNER_URL: ${DOCKER_MODEL_RUNNER_URL:-http://model-runner.docker.internal:12434}
-      DOCKER_MODEL_RUNNER_MODEL: ${DOCKER_MODEL_RUNNER_MODEL:-zglosto/basal-2.0-4.5b:q4_k_m}
+      DOCKER_MODEL_RUNNER_MODEL: ${DOCKER_MODEL_RUNNER_MODEL:-zglosto/basal-2.0-mini:q5_k_m}
       DOCKER_MODEL_RUNNER_ENGINE: ${DOCKER_MODEL_RUNNER_ENGINE:-llama.cpp}
     volumes:
       - ./.certs/service/ca.crt:/run/secrets/service/ca.crt:ro

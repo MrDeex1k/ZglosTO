@@ -20,9 +20,10 @@ API montowany wyłącznie do gatewaya. `LLM_MODE=disabled` pozostaje domyślne.
 
 ## Przypięta konfiguracja
 
-Domyślny lokalny klasyfikator to **Basal 2.0 4,5B Q4_K_M**, pakowany lokalnie jako
-`zglosto/basal-2.0-4.5b:q4_k_m`. Jest to testowana konwersja własna, a nie oficjalny
-artefakt Q4 autora Basal. Szczegóły pochodzenia i porównanie z Omni:
+Domyślny lokalny klasyfikator to **Basal 2.0 Mini 1,5B Q5_K_M**, pakowany jako
+`zglosto/basal-2.0-mini:q5_k_m`. Pobieramy oficjalny plik autora bez konwersji.
+Rewizja Hugging Face: `9926cd8a62e7e65cba57aaab51d56c18b38f0a6b` z repozytorium
+`Remek/basal-2.0-mini-GGUF`. Historia testów Q4 i aktualny pomiar Mini Q5:
 [plan migracji i benchmark](basal-model-migration.md).
 
 Przed pierwszym uruchomieniem profilu lokalnego przygotuj model:
@@ -31,24 +32,23 @@ Przed pierwszym uruchomieniem profilu lokalnego przygotuj model:
 ./scripts/prepare-basal-dmr.sh
 ```
 
-Skrypt wymaga Pythona z zależnościami konwertera (torch, transformers, numpy,
-sentencepiece, protobuf, safetensors), pobiera przypięte źródła i sprawdza SHA-256.
-Na macOS arm64 pobiera również przypięty `llama-quantize`; na innych platformach
-podaj `LLAMA_QUANTIZE` z llama.cpp `b11312`. Potrzeba około 30 GB wolnego miejsca
-na konwersję. Wynik trafia do ignorowanego `.local-models/` i lokalnego magazynu DMR.
-Nie publikujemy go automatycznie w rejestrze. Ten krok wykonuje się na każdym hoście
-DMR przed uruchomieniem Compose; samo `docker compose up` nie buduje modelu.
+Skrypt wymaga Docker Model Runner, curl i narzędzia SHA-256. Pobiera przypięty
+oficjalny GGUF, sprawdza sumę i rozmiar, a następnie pakuje go lokalnie. Nie wymaga
+Pythona, wag BF16 ani konwertera. Plik zajmuje 1,17 GB; na pobranie i kopię w DMR
+potrzeba około 2,4 GB wolnego miejsca. Cache jest w ignorowanym `.local-models/`.
+Przygotowanie wykonuje się na każdym hoście DMR przed uruchomieniem Compose.
+Skrypt nie publikuje modelu w rejestrze.
 
 | Parametr                  | Wartość                                                            |
 | ------------------------- | ------------------------------------------------------------------ |
-| Plik GGUF                 | `basal-2.0-4.5B-Q4_K_M.gguf`                                       |
-| SHA-256 pliku             | `b271979c29c71527f357b800fa82ec2e317ae8617f334fb4b96c86a03269465d` |
-| Rozmiar pliku             | `2 878 886 368` bajtów                                             |
+| Plik GGUF                 | `basal-2.0-mini-Q5_K_M.gguf`                                       |
+| SHA-256 pliku             | `9865d535e7497f5195a17292808d50969757ab390a5e8fbda5e9c17a3361f0b5` |
+| Rozmiar pliku             | `1 168 136 320` bajtów                                             |
 | Kontekst                  | `4096` tokenów                                                     |
-| Odpowiedź                 | jeden token, `logprobs=20`                                         |
+| Odpowiedź                 | jeden token, `logprobs=100`                                        |
 | Timeout gateway → DMR     | `5000 ms`                                                          |
 | Timeout backend → gateway | `7000 ms`                                                          |
-| Pewność Q4                | `null` — bez kalibracji na danych docelowych                       |
+| Pewność klasyfikatora     | `null` — bez kalibracji na danych docelowych                       |
 
 Usunięto parametry `DOCKER_MODEL_RUNNER_TEMPERATURE` i
 `DOCKER_MODEL_RUNNER_MAX_TOKENS`: protokół Basal ustala pojedynczy odczyt logitów,

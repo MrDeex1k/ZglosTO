@@ -99,7 +99,7 @@ transportów.
 {
   "status": "ok",
   "service": "llm_gateway",
-  "model": "zglosto/basal-2.0-4.5b:q4_k_m",
+  "model": "zglosto/basal-2.0-mini:q5_k_m",
   "enabled": true,
   "loaded": false,
   "error": "model_unavailable"

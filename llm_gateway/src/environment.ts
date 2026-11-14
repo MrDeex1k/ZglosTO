@@ -71,7 +71,7 @@ export function validateEnvironment(): LlmGatewayEnvironment {
     dockerModelRunnerUrl:
       process.env.DOCKER_MODEL_RUNNER_URL ?? 'http://model-runner.docker.internal:12434',
     dockerModelRunnerModel:
-      process.env.DOCKER_MODEL_RUNNER_MODEL ?? 'zglosto/basal-2.0-4.5b:q4_k_m',
+      process.env.DOCKER_MODEL_RUNNER_MODEL ?? 'zglosto/basal-2.0-mini:q5_k_m',
     dockerModelRunnerEngine: process.env.DOCKER_MODEL_RUNNER_ENGINE ?? 'llama.cpp',
     openAiCompatibleUrl: process.env.OPENAI_COMPATIBLE_URL ?? 'https://llm.example.invalid/v1',
     openAiCompatibleModel: process.env.OPENAI_COMPATIBLE_MODEL ?? 'disabled',

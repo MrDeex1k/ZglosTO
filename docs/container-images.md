@@ -8,7 +8,7 @@ Od 2026-11-13 projekt używa następujących przypiętych obrazów:
 | ----------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | minimalny runtime usług Bun                     | `alpine:3.24.4` + binarny Bun 1.4.4                                                            |
 | publiczny Nginx i runtime statycznego frontendu | `nginx:1.31.8-alpine3.24-slim`                                                                 |
-| opcjonalny model DMR                            | `zglosto/basal-2.0-4.5b:q4_k_m`                                                                |
+| opcjonalny model DMR                            | `zglosto/basal-2.0-mini:q5_k_m`                                                                |
 | baza własnego obrazu database                   | `postgres:18.7-alpine3.24`                                                                     |
 | własny obraz poolera                            | `pgbouncer/Dockerfile` bazujący na `edoburu/pgbouncer:v1.26.1-p0`                              |
 | trwały broker bez panelu management             | `rabbitmq:4.4.0-alpine`                                                                        |
@@ -47,8 +47,8 @@ pgBackRest wraz z systemowym PostgreSQL wyłącznie na czas budowania. Do finaln
 trafiają tylko `pg_cron.so`, pliki kontrolne rozszerzenia, binarny pgBackRest oraz jego dwie
 brakujące biblioteki runtime, więc obraz nie zawiera drugiej instalacji serwera.
 
-Model DMR jest lokalną konwersją Basal 2.0 4,5B Q4_K_M, z przypiętymi wagami
-źródłowymi i SHA-256 GGUF. Przygotowanie przez `scripts/prepare-basal-dmr.sh` oraz
+Model DMR to oficjalny Basal 2.0 Mini 1,5B Q5_K_M, z przypiętą rewizją
+Hugging Face i SHA-256 GGUF. Przygotowanie przez `scripts/prepare-basal-dmr.sh` oraz
 wymagania opisuje [instrukcja DMR](docker-model-runner.md). Nie jest obrazem
 aplikacyjnym budowanym przez `build-images.sh`.
 

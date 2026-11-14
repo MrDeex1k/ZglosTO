@@ -24,7 +24,7 @@
       "observability": "disabled",
       "llm": "local",
       "llmRuntime": "docker-model-runner",
-      "llmModel": "zglosto/basal-2.0-4.5b:q4_k_m"
+      "llmModel": "zglosto/basal-2.0-mini:q5_k_m"
     },
     "recommended": {
       "objectStorage": "local",

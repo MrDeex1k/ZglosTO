@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "artifact": {
+    "repository": "Remek/basal-2.0-mini-GGUF",
+    "revision": "9926cd8a62e7e65cba57aaab51d56c18b38f0a6b",
+    "file": "basal-2.0-mini-Q5_K_M.gguf",
+    "official": true,
+    "locallyQuantized": false,
+    "sha256": "9865d535e7497f5195a17292808d50969757ab390a5e8fbda5e9c17a3361f0b5",
+    "bytes": 1168136320,
+    "dmrId": "sha256:195c15dd8531bebec9b535c8fc5ead1f7370fd4c9896a414dfc71179c1b930ad"
+  },
+  "runtime": {
+    "dmr": "1.2.9",
+    "llamaCpp": "b9879-72874f559",
+    "acceleration": "CPU",
+    "cpu": "Apple M4 Pro",
+    "logicalCpu": 12,
+    "ramBytes": 25769803776
+  },
+  "startedAt": "2026-11-14T07:58:04.504Z",
+  "finishedAt": "2026-11-14T07:58:13.771Z",
+  "variant": "basal-2.0-mini",
+  "fixtureSha256": "eab1b65f7b7107413a13c9bcd62f8017a4a8106f1c6d45651b7bf59cff3bfdf9",
+  "calibration": "none: scores are raw restricted probabilities, not domain-calibrated confidence",
+  "settings": {
+    "bos": "server adds one BOS; request omits the template BOS",
+    "timeoutMs": 5000,
+    "repeats": 1,
+    "fixtureCount": 30,
+    "optionOrders": 2,
+    "maxTokens": 1,
+    "logprobs": 100,
+    "temperature": 1
+  },
+  "summary": {
+    "decisionMethod": "mean of two raw distributions after mapping each option order back to classes",
+    "perOrder": {
+      "forward": {
+        "decisions": 30,
+        "correct": 30,
+        "accuracy": 1,
+        "fallbacks": 0,
+        "falseNegatives": 0,
+        "falsePositives": 0,
+        "latencyMs": {
+          "p50": 153.2377909999999,
+          "p95": 164.29583300000013
+        }
+      },
+      "reverse": {
+        "decisions": 30,
+        "correct": 30,
+        "accuracy": 1,
+        "fallbacks": 0,
+        "falseNegatives": 0,
+        "falsePositives": 0,
+        "latencyMs": {
+          "p50": 153.24258400000008,
+          "p95": 155.71591700000005
+        }
+      }
+    },
+    "decisions": 30,
+    "correct": 30,
+    "accuracy": 1,
+    "fallbacks": 0,
+    "fallbackCounts": {},
+    "falseNegatives": 0,
+    "falsePositives": 0,
+    "orderDisagreements": 0,
+    "calls": 60,
+    "successfulCalls": 60,
+    "latencyMs": {
+      "firstCall": 201.40125,
+      "p50": 153.24258400000008,
+      "p95": 157.419042,
+      "total": 9262.468458999992
+    },
+    "usage": {
+      "promptTokens": 9260,
+      "completionTokens": 60,
+      "callsWithUsage": 60
+    }
+  },
+  "failures": [],
+  "readoutValidation": {
+    "initialLogprobs": 20,
+    "initialReverseFallbacks": 2,
+    "observedWeakerOptionRank": 26,
+    "finalLogprobs": 100,
+    "strictBothCodesRequired": true
+  },
+  "applicationGate": {
+    "schemaVersion": 1,
+    "phase": "12",
+    "model": "zglosto/basal-2.0-mini:q5_k_m",
+    "engine": "llama.cpp",
+    "sampleCount": 5,
+    "timeoutMs": 5000,
+    "p95Ms": 371,
+    "maximumMs": 371,
+    "passed": true,
+    "capturedAt": "2026-11-14T07:58:50.080Z"
+  },
+  "limitations": [
+    "30 synthetic cases, not a production accuracy estimate.",
+    "Warm sequential DMR run, no load/concurrency test.",
+    "Application confidence remains null without domain calibration."
+  ]
+}

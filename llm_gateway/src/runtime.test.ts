@@ -26,7 +26,7 @@ function dockerEnvironment(url: string): LlmGatewayEnvironment {
     runtime: 'docker-model-runner',
     upstreamTimeoutMs: 100,
     dockerModelRunnerUrl: url,
-    dockerModelRunnerModel: 'zglosto/basal-2.0-4.5b:q4_k_m',
+    dockerModelRunnerModel: 'zglosto/basal-2.0-mini:q5_k_m',
     dockerModelRunnerEngine: 'llama.cpp',
     openAiCompatibleUrl: 'https://provider.example.invalid/v1',
     openAiCompatibleModel: 'municipal-classifier',
@@ -67,7 +67,7 @@ test('reads Basal option logprobs from Docker Model Runner raw completions', asy
     min_p: 0,
     max_tokens: 1,
     stream: false,
-    logprobs: 20,
+    logprobs: 100,
     prompt: expect.stringMatching(/^<\|im_start\|>system\n/),
   });
 });
@@ -76,7 +76,7 @@ test('uses the Compose-injected OpenAI base URL and accepts a canonical Docker m
   const fetchMock = vi.fn(async () =>
     Response.json({
       object: 'list',
-      data: [{ id: 'docker.io/zglosto/basal-2.0-4.5b:q4_k_m', object: 'model' }],
+      data: [{ id: 'docker.io/zglosto/basal-2.0-mini:q5_k_m', object: 'model' }],
     }),
   );
   vi.stubGlobal('fetch', fetchMock);

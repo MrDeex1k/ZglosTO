@@ -61,7 +61,7 @@ test('uses the disabled-by-default Phase 7 configuration', () => {
     runtime: 'disabled',
     upstreamTimeoutMs: 5000,
     dockerModelRunnerUrl: 'http://model-runner.docker.internal:12434',
-    dockerModelRunnerModel: 'zglosto/basal-2.0-4.5b:q4_k_m',
+    dockerModelRunnerModel: 'zglosto/basal-2.0-mini:q5_k_m',
     dockerModelRunnerEngine: 'llama.cpp',
     openAiCompatibleUrl: 'https://llm.example.invalid/v1',
     openAiCompatibleModel: 'disabled',

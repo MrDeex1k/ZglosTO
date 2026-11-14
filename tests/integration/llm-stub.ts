@@ -6,7 +6,7 @@ const json = (response: ServerResponse, status: number, payload: unknown): void 
   response.end(JSON.stringify(payload));
 };
 
-const model = 'zglosto/basal-2.0-4.5b:q4_k_m';
+const model = 'zglosto/basal-2.0-mini:q5_k_m';
 
 const server = http.createServer(async (request, response) => {
   if (

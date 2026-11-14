@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import {
+  BASAL_LOGPROBS,
   basalProbabilities,
   basalCompletionPrompt,
   type BasalOptionOrder,
@@ -98,11 +99,12 @@ function parseFixtures(text: string): Fixture[] {
 if (process.argv.includes('--help')) {
   console.log(`Run with bun scripts/benchmark-basal.ts. Required environment:
 BASAL_BENCHMARK_MODEL: exact loaded model ID
-BASAL_BENCHMARK_VARIANT: basal-2.0-4.5b or basal-omni-1.0-mini
+BASAL_BENCHMARK_VARIANT: basal-2.0-mini, basal-2.0-4.5b or basal-omni-1.0-mini
 Optional: BASAL_BENCHMARK_URL (default http://localhost:12434/v1),
 BASAL_BENCHMARK_OUTPUT (JSON file), BASAL_BENCHMARK_FIXTURE (JSON file),
 BASAL_BENCHMARK_TIMEOUT_MS (default 120000), BASAL_BENCHMARK_LIMIT,
-BASAL_BENCHMARK_REPEATS (default 1), BASAL_BENCHMARK_MODEL_SHA256 (artifact provenance).
+BASAL_BENCHMARK_REPEATS (default 1), BASAL_BENCHMARK_LOGPROBS (default 100),
+BASAL_BENCHMARK_MODEL_SHA256 (artifact provenance).
 Uses an already running DMR or llama-server /v1/completions with automatic BOS
 (add_special=true, GGUF add_bos_token=true); downloads and starts nothing.`);
   process.exit(0);
@@ -111,8 +113,12 @@ Uses an already running DMR or llama-server /v1/completions with automatic BOS
 const model = process.env.BASAL_BENCHMARK_MODEL?.trim();
 if (!model) throw new Error('BASAL_BENCHMARK_MODEL is required');
 const variant = process.env.BASAL_BENCHMARK_VARIANT;
-if (variant !== 'basal-2.0-4.5b' && variant !== 'basal-omni-1.0-mini') {
-  throw new Error('BASAL_BENCHMARK_VARIANT must select one of the two supported templates');
+if (
+  variant !== 'basal-2.0-mini' &&
+  variant !== 'basal-2.0-4.5b' &&
+  variant !== 'basal-omni-1.0-mini'
+) {
+  throw new Error('BASAL_BENCHMARK_VARIANT must select a supported model template');
 }
 const endpoint = new URL(process.env.BASAL_BENCHMARK_URL ?? 'http://localhost:12434/v1');
 if (
@@ -127,6 +133,8 @@ if (
 endpoint.pathname = `${endpoint.pathname.replace(/\/+$/u, '')}/completions`;
 const timeoutMs = positiveInteger(process.env.BASAL_BENCHMARK_TIMEOUT_MS, 120_000);
 const repeats = positiveInteger(process.env.BASAL_BENCHMARK_REPEATS, 1);
+const logprobs = positiveInteger(process.env.BASAL_BENCHMARK_LOGPROBS, BASAL_LOGPROBS);
+if (logprobs > 1000) throw new Error('Benchmark logprobs must be at most 1000');
 const fixtureText = await readFile(
   process.env.BASAL_BENCHMARK_FIXTURE ??
     new URL('../tests/fixtures/llm/basal-classification.json', import.meta.url),
@@ -169,7 +177,7 @@ async function observe(
         min_p: 0,
         max_tokens: 1,
         stream: false,
-        logprobs: 20,
+        logprobs,
       }),
     });
     if (!response.ok) {
@@ -292,7 +300,7 @@ const evidence = {
   variant,
   modelSha256: process.env.BASAL_BENCHMARK_MODEL_SHA256 ?? null,
   fixtureSha256: createHash('sha256').update(fixtureText).digest('hex'),
-  calibration: 'none: custom Q4_K_M; scores are raw restricted probabilities',
+  calibration: 'none: scores are raw restricted probabilities, not domain-calibrated confidence',
   settings: {
     bos: 'server adds one BOS; request omits the template BOS',
     timeoutMs,
@@ -300,7 +308,7 @@ const evidence = {
     fixtureCount: fixtures.length,
     optionOrders: 2,
     maxTokens: 1,
-    logprobs: 20,
+    logprobs,
     temperature: 1,
   },
   summary: {

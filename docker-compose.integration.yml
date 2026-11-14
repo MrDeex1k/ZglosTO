@@ -94,7 +94,7 @@ services:
       # Exercise the same quarantine state machine with a shorter isolated-test window.
       LLM_GATEWAY_AUTH_CLOCK_SKEW_SECONDS: '1'
       DOCKER_MODEL_RUNNER_URL: http://model_runner_stub:8123
-      DOCKER_MODEL_RUNNER_MODEL: zglosto/basal-2.0-4.5b:q4_k_m
+      DOCKER_MODEL_RUNNER_MODEL: zglosto/basal-2.0-mini:q5_k_m
     depends_on:
       model_runner_stub:
         condition: service_healthy

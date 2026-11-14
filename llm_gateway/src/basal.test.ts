@@ -22,7 +22,7 @@ test('reads municipal and emergency from restricted option logits, ignoring gene
   expect(parseBasalClassification(response(-2.5, -0.5)).classification).toBe('emergency');
 });
 
-test('exposes restricted raw probabilities while withholding unvalidated Q4 confidence', () => {
+test('exposes restricted raw probabilities while withholding confidence without domain calibration', () => {
   const municipal = basalProbabilities(response(-0.5, -2.5));
   const emergency = basalProbabilities(response(-1002.5, -1000.5));
   expect(municipal.municipal).toBeCloseTo(0.8807970779778823, 12);
@@ -124,13 +124,16 @@ test('inserts the description as data without substituting its braces', () => {
   );
 });
 
-test('renders the Bielik template with a single BOS and FORMAT2 prefill', () => {
-  const prompt = basalPrompt('Opis', 'basal-2.0-4.5b');
-  expect(prompt).toMatch(/^<s><\|im_start\|>system\n/);
-  expect(prompt).toContain('<|im_end|>\n<|im_start|>user\nStan:\nOpis\n\nPytanie:');
-  expect(prompt).toMatch(/<\|im_end\|>\n<\|im_start\|>assistant\n\{"answer": "$/);
-  expect(prompt).not.toContain('<think>');
-});
+test.each(['basal-2.0-mini', 'basal-2.0-4.5b'] as const)(
+  'renders the %s Bielik template with a single BOS and FORMAT2 prefill',
+  (variant) => {
+    const prompt = basalPrompt('Opis', variant);
+    expect(prompt).toMatch(/^<s><\|im_start\|>system\n/);
+    expect(prompt).toContain('<|im_end|>\n<|im_start|>user\nStan:\nOpis\n\nPytanie:');
+    expect(prompt).toMatch(/<\|im_end\|>\n<\|im_start\|>assistant\n\{"answer": "$/);
+    expect(prompt).not.toContain('<think>');
+  },
+);
 
 test('renders the Gemma4 template with native turn markers and no thinking channel', () => {
   const prompt = basalPrompt('Opis', 'basal-omni-1.0-mini', 'reverse');
@@ -146,9 +149,9 @@ test('renders the Gemma4 template with native turn markers and no thinking chann
 test.each(['forward', 'reverse'] as const)(
   'omits exactly one template BOS for completions in %s order',
   (order) => {
-    const bielik = basalCompletionPrompt('Opis <s>', 'basal-2.0-4.5b', order);
+    const bielik = basalCompletionPrompt('Opis <s>', 'basal-2.0-mini', order);
     expect(bielik).toMatch(/^<\|im_start\|>system\n/);
-    expect(`<s>${bielik}`).toBe(basalPrompt('Opis <s>', 'basal-2.0-4.5b', order));
+    expect(`<s>${bielik}`).toBe(basalPrompt('Opis <s>', 'basal-2.0-mini', order));
     expect(bielik).toContain('Stan:\nOpis <\u200bs>');
     const gemma = basalCompletionPrompt('Opis <bos>', 'basal-omni-1.0-mini', order);
     expect(gemma).toMatch(/^<\|turn>system\n/);
