@@ -1,5 +1,5 @@
 import { ScrollView, View } from '@/components/ui/native';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { router, Stack } from 'expo-router';
 import { Linking, Platform } from 'react-native';
@@ -60,7 +60,10 @@ function ReadyIncidentDetailsScreen({
   const networkAvailability = useNetworkAvailability();
   const isOffline = networkAvailability === 'offline';
 
-  const query = useQuery(publicIncidentQueryOptions(runtime.environment.apiOrigin, incidentId));
+  const queryClient = useQueryClient();
+  const query = useQuery(
+    publicIncidentQueryOptions(runtime.environment.apiOrigin, incidentId, queryClient),
+  );
   const incident = query.data ?? null;
   const service = incident
     ? runtime.config.services.find((item) => item.key === incident.typ_sluzby)

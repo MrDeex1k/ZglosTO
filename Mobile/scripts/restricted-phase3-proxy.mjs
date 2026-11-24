@@ -7,6 +7,7 @@ const maximumBodyBytes = 64 * 1024;
 
 const exactRoutes = new Map([
   ['GET /api/auth/get-session', true],
+  ['GET /api/auth/capabilities', true],
   ['GET /api/auth/__test__/verification-email', true],
   ['GET /api/auth/verify-email', true],
   ['POST /api/auth/send-verification-email', true],
@@ -24,10 +25,16 @@ const exactRoutes = new Map([
   ['GET /api/sluzby/statystyki', true],
 ]);
 
+const publicIncidentPrefix = '/api/mieszkaniec/incydenty/glowna/';
+const uuid = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
+
 export function isAllowedMobileRequest(method, pathname) {
   if (exactRoutes.has(`${method} ${pathname}`)) return true;
   if ((method === 'GET' || method === 'HEAD') && /^\/api\/images\/[\w-]+$/.test(pathname)) {
     return true;
+  }
+  if (method === 'GET' && pathname.startsWith(publicIncidentPrefix)) {
+    return uuid.test(pathname.slice(publicIncidentPrefix.length));
   }
   return (
     (method === 'PATCH' &&
@@ -37,7 +44,7 @@ export function isAllowedMobileRequest(method, pathname) {
   );
 }
 
-export function copyRequestHeaders(request) {
+export function copyRequestHeaders(request, pathname) {
   const headers = {};
   for (const name of [
     'accept',
@@ -51,6 +58,10 @@ export function copyRequestHeaders(request) {
   ]) {
     const value = request.headers[name];
     if (value !== undefined) headers[name] = value;
+  }
+  if (request.method === 'POST' && pathname === '/api/mieszkaniec/incydenty') {
+    const idempotencyKey = request.headers['idempotency-key'];
+    if (idempotencyKey !== undefined) headers['idempotency-key'] = idempotencyKey;
   }
   return headers;
 }
@@ -87,7 +98,7 @@ function startRestrictedMobileProxy() {
 
     const upstreamRequest = createRequest(
       {
-        headers: copyRequestHeaders(request),
+        headers: copyRequestHeaders(request, url.pathname),
         host: upstreamHost,
         method,
         path: `${url.pathname}${url.search}`,
