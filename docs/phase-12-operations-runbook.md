@@ -20,11 +20,13 @@ Testy integracyjne usuwają wyłącznie izolowane projekty i wolumeny o nazwach 
 ale celowo niszczą dane wewnątrz nich. Wymagają jawnej zgody:
 
 ```bash
-PHASE12_ALLOW_DESTRUCTIVE=1 bun run phase12:integration:minimal
 PHASE12_ALLOW_DESTRUCTIVE=1 bun run phase12:integration:recommended
 PHASE12_ALLOW_DESTRUCTIVE=1 bun run phase12:load
 PHASE12_ALLOW_DESTRUCTIVE=1 bun run phase12:observability
 ```
+
+Brama `phase12:integration:minimal` wymaga osobnego wariantu testowego z wyłączonym LLM.
+`local-all` pomija tę bramę i uruchamia wariant z Redisem oraz test obciążeniowy.
 
 Lokalny pomiar zasobów uruchamia izolowane scenariusze i próbkuje `docker stats`.
 Pomiar używa lokalnego Redisa, którego wymaga wspólna ochrona przed replay aktywnego

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 services_to_resume=()
+replicas_to_resume=()
 
 prepare_maintenance_compose() {
   local operations_file
@@ -71,22 +72,42 @@ add_default_compose_files() {
 }
 
 stop_for_maintenance() {
-  local service containers index container
-  local running_services=() running_containers=()
-  # Capture every service before stopping any writer.
+  local service containers index container state running mixed
+  local running_services=() running_containers=() mixed_services=()
+  # Inspect stopped replicas as well: restarting writers can resume on their own.
   for service in "$@"; do
-    if ! containers=$("${compose[@]}" ps --status running --quiet "$service"); then
-      printf 'Could not determine running containers for %s.\n' "$service" >&2
+    if ! containers=$("${compose[@]}" ps --all --quiet "$service"); then
+      printf 'Could not determine containers for %s.\n' "$service" >&2
       return 1
     fi
-    if [ -n "$containers" ]; then
+    [ -n "$containers" ] || continue
+    running=''
+    mixed=false
+    while IFS= read -r container; do
+      state=$(docker inspect --format '{{.State.Status}}' "$container") || return
+      case "$state" in
+        running) running="${running:+$running$'\n'}$container" ;;
+        created|exited) mixed=true ;;
+        *)
+          printf 'Cannot stop %s for maintenance: container %s is %s.\n' "$service" "$container" "$state" >&2
+          return 1
+          ;;
+      esac
+    done <<< "$containers"
+    if [ -n "$running" ]; then
       running_services+=("$service")
-      running_containers+=("$containers")
+      running_containers+=("$running")
+      mixed_services+=("$mixed")
     fi
   done
   for ((index=0; index<${#running_services[@]}; index++)); do
     service=${running_services[$index]}
     services_to_resume+=("$service")
+    if [ "${mixed_services[$index]}" = true ]; then
+      replicas_to_resume+=("${running_containers[$index]}")
+    else
+      replicas_to_resume+=('')
+    fi
     "${compose[@]}" stop --timeout 120 "$service" >/dev/null || return
     # A SIGKILL can interrupt a DB/Object Storage operation between its stages.
     # Do not certify a snapshot after a forced shutdown.
@@ -101,14 +122,40 @@ stop_for_maintenance() {
   done
 }
 
+resume_service() {
+  local service=$1 index container state pending
+  local replicas=()
+  for ((index=0; index<${#services_to_resume[@]}; index++)); do
+    [ "${services_to_resume[$index]}" = "$service" ] || continue
+    [ -n "${replicas_to_resume[$index]}" ] || break
+    while IFS= read -r container; do
+      replicas+=("$container")
+    done <<< "${replicas_to_resume[$index]}"
+    docker start "${replicas[@]}" >/dev/null || return
+    local deadline=$((SECONDS + 120))
+    while ((SECONDS < deadline)); do
+      pending=false
+      for container in "${replicas[@]}"; do
+        state=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container") || return
+        case "$state" in
+          running|healthy) ;;
+          *) pending=true ;;
+        esac
+      done
+      [ "$pending" = true ] || return 0
+      sleep 1
+    done
+    printf 'Timed out waiting for the original replicas of %s.\n' "$service" >&2
+    return 1
+  done
+  "${compose[@]}" start --wait --wait-timeout 120 "$service" >/dev/null
+}
+
 resume_application() {
   [ "${#services_to_resume[@]}" -gt 0 ] || return 0
-  local service
-  # Start existing containers instead of reconciling their scale with `up`.
   # Reverse the stop order so the public proxy is enabled last.
   local index
   for ((index=${#services_to_resume[@]}-1; index>=0; index--)); do
-    service=${services_to_resume[$index]}
-    "${compose[@]}" start --wait --wait-timeout 120 "$service" >/dev/null || return
+    resume_service "${services_to_resume[$index]}" || return
   done
 }

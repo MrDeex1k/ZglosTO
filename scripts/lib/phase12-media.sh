@@ -61,6 +61,7 @@ SQL
       return 1
     fi
     if [ "$waiting" -eq 0 ] && [ "$actual" -eq "$expected" ]; then
+      verify_phase12_media_objects "$compose_command" "$targets" "$actual" || return
       printf 'Verified %s load-test media jobs and their WebP results.\n' "$actual"
       return 0
     fi
@@ -68,4 +69,55 @@ SQL
   done
   printf 'Load-test media jobs did not finish within 60 polling attempts.\n' >&2
   return 1
+}
+
+verify_phase12_media_objects() {
+  local compose_command=$1 targets=$2 expected_count=$3 objects
+  objects=$("$compose_command" exec -T database /usr/local/bin/load-container-secrets sh -c \
+    'psql -X -v ON_ERROR_STOP=1 "$DATABASE_DIRECT_URL" -At' <<SQL
+SELECT COALESCE(json_agg(json_build_object(
+  'originalKey', image.original_object_key,
+  'processedKey', image.processed_object_key,
+  'checksum', image.processed_checksum_sha256,
+  'width', image.width,
+  'height', image.height
+)), '[]'::json)
+FROM jsonb_to_recordset('$targets'::jsonb) AS target(incident_id uuid, image_id uuid)
+JOIN incident_images image ON image.id = target.image_id AND image.incident_id = target.incident_id
+WHERE image.kind = 'report' AND image.revision = 1 AND image.status = 'ready';
+SQL
+  ) || return
+
+  "$compose_command" exec -T media_worker bun --input-type=module -e '
+    import { createHash } from "node:crypto";
+    import sharp from "sharp";
+    import { validateObjectStorageEnvironment } from "./dist/config/env.js";
+    import { S3ObjectStorage } from "./dist/storage/s3-object-storage.js";
+
+    const objects = await Bun.stdin.json();
+    if (!Array.isArray(objects) || objects.length !== Number(process.argv[1])) {
+      throw new Error("Missing load-test media objects");
+    }
+    const storage = new S3ObjectStorage(validateObjectStorageEnvironment());
+    try {
+      await storage.initialize();
+      for (const { originalKey, processedKey, checksum, width, height } of objects) {
+        const object = await storage.getObject(processedKey);
+        const metadata = await sharp(object.body).metadata();
+        const digest = createHash("sha256").update(object.body).digest("hex");
+        if (
+          object.contentType !== "image/webp" || metadata.format !== "webp" ||
+          digest !== checksum || object.checksumSha256 !== digest ||
+          metadata.width !== width || metadata.height !== height
+        ) {
+          throw new Error("Unexpected load-test WebP format, checksum or dimensions");
+        }
+        if (await storage.objectExists(originalKey)) {
+          throw new Error("Load-test image original was not deleted");
+        }
+      }
+    } finally {
+      await storage.close();
+    }
+  ' "$expected_count" <<< "$objects"
 }

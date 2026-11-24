@@ -68,7 +68,7 @@ printf '[restore] Verifying database/Object Storage consistency\n'
 if [ "${#services_to_resume[@]}" -eq 0 ] || [[ " ${services_to_resume[*]} " != *' pgbouncer '* ]]; then
   temporary_pgbouncer=true
 fi
-"${compose[@]}" start --wait --wait-timeout 120 pgbouncer >/dev/null
+resume_service pgbouncer
 "${operations_compose[@]}" run --rm --no-deps -T backend bun dist/operations/object-storage-audit-cli.js \
   > "$backup_directory/post-restore-object-storage-audit.json"
 

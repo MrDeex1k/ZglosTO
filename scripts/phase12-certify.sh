@@ -153,7 +153,7 @@ case "${1:-}" in
     observability_gate
     ;;
   integration-minimal)
-    integration_gate disabled
+    fail "integration-minimal requires an LLM-disabled fixture; use integration-recommended for the stub."
     ;;
   integration-recommended)
     integration_gate local
@@ -168,7 +168,7 @@ case "${1:-}" in
     static_gate
     host_gate
     dmr_gate
-    integration_gate disabled
+    log "Skipping integration-minimal: the LLM stub requires Redis."
     integration_gate local
     load_gate
     ;;
@@ -182,7 +182,7 @@ case "${1:-}" in
       '  edge                     verify real DNS, public TLS, HSTS and public probes' \
       '  soak                     run the 60-minute acceptance soak against PHASE12_BASE_URL' \
       '  observability            run isolated metric -> trace -> log and failure drill' \
-      '  integration-minimal      destructive isolated RustFS + LLM-stub profile drill' \
+      '  integration-minimal      unavailable until the LLM-disabled fixture is implemented' \
       '  integration-recommended  destructive isolated RustFS + Redis profile drill' \
       '  load                     destructive public-read, incident-write and media-drain load test' \
       '  production-runtime       guarded real production deploy/restart/backup drill' \

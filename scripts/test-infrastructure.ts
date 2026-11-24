@@ -108,15 +108,23 @@ const dockerMock = `#!${process.execPath}
 const fs = require('node:fs');
 const args = process.argv.slice(2);
 fs.appendFileSync(process.env.MOCK_LOG, JSON.stringify(args)+'\\n');
-if (args[0] === 'inspect') {
-  console.log(process.env.MOCK_FORCE_KILL && args.at(-1).includes(process.env.MOCK_FORCE_KILL) ? 137 : 0);
-  process.exit(0);
-}
 const commands = ['config','ps','stop','start','run','exec','up'];
 const position = args.findIndex(arg => commands.includes(arg));
 const command = args[position];
 const tail = args.slice(position+1);
 let stopped = new Set(JSON.parse(fs.readFileSync(process.env.MOCK_STATE,'utf8')));
+if (args[0] === 'inspect') {
+  const id = args.at(-1);
+  const service = id.replace(/^id-/, '').replace(/-[12]$/, '');
+  if (args[2].includes('ExitCode')) {
+    console.log(process.env.MOCK_FORCE_KILL && id.includes(process.env.MOCK_FORCE_KILL) ? 137 : 0);
+  } else if (process.env.MOCK_RESTARTING === id) {
+    console.log('restarting');
+  } else {
+    console.log(stopped.has(service) || stopped.has(id) ? 'exited' : 'running');
+  }
+  process.exit(0);
+}
 if (command === 'config') {
   if (tail.includes('--environment')) {
     for (const name of ['COMPOSE_FILE','COMPOSE_PATH_SEPARATOR']) {
@@ -128,14 +136,17 @@ if (command === 'config') {
 } else if (command === 'ps') {
   const service = tail.at(-1);
   if (process.env.MOCK_PS_FAIL === service) process.exit(23);
-  if (!stopped.has(service)) {
-    console.log('id-'+service+'-1');
-    if (service === 'media_worker') console.log('id-media_worker-2');
-  }
+  console.log('id-'+service+'-1');
+  if (service === 'media_worker') console.log('id-media_worker-2');
 } else if (command === 'stop') {
   stopped.add(tail.at(-1));
 } else if (command === 'start') {
-  stopped.delete(tail.at(-1));
+  if (args[0] === 'start') {
+    for (const id of tail) stopped.delete(id.replace(/^id-/, '').replace(/-[12]$/, ''));
+  } else {
+    stopped.delete(tail.at(-1));
+    if (tail.at(-1) === 'media_worker') stopped.delete('id-media_worker-2');
+  }
 } else if (command === 'up') {
   throw Error('Must preserve existing replicas with start');
 } else {
@@ -216,6 +227,34 @@ test('backup failure resumes services; failed restore leaves writers stopped', (
     const stopped = JSON.parse(readFileSync(fixture.state, 'utf8')) as string[];
     for (const writer of ['nginx', 'authorization', 'backend', 'media_worker'])
       assert.ok(stopped.includes(writer));
+  } finally {
+    rmSync(fixture.directory, { recursive: true, force: true });
+  }
+});
+
+test('maintenance rejects restarting writers before it stops any service', () => {
+  const fixture = maintenanceFixture();
+  try {
+    const result = fixture.run('backup-compose.sh', join(fixture.directory, 'backup'), {
+      MOCK_RESTARTING: 'id-media_worker-1',
+    });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /restarting/u);
+    assert.doesNotMatch(readFileSync(fixture.log, 'utf8'), /"(?:stop|run|exec)"/u);
+  } finally {
+    rmSync(fixture.directory, { recursive: true, force: true });
+  }
+});
+
+test('maintenance resumes only the originally running worker replica', () => {
+  const fixture = maintenanceFixture();
+  try {
+    const stopped = ['id-media_worker-2'];
+    writeFileSync(fixture.state, JSON.stringify(stopped));
+    const result = fixture.run('backup-compose.sh', join(fixture.directory, 'backup'));
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(JSON.parse(readFileSync(fixture.state, 'utf8')), stopped);
+    assert.match(readFileSync(fixture.log, 'utf8'), /\["start","id-media_worker-1"\]/u);
   } finally {
     rmSync(fixture.directory, { recursive: true, force: true });
   }
@@ -611,7 +650,7 @@ test('phase 12 media evidence requires successful jobs for the exact uploaded im
         ],
       }),
     );
-    const run = (state: string) =>
+    const run = (state: string, storageFailure = false) =>
       spawnSync(
         'bash',
         [
@@ -621,8 +660,15 @@ test('phase 12 media evidence requires successful jobs for the exact uploaded im
       source scripts/lib/phase12-media.sh
       compose() {
         if [ "$3" = database ]; then
+          query=$(cat)
+          printf '%s\\n' "$query" >&2
+          case "$query" in
+            *json_agg*) printf '%s\\n' '[{"processedKey":"processed"}]' ;;
+            *) printf '%s\\n' "$MOCK_MEDIA_STATE" ;;
+          esac
+        elif [ "$3" = media_worker ]; then
           cat >&2
-          printf '%s\\n' "$MOCK_MEDIA_STATE"
+          [ "$MOCK_STORAGE_FAILURE" = false ]
         fi
       }
       verify_phase12_media_jobs "$1" compose
@@ -632,7 +678,11 @@ test('phase 12 media evidence requires successful jobs for the exact uploaded im
         ],
         {
           cwd: root,
-          env: { ...process.env, MOCK_MEDIA_STATE: state },
+          env: {
+            ...process.env,
+            MOCK_MEDIA_STATE: state,
+            MOCK_STORAGE_FAILURE: String(storageFailure),
+          },
           encoding: 'utf8',
         },
       );
@@ -645,6 +695,10 @@ test('phase 12 media evidence requires successful jobs for the exact uploaded im
     const verified = run('0|0|1|1');
     assert.equal(verified.status, 0, verified.stderr);
     assert.match(verified.stdout, /Verified 1 load-test media jobs/u);
+    assert.match(verified.stderr, /"processedKey":"processed"/u);
+    const missing = run('0|0|1|1', true);
+    assert.equal(missing.status, 1);
+    assert.doesNotMatch(missing.stdout, /Verified/u);
     writeFileSync(
       report,
       '{"scenario":"incident-write","passed":true,"requests":0,"failures":0,"mediaTargets":[]}',
