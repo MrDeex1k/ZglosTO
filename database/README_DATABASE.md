@@ -507,3 +507,11 @@ Uruchamia osobny, jednorazowy PostgreSQL z pustym katalogiem danych i skryptami
 `05-user-provisioning.sql` i `06-runtime-roles.sh` wykonywanymi przez oficjalny
 entrypoint wraz z aktualnymi grantami, bez migracji schematu. Bez sieci i portów hosta; wymaga lokalnie
 obrazu `postgres:18.7-alpine3.24` (test nie pobiera go automatycznie).
+
+### Aktualizacja istniejącej bazy po audycie backendu
+
+Skrypt [20261124-backend-audit.sql](migrations/20261124-backend-audit.sql) uruchom
+przez `psql -f` jako właściciel schematu, poza blokiem transakcji. Skrypt tworzy
+indeksy stronicowania i usuwa historyczne daty rozwiązania ze zgłoszeń o innym
+statusie niż `resolved`. Wykonaj korektę po wyłączeniu wcześniejszej wersji
+backendu, która mogła zapisać datę rozwiązania przy otwartej sprawie.

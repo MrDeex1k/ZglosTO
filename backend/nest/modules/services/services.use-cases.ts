@@ -1,6 +1,7 @@
 import type {
   CurrentDatabaseIncidentDto,
   ServiceIncidentListItemDto,
+  IncidentPage,
   ServiceIncidentStatisticsItem,
   UpdateIncidentServiceRequest,
   UpdateIncidentStatusRequest,
@@ -14,6 +15,7 @@ import {
   type ServiceIncidentMutationResult,
   type VersionedIncidentMutationResponse,
 } from '../incidents/incident-domain.port.ts';
+import type { IncidentPageRequest } from '../incidents/incident-pagination.ts';
 import { IncidentPolicyService } from '../incidents/incident-policy.service.ts';
 import { PublicResolvedIncidentCache } from '../incidents/public-resolved-incident-cache.ts';
 
@@ -24,8 +26,13 @@ export class ServicesUseCases {
     private readonly publicResolvedIncidentCache: PublicResolvedIncidentCache,
   ) {}
 
-  list(serviceKey: string): Promise<readonly ServiceIncidentListItemDto[]> {
-    return this.incidents.listServiceIncidents(serviceKey);
+  list(
+    serviceKey: string,
+    page: IncidentPageRequest | null = null,
+  ): Promise<readonly ServiceIncidentListItemDto[] | IncidentPage<ServiceIncidentListItemDto>> {
+    return page === null
+      ? this.incidents.listServiceIncidents(serviceKey)
+      : this.incidents.pageServiceIncidents(serviceKey, page);
   }
 
   statistics(serviceKey: string): Promise<readonly ServiceIncidentStatisticsItem[]> {

@@ -298,6 +298,25 @@ Pełny zestaw integracyjny uruchamia własny, izolowany Compose:
 bun run test:integration
 ```
 
+### Testy przeglądarkowe WEB
+
+Flashwright uruchamia scenariusze w Chromium i WebKit. Repozytorium przypina
+`flashwright-test` przez alias npm `@playwright/test`, dlatego importy, konfiguracja
+`playwright.config.ts` i nazwa CLI pozostają zgodne z Playwright.
+
+```bash
+bun run test:browser:install
+bun run test:browser
+```
+
+Druga komenda buduje frontend i uruchamia tymczasowy podgląd na
+`127.0.0.1:4179`. Testy podstawiają odpowiedzi API i używają lokalnego odbiornika
+uploadu do sprawdzenia rzeczywistych bajtów zdjęcia. Obejmują publiczne zgłoszenia,
+język, reguły wejścia do paneli oraz zgłaszanie z i bez zdjęcia, 112 i błąd zapisu.
+Na Linux CI zależności systemowe przeglądarek można zainstalować przez
+`bun run test:browser:install --with-deps`. Raport HTML trafia do
+`playwright-report/`, a ślady nieudanych testów do `test-results/`.
+
 ## 9. Cleanup
 
 Zwykłe zatrzymanie bazowego środowiska zachowuje wolumeny:

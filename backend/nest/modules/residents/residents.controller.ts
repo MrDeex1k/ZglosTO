@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Inject,
   Post,
+  Query,
   Req,
   Res,
   UseInterceptors,
@@ -14,6 +15,10 @@ import {
   CurrentCreateIncidentRequestSchema,
   CurrentCreateIncidentResponseSchema,
   CurrentIncidentListItemSchema,
+  CurrentIncidentPageSchema,
+  IncidentListQuerySchema,
+  type IncidentListQuery,
+  type IncidentPage,
   CurrentResolvedIncidentSchema,
   InitiateImageUploadRequestSchema,
   InitiateImageUploadResponseSchema,
@@ -24,7 +29,7 @@ import {
   type InitiateImageUploadRequest,
   type InitiateImageUploadResponse,
 } from '@zglosto/contracts';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { ApiContract } from '../../openapi/api-contract.decorator.ts';
@@ -32,6 +37,7 @@ import {
   RUNTIME_CONFIGURATION,
   type RuntimeConfiguration,
 } from '../../platform/runtime-configuration.ts';
+import { incidentPageRequest } from '../incidents/incident-pagination.ts';
 import { OptionalSession, PublicEndpoint, RequireRoles } from '../auth-bridge/auth.decorators.ts';
 import { AuthRequestContext } from '../auth-bridge/auth-request-context.ts';
 import { ResidentsUseCases } from './residents.use-cases.ts';
@@ -76,14 +82,23 @@ export class ResidentsController {
   @Get('incydenty')
   @RequireRoles('mieszkaniec')
   @ApiOperation({ summary: 'List incidents belonging to the authenticated resident' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    schema: { type: 'integer', minimum: 1, maximum: 100 },
+  })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
   @ApiContract({
     authenticated: true,
-    errorStatuses: [401, 403, 500, 503],
-    serializationSchema: CurrentIncidentListItemSchema,
-    successSchema: z.array(CurrentIncidentListItemSchema),
+    errorStatuses: [400, 401, 403, 500, 503],
+    serializationSchema: z.union([CurrentIncidentListItemSchema, CurrentIncidentPageSchema]),
+    successSchema: z.union([z.array(CurrentIncidentListItemSchema), CurrentIncidentPageSchema]),
   })
-  listOwn(@Req() request: Request): Promise<readonly CurrentIncidentListItemDto[]> {
-    return this.useCases.listOwn(this.authContext.requireUser(request));
+  listOwn(
+    @Req() request: Request,
+    @Query({ schema: IncidentListQuerySchema }) query: IncidentListQuery,
+  ): Promise<readonly CurrentIncidentListItemDto[] | IncidentPage<CurrentIncidentListItemDto>> {
+    return this.useCases.listOwn(this.authContext.requireUser(request), incidentPageRequest(query));
   }
 
   @Get('incydenty/glowna')

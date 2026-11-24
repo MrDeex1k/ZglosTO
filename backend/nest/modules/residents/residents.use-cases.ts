@@ -3,11 +3,13 @@ import type {
   CurrentCreateIncidentRequest,
   CurrentCreateIncidentResponse,
   CurrentIncidentListItemDto,
+  IncidentPage,
   CurrentResolvedIncidentDto,
 } from '@zglosto/contracts';
 import { isValidReporterEmail, normalizeReporterEmail } from '../../../lib/reporter-identity.ts';
 import { badRequest, forbidden } from '../../application-error.ts';
 import { IncidentDomainPort } from '../incidents/incident-domain.port.ts';
+import type { IncidentPageRequest } from '../incidents/incident-pagination.ts';
 import { IncidentPolicyService } from '../incidents/incident-policy.service.ts';
 import { PublicResolvedIncidentCache } from '../incidents/public-resolved-incident-cache.ts';
 
@@ -18,9 +20,14 @@ export class ResidentsUseCases {
     private readonly publicResolvedIncidentCache: PublicResolvedIncidentCache,
   ) {}
 
-  async listOwn(user: AuthSessionUser): Promise<readonly CurrentIncidentListItemDto[]> {
+  async listOwn(
+    user: AuthSessionUser,
+    page: IncidentPageRequest | null = null,
+  ): Promise<readonly CurrentIncidentListItemDto[] | IncidentPage<CurrentIncidentListItemDto>> {
     await this.incidents.claimAnonymousIncidents(user);
-    return this.incidents.listResidentIncidents(user.id);
+    return page === null
+      ? this.incidents.listResidentIncidents(user.id)
+      : this.incidents.pageResidentIncidents(user.id, page);
   }
 
   listResolved(): Promise<readonly CurrentResolvedIncidentDto[]> {

@@ -234,6 +234,12 @@ CREATE INDEX IF NOT EXISTS idx_incydenty_mail_zglaszajacego ON incydenty (mail_z
 CREATE INDEX IF NOT EXISTS idx_incydenty_reporter_user_id ON incydenty (reporter_user_id);
 CREATE INDEX IF NOT EXISTS idx_incydenty_status ON incydenty (status_incydentu);
 CREATE INDEX IF NOT EXISTS idx_incydenty_service_key ON incydenty (service_key);
+CREATE INDEX IF NOT EXISTS idx_incydenty_page_order
+	ON incydenty (data_zgloszenia DESC, godzina_zgloszenia DESC, id_zgloszenia DESC);
+CREATE INDEX IF NOT EXISTS idx_incydenty_reporter_page_order
+	ON incydenty (reporter_user_id, data_zgloszenia DESC, godzina_zgloszenia DESC, id_zgloszenia DESC);
+CREATE INDEX IF NOT EXISTS idx_incydenty_service_page_order
+	ON incydenty (service_key, data_zgloszenia DESC, godzina_zgloszenia DESC, id_zgloszenia DESC);
 CREATE INDEX IF NOT EXISTS idx_incydenty_public_resolved_order
 	ON incydenty (
 		data_rozwiazania DESC NULLS LAST,

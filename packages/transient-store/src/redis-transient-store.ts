@@ -78,31 +78,59 @@ function incrementResult(value: unknown): TransientIncrementResult {
 }
 
 export class RedisTransientStore implements TransientStore {
-  readonly #client: RedisClientType;
+  readonly #createClient: () => RedisClientType;
+  #activeClient: RedisClientType | undefined;
   readonly #commandTimeoutMs: number;
   readonly #connectTimeoutMs: number;
   readonly #keyPrefix: string;
   readonly #onOperation: ((event: TransientStoreOperationEvent) => void) | null;
+  #connecting: Promise<void> | undefined;
   #closed = false;
 
-  constructor(client: RedisClientType, options: RedisTransientStoreOptions) {
-    this.#client = client;
+  constructor(createClient: () => RedisClientType, options: RedisTransientStoreOptions) {
+    this.#createClient = createClient;
+    this.#activeClient = createClient();
     this.#commandTimeoutMs = positiveInteger('commandTimeoutMs', options.commandTimeoutMs);
     this.#connectTimeoutMs = positiveInteger('connectTimeoutMs', options.connectTimeoutMs);
     this.#keyPrefix = validKey(options.keyPrefix);
     this.#onOperation = options.onOperation ?? null;
   }
 
-  async connect(): Promise<void> {
-    await this.#execute(
+  connect(): Promise<void> {
+    if (this.#closed) {
+      return Promise.reject(
+        new TransientStoreOperationError('connect', {
+          cause: new Error('Redis transient store is closed'),
+        }),
+      );
+    }
+    if (this.#connecting !== undefined) return this.#connecting;
+
+    this.#connecting = this.#execute(
       'connect',
-      async () => {
-        if (this.#client.isReady) return;
-        if (this.#client.isOpen) this.#client.destroy();
-        await this.#client.connect();
+      async (signal) => {
+        const client = this.#client;
+        if (client.isReady) return;
+        if (client.isOpen) client.destroy();
+        const abort = () => {
+          // A canceled provider attempt can settle after the next connection starts.
+          this.#activeClient = undefined;
+          if (client.isOpen) client.destroy();
+        };
+        signal.addEventListener('abort', abort, { once: true });
+        try {
+          await client.connect();
+        } finally {
+          signal.removeEventListener('abort', abort);
+          // A late socket can exist even when cancellation already cleared isOpen.
+          if (signal.aborted) client.destroy();
+        }
       },
       this.#connectTimeoutMs,
-    );
+    ).finally(() => {
+      this.#connecting = undefined;
+    });
+    return this.#connecting;
   }
 
   async ping(): Promise<void> {
@@ -177,7 +205,12 @@ export class RedisTransientStore implements TransientStore {
   close(): void {
     if (this.#closed) return;
     this.#closed = true;
-    this.#client.destroy();
+    if (this.#activeClient?.isOpen) this.#activeClient.destroy();
+    this.#activeClient = undefined;
+  }
+
+  get #client(): RedisClientType {
+    return (this.#activeClient ??= this.#createClient());
   }
 
   #qualifiedKey(key: string): string {

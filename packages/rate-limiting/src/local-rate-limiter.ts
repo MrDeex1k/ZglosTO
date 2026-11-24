@@ -27,6 +27,7 @@ interface Counter {
 }
 
 interface LocalRateLimiterDependencies {
+  // Fixed windows rely on a monotonic clock.
   now?: () => number;
   setInterval?: typeof globalThis.setInterval;
   clearInterval?: typeof globalThis.clearInterval;
@@ -109,10 +110,7 @@ export class LocalRateLimiter {
       this.cleanup(now);
     }
     if (this.#counters.size >= this.#configuration.maxKeys) {
-      let earliestReset = Number.POSITIVE_INFINITY;
-      for (const counter of this.#counters.values()) {
-        earliestReset = Math.min(earliestReset, counter.resetAt);
-      }
+      const earliestReset = this.#counters.values().next().value!.resetAt;
       return {
         activeKeys: this.#counters.size,
         allowed: false,
@@ -135,11 +133,11 @@ export class LocalRateLimiter {
 
   cleanup(now = this.#now()): number {
     let removed = 0;
+    // Each window has the same duration, so insertion order is also expiration order.
     for (const [key, counter] of this.#counters) {
-      if (counter.resetAt <= now) {
-        this.#counters.delete(key);
-        removed += 1;
-      }
+      if (counter.resetAt > now) break;
+      this.#counters.delete(key);
+      removed += 1;
     }
     return removed;
   }

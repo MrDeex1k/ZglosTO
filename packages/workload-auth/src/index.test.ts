@@ -136,3 +136,19 @@ test('capacity pressure cannot evict a live nonce and allow a replay', () => {
   const fresh = new Headers(createWorkloadAuthHeaders({ ...input, timestamp: 1_031 }, key));
   expect(verify(fresh, 1_031).ok).toBe(true);
 });
+
+test('reclaims out-of-order expirations while retaining every still-valid nonce', () => {
+  const cache = new WorkloadReplayCache(4);
+  expect(cache.accept('latest', 130, 100)).toBe(true);
+  expect(cache.accept('middle', 120, 100)).toBe(true);
+  expect(cache.accept('earliest', 110, 100)).toBe(true);
+  expect(cache.accept('same-expiration', 110, 100)).toBe(true);
+
+  expect(cache.accept('new', 140, 110)).toBe(false);
+  expect(cache.accept('new', 140, 111)).toBe(true);
+  expect(cache.accept('earliest', 140, 111)).toBe(true);
+  expect(cache.accept('middle', 140, 120)).toBe(false);
+  expect(cache.accept('middle', 140, 121)).toBe(true);
+  expect(cache.accept('latest', 140, 130)).toBe(false);
+  expect(cache.accept('latest', 140, 131)).toBe(true);
+});
