@@ -28,8 +28,13 @@ Utwórz główny `.env` na podstawie `.env.example`. Authorization waliduje przy
 `EMAIL_DELIVERY_MODE=disabled` jest obecnym trybem zwykłego środowiska. Izolowany zestaw Fazy 0 ustawia `test`, zapisuje link Better Auth w pamięciowym outboksie i testuje rzeczywiste potwierdzenie. Tryb `test` jest odrzucany, jeśli `NODE_ENV` nie ma wartości `test`; nie zastępuje produkcyjnego providera poczty.
 
 Weryfikacja e-mail pozostaje opcjonalna (`requireEmailVerification: false`). Podłączenie
-produkcyjnego nadawcy, domeny i wymuszenie weryfikacji są odłożone. Przypisywanie wcześniejszych
+produkcyjnego nadawcy wymaga wyboru operatora i domeny nadawczej. Przypisywanie wcześniejszych
 anonimowych zgłoszeń nadal wymaga zweryfikowanego adresu.
+
+`GET /api/auth/capabilities` zwraca `{ "emailVerificationDelivery": false }` w trybie
+`disabled` i `true` w trybie `test`. Klient udostępnia ponowną wysyłkę po otrzymaniu
+`true`. Przy wyłączonej wysyłce `POST /api/auth/send-verification-email` zwraca
+`503` z kodem `EMAIL_VERIFICATION_UNAVAILABLE`.
 
 Pula PostgreSQL ma domyślnie 10 połączeń, 5 s na uzyskanie połączenia oraz 30 s bezczynności
 (`DATABASE_POOL_MAX`, `DATABASE_CONNECTION_TIMEOUT_MS`, `DATABASE_IDLE_TIMEOUT_MS`). Błędy

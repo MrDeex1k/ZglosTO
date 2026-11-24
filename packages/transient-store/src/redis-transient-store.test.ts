@@ -43,6 +43,16 @@ class FakeRedisClient {
   }
 }
 
+function pendingConnection() {
+  let resolve!: (client: FakeRedisClient) => void;
+  let reject!: (error: Error) => void;
+  const promise = new Promise<FakeRedisClient>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
+
 const stores: RedisTransientStore[] = [];
 
 afterEach(() => {
@@ -53,11 +63,12 @@ function createStore(
   client = new FakeRedisClient(),
   commandTimeoutMs = 500,
   onOperation?: (event: TransientStoreOperationEvent) => void,
+  createClient = () => client,
 ): {
   client: FakeRedisClient;
   store: RedisTransientStore;
 } {
-  const store = new RedisTransientStore(client as unknown as RedisClientType, {
+  const store = new RedisTransientStore(() => createClient() as unknown as RedisClientType, {
     commandTimeoutMs,
     connectTimeoutMs: 1_000,
     keyPrefix: 'zglosto',
@@ -113,6 +124,81 @@ describe('RedisTransientStore', () => {
     expect(client.isOpen).toBe(true);
     expect(client.isReady).toBe(true);
   });
+
+  it('shares a pending connection and clears a rejected attempt for retry', async () => {
+    const client = new FakeRedisClient();
+    const pending = pendingConnection();
+    const connect = vi.spyOn(client, 'connect').mockImplementationOnce(() => {
+      client.isOpen = true;
+      return pending.promise;
+    });
+    const destroy = vi.spyOn(client, 'destroy');
+    const { store } = createStore(client);
+
+    const first = store.connect();
+    const second = store.connect();
+    expect(second).toBe(first);
+    expect(connect).toHaveBeenCalledOnce();
+    expect(destroy).not.toHaveBeenCalled();
+
+    pending.reject(new Error('Connection unavailable'));
+    await expect(first).rejects.toThrow('Transient store operation failed: connect');
+    await expect(second).rejects.toThrow('Transient store operation failed: connect');
+    await expect(store.connect()).resolves.toBeUndefined();
+    expect(connect).toHaveBeenCalledTimes(2);
+    expect(client.isReady).toBe(true);
+  });
+
+  it.each(['resolves', 'rejects'] as const)(
+    'disposes the timed-out client if its connection later %s',
+    async (outcome) => {
+      vi.useFakeTimers();
+      try {
+        const client = new FakeRedisClient();
+        const pending = pendingConnection();
+        const connect = vi.spyOn(client, 'connect').mockImplementationOnce(() => {
+          client.isOpen = true;
+          return pending.promise;
+        });
+        const destroy = vi.spyOn(client, 'destroy');
+        const replacement = new FakeRedisClient();
+        const factory = vi.fn(() => replacement).mockReturnValueOnce(client);
+        const { store } = createStore(client, 500, undefined, factory);
+
+        const first = store.connect();
+        const second = store.connect();
+        const firstError = expect(first).rejects.toThrow(
+          'Transient store operation failed: connect',
+        );
+        const secondError = expect(second).rejects.toThrow(
+          'Transient store operation failed: connect',
+        );
+        await vi.advanceTimersByTimeAsync(1_000);
+        await Promise.all([firstError, secondError]);
+        expect(destroy).toHaveBeenCalledOnce();
+        expect(client.isOpen).toBe(false);
+        await expect(store.connect()).resolves.toBeUndefined();
+        expect(factory).toHaveBeenCalledTimes(2);
+        expect(connect).toHaveBeenCalledOnce();
+
+        if (outcome === 'resolves') {
+          // The provider can assign a socket after clearing its open flag on cancellation.
+          client.isReady = true;
+          pending.resolve(client);
+        } else {
+          pending.reject(new Error('Canceled socket closed'));
+        }
+        await Promise.resolve();
+        expect(destroy).toHaveBeenCalledTimes(2);
+        expect(client.isReady).toBe(false);
+        expect(replacement.isReady).toBe(true);
+        await store.ping();
+        expect(replacement.ping).toHaveBeenCalledOnce();
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
 
   it('acquires a lease with SET NX PX and releases only the matching token', async () => {
     const { client, store } = createStore();
@@ -203,6 +289,7 @@ describe('RedisTransientStore', () => {
 
   it('destroys the client once and rejects operations after close', async () => {
     const { client, store } = createStore();
+    await store.connect();
 
     store.close();
     store.close();

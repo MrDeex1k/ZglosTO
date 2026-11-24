@@ -308,3 +308,29 @@ describe('LLM contracts', () => {
     ).toThrow(ContractValidationError);
   });
 });
+
+test('validates PostgreSQL text limits after trimming and counts Unicode code points', () => {
+  const request = {
+    opis_zgloszenia: ` ${'🚧'.repeat(255)} `,
+    adres_zgloszenia: ` ${'ą'.repeat(50)} `,
+    mail_zglaszajacego: ' resident@example.com ',
+    typ_sluzby: ' roads ',
+  };
+  expect(CurrentCreateIncidentRequestSchema.parse(request)).toMatchObject({
+    opis_zgloszenia: '🚧'.repeat(255),
+    adres_zgloszenia: 'ą'.repeat(50),
+    mail_zglaszajacego: 'resident@example.com',
+    typ_sluzby: 'roads',
+  });
+  for (const overflow of [
+    { opis_zgloszenia: '🚧'.repeat(256) },
+    { adres_zgloszenia: 'a'.repeat(51) },
+    { mail_zglaszajacego: `${'a'.repeat(250)}@x.pl` },
+    { typ_sluzby: 'a'.repeat(65) },
+    { opis_zgloszenia: 'Pothole\u0000' },
+  ]) {
+    expect(CurrentCreateIncidentRequestSchema.safeParse({ ...request, ...overflow }).success).toBe(
+      false,
+    );
+  }
+});

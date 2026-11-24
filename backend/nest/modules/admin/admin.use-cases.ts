@@ -2,6 +2,7 @@ import type {
   AdminIncidentStatisticsItem,
   CurrentDatabaseIncidentDto,
   CurrentIncidentListItemDto,
+  IncidentPage,
   UpdateIncidentServiceRequest,
   UpdateIncidentStatusRequest,
   UpdateIncidentVerificationRequest,
@@ -13,6 +14,7 @@ import {
   IncidentDomainPort,
   type IncidentMutationResponse,
 } from '../incidents/incident-domain.port.ts';
+import type { IncidentPageRequest } from '../incidents/incident-pagination.ts';
 import { IncidentPolicyService } from '../incidents/incident-policy.service.ts';
 import { PublicResolvedIncidentCache } from '../incidents/public-resolved-incident-cache.ts';
 
@@ -23,8 +25,12 @@ export class AdminUseCases {
     private readonly publicResolvedIncidentCache: PublicResolvedIncidentCache,
   ) {}
 
-  list(): Promise<readonly CurrentIncidentListItemDto[]> {
-    return this.incidents.listAdminIncidents();
+  list(
+    page: IncidentPageRequest | null = null,
+  ): Promise<readonly CurrentIncidentListItemDto[] | IncidentPage<CurrentIncidentListItemDto>> {
+    return page === null
+      ? this.incidents.listAdminIncidents()
+      : this.incidents.pageAdminIncidents(page);
   }
 
   statistics(): Promise<readonly AdminIncidentStatisticsItem[]> {

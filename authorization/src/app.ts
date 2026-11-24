@@ -1,6 +1,5 @@
-import { withHttpServerSpan } from '@zglosto/observability';
 import { randomUUID } from 'node:crypto';
-import { addCounter, recordHistogram } from '@zglosto/observability';
+import { addCounter, recordHistogram, withHttpServerSpan } from '@zglosto/observability';
 import {
   AuthorizationReadinessResponseSchema,
   CorrelationIdSchema,
@@ -10,6 +9,7 @@ import {
 import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
 import { bodyLimit } from 'hono/body-limit';
+import { routePath } from 'hono/route';
 import type { LocalRateLimiter } from '@zglosto/rate-limiting';
 import type { WhiteLabelConfigReadiness } from '@zglosto/white-label-config';
 
@@ -30,6 +30,18 @@ interface CreateAuthorizationAppOptions {
 }
 
 const allowedOrigins = authorizationOrigins(env.frontendOrigin, env.nodeEnv);
+const knownHttpMethods = new Set([
+  'CONNECT',
+  'DELETE',
+  'GET',
+  'HEAD',
+  'OPTIONS',
+  'PATCH',
+  'POST',
+  'PUT',
+  'QUERY',
+  'TRACE',
+]);
 
 function normalizeBetterAuthRequest(request: Request, clientAddress: string): Request {
   const contentLength = request.headers.get('content-length');
@@ -69,10 +81,16 @@ export function createAuthorizationApp(
     context.header('x-correlation-id', correlationId);
     await runWithAuthorizationLogContext(correlationId, next);
     const durationSeconds = (performance.now() - startedAt) / 1_000;
+    const matchedPath = routePath(context);
     const attributes = {
-      'http.request.method': context.req.method,
+      'http.request.method': knownHttpMethods.has(context.req.method)
+        ? context.req.method
+        : '_OTHER',
       'http.response.status_code': context.res.status,
-      'http.route': context.req.path,
+      'http.route':
+        context.res.status === 404 || !matchedPath || matchedPath === '*'
+          ? 'unmatched'
+          : matchedPath,
     };
     addCounter('zglosto_http_server_requests', 1, attributes);
     recordHistogram('zglosto_http_server_duration_seconds', durationSeconds, attributes);
@@ -163,6 +181,27 @@ export function createAuthorizationApp(
       : context.json({ error: 'User not found' }, 404);
   });
 
+  app.get('/api/auth/capabilities', (context) =>
+    context.json({ emailVerificationDelivery: env.emailDeliveryMode === 'test' }),
+  );
+
+  app.post('/api/auth/send-verification-email', async (context, next) => {
+    if (env.emailDeliveryMode === 'test') {
+      await next();
+      return;
+    }
+
+    const message = 'Verification email delivery is unavailable';
+    return context.json(
+      {
+        correlationId: context.get('correlationId'),
+        code: 'EMAIL_VERIFICATION_UNAVAILABLE',
+        message,
+      },
+      503,
+    );
+  });
+
   app.on(['GET', 'POST'], '/api/auth/*', (context) =>
     auth.handler(normalizeBetterAuthRequest(context.req.raw, context.get('clientAddress'))),
   );
@@ -210,19 +249,15 @@ export function createAuthorizationApp(
       });
 
       if (!session) {
-        await logApiRequest('GET', '/api/verify-session', 401, false, 'Brak sesji');
         return context.json({ error: 'Unauthorized', session: null }, 401);
       }
 
-      await logApiRequest('GET', '/api/verify-session', 200, true, 'Session verified');
       return context.json({
         success: true,
         session: session.session,
         user: session.user,
       });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      await logApiRequest('GET', '/api/verify-session', 503, false, `Błąd: ${errorMessage}`);
+    } catch {
       return context.json({ error: 'Session verification is temporarily unavailable' }, 503);
     }
   });

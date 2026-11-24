@@ -6,9 +6,14 @@ import {
   expectString,
   type AuthSessionUser,
   type IncidentImageKind,
-  type IncidentImageRef,
 } from '@zglosto/contracts';
-import { ImageUploadValidationError, storeIncidentImage } from '../../../lib/incident-images.ts';
+import {
+  attachIncidentImage,
+  ImageUploadValidationError,
+  verifyIncidentImageUpload,
+  type VerifiedImageUpload,
+} from '../../../lib/incident-images.ts';
+import type { DatabaseClient } from '../../../types.ts';
 import { badRequest, forbidden, notFound, unauthorized } from '../../application-error.ts';
 import { CorrelationContext } from '../../platform/correlation-context.ts';
 import { IncidentImageAccessPolicy } from '../auth-bridge/incident-image-access.policy.ts';
@@ -43,28 +48,52 @@ export class IncidentMediaService {
     private readonly correlationContext: CorrelationContext,
   ) {}
 
-  async store(
-    incidentId: string,
+  async verifyUpload(
     kind: IncidentImageKind,
+    incidentId: string | null,
     imageUploadId: string,
-  ): Promise<IncidentImageRef> {
+  ): Promise<VerifiedImageUpload> {
     try {
-      return await storeIncidentImage(
+      return await verifyIncidentImageUpload(
         this.database,
         this.storage,
-        incidentId,
         kind,
+        incidentId,
         imageUploadId,
-        {
-          correlationId:
-            this.correlationContext.currentId() ?? CorrelationIdSchema.parse(randomUUID()),
-          traceparent: this.correlationContext.currentTraceparent(),
-        },
       );
     } catch (error: unknown) {
       if (error instanceof ImageUploadValidationError) throw badRequest(error.message);
       throw error;
     }
+  }
+
+  async attach(
+    transaction: DatabaseClient,
+    incidentId: string,
+    upload: VerifiedImageUpload,
+  ): Promise<readonly string[]> {
+    try {
+      return await attachIncidentImage(transaction, incidentId, upload, {
+        correlationId:
+          this.correlationContext.currentId() ?? CorrelationIdSchema.parse(randomUUID()),
+        traceparent: this.correlationContext.currentTraceparent(),
+      });
+    } catch (error: unknown) {
+      if (error instanceof ImageUploadValidationError) throw badRequest(error.message);
+      throw error;
+    }
+  }
+
+  async cleanupReplacedObjects(keys: readonly string[]): Promise<void> {
+    await Promise.all(
+      keys.map(async (key) => {
+        try {
+          await this.storage.deleteObject(key);
+        } catch {
+          console.error('Could not remove replaced incident image object');
+        }
+      }),
+    );
   }
 
   async authorizeForHttp(

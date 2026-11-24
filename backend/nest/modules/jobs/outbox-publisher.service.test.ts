@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { DatabaseClient } from '../../../types.ts';
+import type { DatabaseService } from '../database/database.service.ts';
 import { GracefulShutdownRegistry } from '../../platform/graceful-shutdown.registry.ts';
 import { StructuredLogger } from '../../platform/structured-logger.ts';
 import { OutboxPublisherService } from './outbox-publisher.service.ts';
@@ -95,6 +97,59 @@ describe('OutboxPublisherService', () => {
     await makeService(broker, outbox).tickOnce();
 
     expect(outbox.markFailed).toHaveBeenCalledWith([message.id], 'broker_publish_failed', 1_000);
+    expect(outbox.markPublished).not.toHaveBeenCalled();
+  });
+
+  it('publishes healthy events from the same batch as a malformed event', async () => {
+    const malformedId = '019b1234-5678-7123-8123-123456789aff';
+    const validRow = {
+      causation_id: message.envelope.causationId,
+      correlation_id: message.envelope.correlationId,
+      created_at: new Date(message.envelope.occurredAt),
+      event_type: message.envelope.messageType,
+      id: message.id,
+      payload: message.envelope.payload,
+      publish_attempts: 1,
+      traceparent: null,
+    };
+    const query = vi
+      .fn()
+      .mockResolvedValueOnce({
+        rows: [{ ...validRow, id: malformedId, payload: {} }, validRow],
+        rowCount: 2,
+      })
+      .mockResolvedValue({ rows: [], rowCount: 1 });
+    const outbox = new OutboxRepository({
+      transaction: <Result>(operation: (client: DatabaseClient) => Promise<Result>) =>
+        operation({ query }),
+    } as unknown as DatabaseService);
+    const broker = new BrokerStub();
+
+    await makeService(broker, outbox).tickOnce();
+
+    expect(broker.publishConfirmed).toHaveBeenCalledExactlyOnceWith([
+      expect.objectContaining({ messageId: message.id }),
+    ]);
+    expect(query).toHaveBeenCalledWith(expect.stringContaining('invalid_outbox_event'), [
+      `{${malformedId}}`,
+    ]);
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining("SET status = 'published', published_at"),
+      [`{${message.id}}`],
+    );
+  });
+
+  it('leaves stale-lease recovery available when broker and database both fail', async () => {
+    const broker = new BrokerStub();
+    broker.publishConfirmed.mockRejectedValue(new Error('broker unavailable'));
+    const outbox = {
+      claimBatch: vi.fn().mockResolvedValue([message]),
+      markFailed: vi.fn().mockRejectedValue(new Error('database unavailable')),
+      markPublished: vi.fn(),
+    } as unknown as OutboxRepository;
+
+    await expect(makeService(broker, outbox).tickOnce()).resolves.toBeUndefined();
+    expect(outbox.markFailed).toHaveBeenCalledOnce();
     expect(outbox.markPublished).not.toHaveBeenCalled();
   });
 

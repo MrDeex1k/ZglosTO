@@ -1,9 +1,14 @@
 import { expect, test, vi } from 'vitest';
+import type { DatabaseClient, DatabaseParameter, DatabaseQueryResult } from '../../../types.ts';
 import type { DatabaseService } from '../database/database.service.ts';
 import type { IncidentMediaService } from '../media/incident-media.service.ts';
 import type { ServiceCatalogSynchronizer } from './service-catalog-synchronizer.ts';
 import { PostgresIncidentAdapter } from './postgres-incident.adapter.ts';
-import { classifyIncident, type IncidentClassification } from '../../../lib/llm-classification.ts';
+import {
+  classifyIncident,
+  fallbackClassification,
+  type IncidentClassification,
+} from '../../../lib/llm-classification.ts';
 
 const row = {
   id_zgloszenia: 'incident-1',
@@ -78,7 +83,11 @@ test.each(['municipal', 'emergency', 'unknown'] as const)(
         rowCount: 1,
       });
     const adapter = new PostgresIncidentAdapter(
-      { query } as unknown as DatabaseService,
+      {
+        query,
+        transaction: <Result>(operation: (client: DatabaseClient) => Promise<Result>) =>
+          operation({ query }),
+      } as unknown as DatabaseService,
       {} as IncidentMediaService,
       { classify: async (): Promise<IncidentClassification> => result },
       { ensureSynchronized: async () => {} } as unknown as ServiceCatalogSynchronizer,
@@ -145,3 +154,61 @@ test.each(['municipal', 'emergency', 'unknown'] as const)(
     expect(listed[0]).not.toHaveProperty('llm_p_emergency_raw');
   },
 );
+
+test('links the verified report upload and reads the response inside the creation transaction', async () => {
+  const imageUploadId = '00000000-0000-4000-8000-000000000001';
+  const steps: string[] = [];
+  const query = vi
+    .fn<(text: string, parameters?: readonly DatabaseParameter[]) => Promise<DatabaseQueryResult>>()
+    .mockImplementationOnce(async () => {
+      steps.push('insert');
+      return { rows: [{ id_zgloszenia: row.id_zgloszenia }], rowCount: 1 };
+    })
+    .mockImplementationOnce(async () => {
+      steps.push('read');
+      return { rows: [row], rowCount: 1 };
+    });
+  const client = { query };
+  const database = {
+    query: vi.fn(),
+    transaction: async <Result>(operation: (client: DatabaseClient) => Promise<Result>) => {
+      steps.push('begin');
+      const response = await operation(client);
+      steps.push('commit');
+      return response;
+    },
+  };
+  const upload = { id: imageUploadId };
+  const media = {
+    verifyUpload: vi.fn(async () => {
+      steps.push('verify');
+      return upload;
+    }),
+    attach: vi.fn(async () => {
+      steps.push('attach');
+      return [];
+    }),
+  };
+  const result = fallbackClassification('disabled', 'roads');
+  const adapter = new PostgresIncidentAdapter(
+    database as unknown as DatabaseService,
+    media as unknown as IncidentMediaService,
+    { classify: async () => result },
+    { ensureSynchronized: async () => {} } as unknown as ServiceCatalogSynchronizer,
+  );
+
+  await adapter.createIncident({
+    address: row.adres_zgloszenia,
+    description: row.opis_zgloszenia,
+    imageUploadId,
+    latitude: null,
+    longitude: null,
+    reporterEmail: row.mail_zglaszajacego,
+    reporterUserId: null,
+    requestedServiceKey: row.service_key,
+  });
+
+  expect(steps).toEqual(['verify', 'begin', 'insert', 'attach', 'read', 'commit']);
+  expect(media.attach).toHaveBeenCalledExactlyOnceWith(client, row.id_zgloszenia, upload);
+  expect(database.query).not.toHaveBeenCalled();
+});

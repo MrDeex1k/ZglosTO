@@ -68,7 +68,13 @@ export class OutboxPublisherService implements OnApplicationBootstrap {
         OutboxPublisherService.name,
       );
     } catch (error: unknown) {
-      await this.outbox.markFailed(ids, OUTBOX_PUBLISH_ERROR, environment.reconnectDelayMs);
+      try {
+        await this.outbox.markFailed(ids, OUTBOX_PUBLISH_ERROR, environment.reconnectDelayMs);
+      } catch {
+        // A lost database connection leaves the lease in place for stale-claim recovery.
+        addCounter('zglosto_outbox_messages', ids.length, { result: 'retry_schedule_failed' });
+        this.logger.warn({ event: 'outbox.retry_schedule.failed' }, OutboxPublisherService.name);
+      }
       addCounter('zglosto_outbox_messages', ids.length, { result: 'failed' });
       this.logger.warn(
         {
