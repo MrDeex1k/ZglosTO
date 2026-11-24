@@ -6,6 +6,7 @@ import type {
   CurrentDatabaseIncidentDto,
   CurrentIncidentListItemDto,
   CurrentResolvedIncidentDto,
+  IncidentPage,
   IncidentStatusCode,
   ServiceIncidentStatisticsItem,
   ServiceIncidentListItemDto,
@@ -13,6 +14,8 @@ import type {
   UserRole,
 } from '@zglosto/contracts';
 import { unavailable } from '../../application-error.ts';
+
+import type { IncidentPageRequest } from './incident-pagination.ts';
 
 export interface CreateIncidentCommand {
   address: string;
@@ -61,6 +64,17 @@ export abstract class IncidentDomainPort {
   abstract listServiceStatistics(
     serviceKey: string,
   ): Promise<readonly ServiceIncidentStatisticsItem[]>;
+  abstract pageAdminIncidents(
+    page: IncidentPageRequest,
+  ): Promise<IncidentPage<CurrentIncidentListItemDto>>;
+  abstract pageResidentIncidents(
+    userId: string,
+    page: IncidentPageRequest,
+  ): Promise<IncidentPage<CurrentIncidentListItemDto>>;
+  abstract pageServiceIncidents(
+    serviceKey: string,
+    page: IncidentPageRequest,
+  ): Promise<IncidentPage<ServiceIncidentListItemDto>>;
   abstract updateAdminIncidentService(
     incidentId: string,
     serviceKey: string,
@@ -138,6 +152,26 @@ export class PendingIncidentInfrastructureAdapter extends IncidentDomainPort {
   }
 
   listServiceStatistics(_serviceKey: string): Promise<readonly ServiceIncidentStatisticsItem[]> {
+    return this.pending();
+  }
+
+  pageAdminIncidents(
+    _page: IncidentPageRequest,
+  ): Promise<IncidentPage<CurrentIncidentListItemDto>> {
+    return this.pending();
+  }
+
+  pageResidentIncidents(
+    _userId: string,
+    _page: IncidentPageRequest,
+  ): Promise<IncidentPage<CurrentIncidentListItemDto>> {
+    return this.pending();
+  }
+
+  pageServiceIncidents(
+    _serviceKey: string,
+    _page: IncidentPageRequest,
+  ): Promise<IncidentPage<ServiceIncidentListItemDto>> {
     return this.pending();
   }
 

@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Param,
   Patch,
+  Query,
   Post,
   Req,
 } from '@nestjs/common';
@@ -17,6 +18,10 @@ import {
   InitiateImageUploadResponseSchema,
   ServiceIncidentStatisticsItemSchema,
   ServiceIncidentListItemSchema,
+  ServiceIncidentPageSchema,
+  IncidentListQuerySchema,
+  type IncidentListQuery,
+  type IncidentPage,
   ServiceIncidentMutationResponseSchema,
   UpdateIncidentServiceRequestSchema,
   UpdateIncidentStatusRequestSchema,
@@ -33,10 +38,11 @@ import {
   type UploadResolvedImageRequest,
   parseIncidentRevisionEtag,
 } from '@zglosto/contracts';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { z } from 'zod';
 import { ApiContract } from '../../openapi/api-contract.decorator.ts';
+import { incidentPageRequest } from '../incidents/incident-pagination.ts';
 import { RequireRoles } from '../auth-bridge/auth.decorators.ts';
 import { AuthRequestContext } from '../auth-bridge/auth-request-context.ts';
 import type {
@@ -59,14 +65,26 @@ export class ServicesController {
 
   @Get('incydenty')
   @ApiOperation({ summary: 'List incidents assigned to the authenticated service' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    schema: { type: 'integer', minimum: 1, maximum: 100 },
+  })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
   @ApiContract({
     authenticated: true,
-    errorStatuses: [401, 403, 500, 503],
-    serializationSchema: ServiceIncidentListItemSchema,
-    successSchema: z.array(ServiceIncidentListItemSchema),
+    errorStatuses: [400, 401, 403, 500, 503],
+    serializationSchema: z.union([ServiceIncidentListItemSchema, ServiceIncidentPageSchema]),
+    successSchema: z.union([z.array(ServiceIncidentListItemSchema), ServiceIncidentPageSchema]),
   })
-  list(@Req() request: Request): Promise<readonly ServiceIncidentListItemDto[]> {
-    return this.useCases.list(this.authContext.requireServiceKey(request));
+  list(
+    @Req() request: Request,
+    @Query({ schema: IncidentListQuerySchema }) query: IncidentListQuery,
+  ): Promise<readonly ServiceIncidentListItemDto[] | IncidentPage<ServiceIncidentListItemDto>> {
+    return this.useCases.list(
+      this.authContext.requireServiceKey(request),
+      incidentPageRequest(query),
+    );
   }
 
   @Post('incydenty/:id/obrazy/uploads')

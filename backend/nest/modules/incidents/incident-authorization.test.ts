@@ -1,4 +1,5 @@
 import { expect, test, vi } from 'vitest';
+import type { DatabaseClient } from '../../../types.ts';
 import type { DatabaseService } from '../database/database.service.ts';
 import type { IncidentMediaService } from '../media/incident-media.service.ts';
 import type { ServiceCatalogSynchronizer } from './service-catalog-synchronizer.ts';
@@ -11,7 +12,11 @@ function setup() {
     rowCount: 0,
   }));
   const adapter = new PostgresIncidentAdapter(
-    { query } as unknown as DatabaseService,
+    {
+      query,
+      transaction: <Result>(operation: (client: DatabaseClient) => Promise<Result>) =>
+        operation({ query }),
+    } as unknown as DatabaseService,
     {} as IncidentMediaService,
     { classify: vi.fn() },
     { ensureSynchronized: async () => {} } as unknown as ServiceCatalogSynchronizer,
@@ -56,4 +61,31 @@ test('claiming anonymous reports requires database-verified email and never stea
   expect(sql).toContain('incident.reporter_user_id IS NULL');
   expect(sql).toContain('incident.mail_zglaszajacego = LOWER(BTRIM(app_user.email))');
   expect(query.mock.calls[0]?.[1]).toEqual(['verified-user']);
+});
+
+test('a service transfer during storage verification prevents the image write and response', async () => {
+  const query = vi.fn().mockResolvedValue({ rows: [], rowCount: 0 });
+  const transaction = vi.fn(<Result>(operation: (client: DatabaseClient) => Promise<Result>) =>
+    operation({ query }),
+  );
+  const attach = vi.fn();
+  const verifyUpload = vi.fn().mockResolvedValue({});
+  const database = {
+    query: vi.fn().mockResolvedValue({ rows: [{ id_zgloszenia: 'incident' }], rowCount: 1 }),
+    transaction,
+  } as unknown as DatabaseService;
+  const adapter = new PostgresIncidentAdapter(
+    database,
+    { attach, verifyUpload } as unknown as IncidentMediaService,
+    { classify: vi.fn() },
+    { ensureSynchronized: async () => {} } as unknown as ServiceCatalogSynchronizer,
+  );
+
+  await expect(adapter.uploadResolutionImage('incident', 'roads', 'upload')).resolves.toBeNull();
+  expect(verifyUpload).toHaveBeenCalledWith('resolution', 'incident', 'upload');
+  expect(query).toHaveBeenCalledExactlyOnceWith(
+    expect.stringContaining('service_key = $2 FOR UPDATE'),
+    ['incident', 'roads'],
+  );
+  expect(attach).not.toHaveBeenCalled();
 });

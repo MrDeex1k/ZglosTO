@@ -128,17 +128,29 @@ export interface ServiceIncidentListItemDto extends CurrentIncidentListItemDto {
 
 const NullableLatitudeSchema = z.number().min(-90).max(90).nullable().default(null);
 const NullableLongitudeSchema = z.number().min(-180).max(180).nullable().default(null);
-const NullableNonEmptyStringSchema = z.string().trim().min(1).nullable().default(null);
+const NullableRequestedServiceSchema = z.string().trim().min(1).max(64).nullable().default(null);
 const NullableUploadIdSchema = z.uuid().nullable().default(null);
+
+// PostgreSQL varchar limits count Unicode code points, including supplementary characters.
+function incidentText(maxLength: number) {
+  return z
+    .string()
+    .trim()
+    .min(1)
+    .refine((value) => !value.includes('\u0000') && Array.from(value).length <= maxLength, {
+      message: `Must contain at most ${maxLength} characters and no NUL characters`,
+    })
+    .meta({ maxLength });
+}
 
 export const CurrentCreateIncidentRequestSchema = z
   .object({
-    opis_zgloszenia: z.string().trim().min(1),
-    mail_zglaszajacego: z.string().trim().pipe(z.email()),
-    adres_zgloszenia: z.string().trim().min(1),
+    opis_zgloszenia: incidentText(255),
+    mail_zglaszajacego: z.string().trim().max(254).pipe(z.email()),
+    adres_zgloszenia: incidentText(50),
     latitude: NullableLatitudeSchema,
     longitude: NullableLongitudeSchema,
-    typ_sluzby: NullableNonEmptyStringSchema,
+    typ_sluzby: NullableRequestedServiceSchema,
     zdjecie_incydentu_zglaszanego_upload_id: NullableUploadIdSchema,
   })
   .strict()
@@ -234,6 +246,37 @@ export const CurrentIncidentListItemSchema = z
 
 export const ServiceIncidentListItemSchema = CurrentIncidentListItemSchema.extend({
   revision: z.number().int().positive(),
+}).strict();
+
+const IncidentCursorTokenSchema = z
+  .string()
+  .max(180)
+  .regex(/^[A-Za-z0-9_-]+$/);
+export const IncidentListQuerySchema = z.object({
+  limit: z
+    .string()
+    .regex(/^(?:[1-9][0-9]?|100)$/)
+    .transform(Number)
+    .optional(),
+  cursor: IncidentCursorTokenSchema.optional(),
+});
+
+export type IncidentListQuery = z.infer<typeof IncidentListQuerySchema>;
+
+export interface IncidentPage<Item> {
+  items: Item[];
+  nextCursor: string | null;
+}
+
+export const CurrentIncidentPageSchema = z
+  .object({
+    items: z.array(CurrentIncidentListItemSchema),
+    nextCursor: IncidentCursorTokenSchema.nullable(),
+  })
+  .strict();
+
+export const ServiceIncidentPageSchema = CurrentIncidentPageSchema.extend({
+  items: z.array(ServiceIncidentListItemSchema),
 }).strict();
 
 export const CurrentResolvedIncidentSchema = z

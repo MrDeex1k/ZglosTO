@@ -1,3 +1,4 @@
+import { setTimeout as waitForRetry } from 'node:timers/promises';
 import { Injectable } from '@nestjs/common';
 import type { AMQPChannel, AMQPMessage } from '@cloudamqp/amqp-client';
 import {
@@ -32,12 +33,16 @@ export interface RabbitMqSubscription {
   queue: string;
 }
 
+interface SubscriptionRegistration {
+  channel: AMQPChannel | null;
+  consecutiveFailures: number;
+  definition: RabbitMqSubscription;
+}
+
 @Injectable()
 export class RabbitMqConsumerService {
-  private readonly subscriptions = new Map<
-    string,
-    { channel: AMQPChannel | null; definition: RabbitMqSubscription }
-  >();
+  private readonly subscriptions = new Map<string, SubscriptionRegistration>();
+  private readonly shutdownSignal = new AbortController();
   private supervisor: NodeJS.Timeout | null = null;
   private activeReconciliation: Promise<void> | null = null;
   private stopping = false;
@@ -56,7 +61,7 @@ export class RabbitMqConsumerService {
     if (this.subscriptions.has(subscription.consumerName)) {
       throw new Error(`RabbitMQ consumer is already registered: ${subscription.consumerName}`);
     }
-    const registration = { channel: null, definition: subscription };
+    const registration = { channel: null, consecutiveFailures: 0, definition: subscription };
     this.subscriptions.set(subscription.consumerName, registration);
     try {
       await this.activate(registration);
@@ -73,16 +78,13 @@ export class RabbitMqConsumerService {
     this.scheduleSupervisor();
   }
 
-  private async activate(registration: {
-    channel: AMQPChannel | null;
-    definition: RabbitMqSubscription;
-  }): Promise<void> {
+  private async activate(registration: SubscriptionRegistration): Promise<void> {
     const channel = await this.rabbitMq.createChannel();
     try {
       await declareRabbitMqTopology(channel);
       await channel.prefetch(registration.definition.prefetch);
       await channel.basicConsume(registration.definition.queue, { noAck: false }, (message) => {
-        void this.handleDelivery(message, registration.definition);
+        void this.handleDelivery(message, registration);
       });
       registration.channel = channel;
     } catch (error: unknown) {
@@ -94,6 +96,7 @@ export class RabbitMqConsumerService {
   async close(): Promise<void> {
     if (this.stopping) return;
     this.stopping = true;
+    this.shutdownSignal.abort();
     if (this.supervisor !== null) clearTimeout(this.supervisor);
     this.supervisor = null;
     await this.activeReconciliation;
@@ -146,8 +149,9 @@ export class RabbitMqConsumerService {
 
   private async handleDelivery(
     message: AMQPMessage,
-    subscription: RabbitMqSubscription,
+    registration: SubscriptionRegistration,
   ): Promise<void> {
+    const subscription = registration.definition;
     try {
       const body = message.body ?? new Uint8Array();
       const headers = this.stringHeaders(message.properties.headers);
@@ -182,10 +186,12 @@ export class RabbitMqConsumerService {
       );
       if (disposition.kind === 'ack') {
         await message.ack();
+        registration.consecutiveFailures = 0;
         return;
       }
       if (disposition.kind === 'dead-letter') {
         await message.nack(false);
+        registration.consecutiveFailures = 0;
         return;
       }
 
@@ -201,18 +207,34 @@ export class RabbitMqConsumerService {
         },
       ]);
       await message.ack();
+      registration.consecutiveFailures = 0;
     } catch (error: unknown) {
+      if (this.stopping) return;
+      registration.consecutiveFailures = Math.min(registration.consecutiveFailures + 1, 6);
+      const baseDelayMs = validateRabbitMqEnvironment().reconnectDelayMs;
+      const retryDelayMs = Math.min(
+        Math.max(30_000, baseDelayMs),
+        baseDelayMs * 2 ** (registration.consecutiveFailures - 1),
+      );
       this.logger.warn(
         {
           consumer: subscription.consumerName,
           error: error instanceof Error ? error.message : 'unknown',
           event: 'rabbitmq.delivery.failed',
+          retryDelayMs,
         },
         RabbitMqConsumerService.name,
       );
+      // Leave the delivery unacked during the delay. Prefetch bounds the number
+      // of waiting deliveries and closing the channel returns them to RabbitMQ.
       try {
-        await message.nack(true);
+        await waitForRetry(retryDelayMs, undefined, {
+          signal: this.shutdownSignal.signal,
+          ref: false,
+        });
+        if (!this.stopping) await message.nack(true);
       } catch {
+        if (this.stopping) return;
         this.logger.warn(
           { consumer: subscription.consumerName, event: 'rabbitmq.delivery.requeue_failed' },
           RabbitMqConsumerService.name,

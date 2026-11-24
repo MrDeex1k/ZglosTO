@@ -80,6 +80,16 @@ Wszystkie endpointy są dostępne pod adresem `http://localhost:1235/api`.
 
 ---
 
+### Stronicowanie prywatnych list zgłoszeń
+
+`GET /admin/incydenty`, `GET /mieszkaniec/incydenty` i `GET /sluzby/incydenty`
+zwracają tablicę, jeśli klient pominie oba parametry. Z parametrem `limit` lub
+`cursor` odpowiedź ma pola `items` i `nextCursor`. `limit` przyjmuje wartości
+od 1 do 100. Domyślny rozmiar strony przy podaniu samego kursora wynosi 50.
+W kolejnym żądaniu przekaż `nextCursor` jako `cursor`. Wartość `null` oznacza
+ostatnią stronę. Strony są sortowane od najnowszego zgłoszenia, a identyfikator
+rozstrzyga remisy daty i godziny. Każde żądanie stosuje bieżący zakres uprawnień.
+
 ### Publiczna konfiguracja miasta
 
 **Endpoint:** `GET /config/public`

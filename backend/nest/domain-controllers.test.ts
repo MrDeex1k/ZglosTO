@@ -122,6 +122,12 @@ function configurePort(): PendingIncidentInfrastructureAdapter {
   vi.spyOn(port, 'listAdminIncidents').mockResolvedValue([]);
   vi.spyOn(port, 'listAdminStatistics').mockResolvedValue([]);
   vi.spyOn(port, 'listResidentIncidents').mockResolvedValue([]);
+  vi.spyOn(port, 'pageAdminIncidents').mockResolvedValue({ items: [], nextCursor: null });
+  vi.spyOn(port, 'pageResidentIncidents').mockResolvedValue({ items: [], nextCursor: null });
+  vi.spyOn(port, 'pageServiceIncidents').mockResolvedValue({
+    items: [serviceIncident('roads-only', 'roads', 3)],
+    nextCursor: null,
+  });
   vi.spyOn(port, 'listResolvedIncidents').mockResolvedValue([]);
   vi.spyOn(port, 'listServiceIncidents').mockResolvedValue([]);
   vi.spyOn(port, 'listServiceStatistics').mockResolvedValue([]);
@@ -313,6 +319,44 @@ describe('NestJS domain controllers', () => {
       '00000000-0000-4000-8000-000000000001',
     );
     expect(publicResolvedIncidentCache.invalidate).toHaveBeenCalledTimes(3);
+  });
+
+  it('negotiates cursor pagination on private lists and preserves the legacy array', async () => {
+    const get = (path: string, role: UserRole) =>
+      apiRequest(baseUrl, path, { body: null, cookie: cookie(role), method: 'GET' });
+    const after = ['2026-08-21', '12:00:00.123456', '00000000-0000-4000-8000-000000000001'];
+    const cursor = Buffer.from(JSON.stringify(after)).toString('base64url');
+    const [admin, resident, service, legacy, badLimit, badCursor, repeatedLimit] =
+      await Promise.all([
+        get('/admin/incydenty?limit=2', 'admin'),
+        get(`/mieszkaniec/incydenty?cursor=${cursor}`, 'mieszkaniec'),
+        get('/sluzby/incydenty?limit=10', 'sluzby'),
+        get('/admin/incydenty', 'admin'),
+        get('/admin/incydenty?limit=101', 'admin'),
+        get('/admin/incydenty?cursor=abc', 'admin'),
+        get('/admin/incydenty?limit=1&limit=2', 'admin'),
+      ]);
+
+    expect([admin.status, resident.status, service.status, legacy.status]).toEqual([
+      200, 200, 200, 200,
+    ]);
+    expect([badLimit.status, badCursor.status, repeatedLimit.status]).toEqual([400, 400, 400]);
+    expect(await admin.json()).toEqual({ items: [], nextCursor: null });
+    expect(await resident.json()).toEqual({ items: [], nextCursor: null });
+    expect(await service.json()).toEqual({
+      items: [serviceIncident('roads-only', 'roads', 3)],
+      nextCursor: null,
+    });
+    expect(await legacy.json()).toEqual([]);
+    expect(port.pageAdminIncidents).toHaveBeenCalledExactlyOnceWith({ after: null, limit: 2 });
+    expect(port.pageResidentIncidents).toHaveBeenCalledExactlyOnceWith('mieszkaniec-1', {
+      after,
+      limit: 50,
+    });
+    expect(port.pageServiceIncidents).toHaveBeenCalledExactlyOnceWith('roads', {
+      after: null,
+      limit: 10,
+    });
   });
 
   it('isolates two service scopes and returns a typed conflict for a stale revision', async () => {

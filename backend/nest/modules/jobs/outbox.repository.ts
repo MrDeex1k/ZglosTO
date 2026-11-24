@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import {
+  ContractValidationError,
   createMessageEnvelopeV1,
   MEDIA_PROCESS_IMAGE_EVENT,
   MEDIA_PROCESSING_TOPOLOGY_V1,
@@ -7,6 +8,7 @@ import {
   type MediaProcessImageRequestedV1,
   type MessageEnvelopeV1,
 } from '@zglosto/contracts';
+import { addCounter } from '@zglosto/observability';
 import { z } from 'zod';
 import type { DatabaseClient } from '../../../types.ts';
 import { DatabaseService } from '../database/database.service.ts';
@@ -37,8 +39,9 @@ export class OutboxRepository {
   constructor(private readonly database: DatabaseService) {}
 
   async claimBatch(batchSize: number, lockTimeoutMs: number): Promise<ClaimedOutboxMessage[]> {
-    const result = await this.database.query(
-      `WITH claimable AS (
+    const { messages, discardedCount } = await this.database.transaction(async (client) => {
+      const result = await client.query(
+        `WITH claimable AS (
          SELECT id
          FROM outbox_events
          WHERE (
@@ -53,7 +56,7 @@ export class OutboxRepository {
        )
        UPDATE outbox_events AS event
        SET status = 'publishing',
-           publish_attempts = event.publish_attempts + 1,
+           publish_attempts = LEAST(event.publish_attempts + 1, 32767),
            locked_at = CURRENT_TIMESTAMP,
            updated_at = CURRENT_TIMESTAMP,
            last_error_code = NULL
@@ -62,30 +65,60 @@ export class OutboxRepository {
        RETURNING event.id, event.event_type, event.payload, event.correlation_id,
                  event.causation_id, event.traceparent, event.created_at,
                  event.publish_attempts`,
-      [batchSize, lockTimeoutMs],
-    );
+        [batchSize, lockTimeoutMs],
+      );
 
-    return result.rows.map((unknownRow) => {
-      const row = ClaimedOutboxRowSchema.parse(unknownRow);
-      const payload = parseMediaProcessImageRequestedV1(row.payload, 'outbox.payload');
-      return {
-        envelope: createMessageEnvelopeV1(
-          {
-            causationId: row.causation_id,
-            correlationId: row.correlation_id,
-            messageId: row.id,
-            messageType: row.event_type,
-            occurredAt: row.created_at.toISOString(),
-            traceparent: row.traceparent,
-          },
-          payload,
-        ),
-        exchange: MEDIA_PROCESSING_TOPOLOGY_V1.exchange,
-        id: row.id,
-        publishAttempts: row.publish_attempts,
-        routingKey: MEDIA_PROCESSING_TOPOLOGY_V1.routingKey,
-      };
+      const validMessages: ClaimedOutboxMessage[] = [];
+      const malformedIds: string[] = [];
+      for (const unknownRow of result.rows) {
+        // The DB guarantees the primary key independently of the event payload.
+        const { id } = z.object({ id: z.guid() }).parse(unknownRow);
+        try {
+          validMessages.push(this.parseClaimedMessage(unknownRow));
+        } catch (error: unknown) {
+          if (!(error instanceof z.ZodError || error instanceof ContractValidationError)) {
+            throw error;
+          }
+          malformedIds.push(id);
+        }
+      }
+      if (malformedIds.length > 0) {
+        await client.query(
+          `UPDATE outbox_events
+           SET status = 'discarded', locked_at = NULL, updated_at = CURRENT_TIMESTAMP,
+               last_error_code = 'invalid_outbox_event'
+           WHERE id = ANY($1::uuid[])`,
+          [this.uuidArray(malformedIds)],
+        );
+      }
+      return { messages: validMessages, discardedCount: malformedIds.length };
     });
+    if (discardedCount > 0) {
+      addCounter('zglosto_outbox_messages', discardedCount, { result: 'discarded' });
+    }
+    return messages;
+  }
+
+  private parseClaimedMessage(unknownRow: unknown): ClaimedOutboxMessage {
+    const row = ClaimedOutboxRowSchema.parse(unknownRow);
+    const payload = parseMediaProcessImageRequestedV1(row.payload, 'outbox.payload');
+    return {
+      envelope: createMessageEnvelopeV1(
+        {
+          causationId: row.causation_id,
+          correlationId: row.correlation_id,
+          messageId: row.id,
+          messageType: row.event_type,
+          occurredAt: row.created_at.toISOString(),
+          traceparent: row.traceparent,
+        },
+        payload,
+      ),
+      exchange: MEDIA_PROCESSING_TOPOLOGY_V1.exchange,
+      id: row.id,
+      publishAttempts: row.publish_attempts,
+      routingKey: MEDIA_PROCESSING_TOPOLOGY_V1.routingKey,
+    };
   }
 
   async markPublished(ids: readonly string[]): Promise<void> {
@@ -107,7 +140,8 @@ export class OutboxRepository {
     await this.database.query(
       `UPDATE outbox_events
        SET status = 'failed', locked_at = NULL,
-           available_at = CURRENT_TIMESTAMP + ($3 * INTERVAL '1 millisecond'),
+           available_at = CURRENT_TIMESTAMP +
+             (LEAST(GREATEST(30000, $3::bigint), $3::bigint * (1 << LEAST(publish_attempts - 1, 5))) * INTERVAL '1 millisecond'),
            updated_at = CURRENT_TIMESTAMP, last_error_code = $2
        WHERE id = ANY($1::uuid[]) AND status = 'publishing'`,
       [this.uuidArray(ids), errorCode, retryDelayMs],
