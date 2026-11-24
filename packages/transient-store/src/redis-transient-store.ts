@@ -83,6 +83,7 @@ export class RedisTransientStore implements TransientStore {
   readonly #connectTimeoutMs: number;
   readonly #keyPrefix: string;
   readonly #onOperation: ((event: TransientStoreOperationEvent) => void) | null;
+  #connecting: Promise<void> | undefined;
   #closed = false;
 
   constructor(client: RedisClientType, options: RedisTransientStoreOptions) {
@@ -93,16 +94,50 @@ export class RedisTransientStore implements TransientStore {
     this.#onOperation = options.onOperation ?? null;
   }
 
-  async connect(): Promise<void> {
-    await this.#execute(
+  connect(): Promise<void> {
+    if (this.#closed) {
+      return Promise.reject(
+        new TransientStoreOperationError('connect', {
+          cause: new Error('Redis transient store is closed'),
+        }),
+      );
+    }
+    if (this.#connecting !== undefined) return this.#connecting;
+
+    let interruptedConnection: Promise<unknown> | undefined;
+    const attempt = this.#execute(
       'connect',
-      async () => {
+      async (signal) => {
         if (this.#client.isReady) return;
         if (this.#client.isOpen) this.#client.destroy();
-        await this.#client.connect();
+        const connection = this.#client.connect();
+        const abort = () => {
+          interruptedConnection = connection;
+          if (this.#client.isOpen) this.#client.destroy();
+        };
+        signal.addEventListener('abort', abort, { once: true });
+        try {
+          await connection;
+        } finally {
+          signal.removeEventListener('abort', abort);
+        }
       },
       this.#connectTimeoutMs,
     );
+    const clearAttempt = () => {
+      this.#connecting = undefined;
+    };
+    this.#connecting = attempt.finally(() => {
+      if (interruptedConnection === undefined) {
+        clearAttempt();
+        return;
+      }
+
+      // A timeout releases callers while the canceled socket attempt finishes unwinding.
+      // Reusing the client before then could let the previous attempt disturb the new one.
+      void interruptedConnection.then(clearAttempt, clearAttempt);
+    });
+    return this.#connecting;
   }
 
   async ping(): Promise<void> {

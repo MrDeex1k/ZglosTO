@@ -80,6 +80,22 @@ describe('LocalRateLimiter', () => {
     limiter.close();
   });
 
+  it('reclaims the earliest window without changing the retry time of existing keys', () => {
+    const { advanceBy, limiter } = createLimiter({ maxRequests: 1 });
+    limiter.check('early');
+    advanceBy(3_000);
+    limiter.check('late');
+    advanceBy(1_000);
+
+    expect(limiter.check('new')).toMatchObject({ reason: 'capacity', retryAfterSeconds: 6 });
+    advanceBy(6_000);
+
+    expect(limiter.check('new')).toMatchObject({ allowed: true, activeKeys: 2 });
+    expect(limiter.check('late')).toMatchObject({ reason: 'limit', retryAfterSeconds: 3 });
+    expect(limiter.check('early')).toMatchObject({ reason: 'capacity', retryAfterSeconds: 3 });
+    limiter.close();
+  });
+
   it('schedules cleanup, releases all state on close and closes idempotently', () => {
     const { clearInterval, limiter, setInterval, timer } = createLimiter();
     limiter.check('client-a');

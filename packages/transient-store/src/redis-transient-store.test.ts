@@ -43,6 +43,14 @@ class FakeRedisClient {
   }
 }
 
+function pendingConnection() {
+  let reject!: (error: Error) => void;
+  const promise = new Promise<FakeRedisClient>((_resolve, rejectPromise) => {
+    reject = rejectPromise;
+  });
+  return { promise, reject };
+}
+
 const stores: RedisTransientStore[] = [];
 
 afterEach(() => {
@@ -112,6 +120,62 @@ describe('RedisTransientStore', () => {
     expect(client.destroyed).toBe(true);
     expect(client.isOpen).toBe(true);
     expect(client.isReady).toBe(true);
+  });
+
+  it('shares a pending connection and clears a rejected attempt for retry', async () => {
+    const client = new FakeRedisClient();
+    const pending = pendingConnection();
+    const connect = vi.spyOn(client, 'connect').mockImplementationOnce(() => {
+      client.isOpen = true;
+      return pending.promise;
+    });
+    const destroy = vi.spyOn(client, 'destroy');
+    const { store } = createStore(client);
+
+    const first = store.connect();
+    const second = store.connect();
+    expect(second).toBe(first);
+    expect(connect).toHaveBeenCalledOnce();
+    expect(destroy).not.toHaveBeenCalled();
+
+    pending.reject(new Error('Connection unavailable'));
+    await expect(first).rejects.toThrow('Transient store operation failed: connect');
+    await expect(second).rejects.toThrow('Transient store operation failed: connect');
+    await expect(store.connect()).resolves.toBeUndefined();
+    expect(connect).toHaveBeenCalledTimes(2);
+    expect(client.isReady).toBe(true);
+  });
+
+  it('bounds a shared attempt and waits for the canceled client before retrying', async () => {
+    vi.useFakeTimers();
+    try {
+      const client = new FakeRedisClient();
+      const pending = pendingConnection();
+      const connect = vi.spyOn(client, 'connect').mockImplementationOnce(() => {
+        client.isOpen = true;
+        return pending.promise;
+      });
+      const { store } = createStore(client);
+
+      const first = store.connect();
+      const second = store.connect();
+      const firstError = expect(first).rejects.toThrow('Transient store operation failed: connect');
+      const secondError = expect(second).rejects.toThrow(
+        'Transient store operation failed: connect',
+      );
+      await vi.advanceTimersByTimeAsync(1_000);
+      await Promise.all([firstError, secondError]);
+      expect(client.destroyed).toBe(true);
+      expect(store.connect()).toBe(first);
+      expect(connect).toHaveBeenCalledOnce();
+
+      pending.reject(new Error('Canceled socket closed'));
+      await Promise.resolve();
+      await expect(store.connect()).resolves.toBeUndefined();
+      expect(connect).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('acquires a lease with SET NX PX and releases only the matching token', async () => {
