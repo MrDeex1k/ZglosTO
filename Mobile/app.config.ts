@@ -28,6 +28,17 @@ export function createNativeAppLinkConfig(host: string) {
   };
 }
 
+export function createEmailVerificationCallback(
+  host: string | null,
+  appEnvironment: string | undefined,
+): string {
+  if (host !== null) return `https://${host}/auth/email-verified`;
+  if (appEnvironment === undefined || appEnvironment === 'development') {
+    return 'zglosto://auth/email-verified';
+  }
+  throw new Error('MOBILE_APP_LINK_HOST is required for preview and production builds.');
+}
+
 const appLinkHost = normalizeAppLinkHost(process.env.MOBILE_APP_LINK_HOST);
 const appLinks = appLinkHost === null ? null : createNativeAppLinkConfig(appLinkHost);
 const allowLocalHttp = process.env.EXPO_PUBLIC_ALLOW_HTTP_ORIGIN?.trim() === 'true';
@@ -112,6 +123,10 @@ const createConfig = ({ config: baseConfig }: ConfigContext): ExpoConfig => ({
   extra: {
     analyticsEnabled: false,
     buildMode: 'local',
+    emailVerificationCallback: createEmailVerificationCallback(
+      appLinkHost,
+      process.env.EXPO_PUBLIC_APP_ENV,
+    ),
   },
 });
 

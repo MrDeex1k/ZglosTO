@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import { createAuthenticatedFetch } from '@/api/authenticated-fetch';
 import { createApiClient } from '@/api/client';
+import { ApiError } from '@/api/errors';
 import {
   updateServiceIncidentStatus,
   updateServiceIncidentVerification,
@@ -173,17 +174,26 @@ function ReadyServiceIncidentDetails({
       </View>
     );
   }
-  if (incidentsQuery.isError || incident === null) {
+  const accessDenied =
+    incidentsQuery.error instanceof ApiError &&
+    (incidentsQuery.error.status === 401 || incidentsQuery.error.status === 403);
+  if (incident === null || accessDenied) {
     return (
       <View className="flex-1 justify-center bg-canvas p-6">
         <StatePanel
-          actionLabel={t(($) => $.mobile.serviceDetails.back)}
+          actionLabel={
+            incidentsQuery.isError
+              ? t(($) => $.mobile.connectivity.retry)
+              : t(($) => $.mobile.serviceDetails.back)
+          }
           description={
             incidentsQuery.isError
               ? t(($) => $.mobile.serviceDetails.errorDescription)
               : t(($) => $.mobile.serviceDetails.notFoundDescription)
           }
-          onAction={() => router.back()}
+          onAction={
+            incidentsQuery.isError ? () => void incidentsQuery.refetch() : () => router.back()
+          }
           title={
             incidentsQuery.isError
               ? t(($) => $.mobile.serviceDetails.errorTitle)
@@ -224,7 +234,15 @@ function ReadyServiceIncidentDetails({
           </Detail>
         </Card>
 
-        {isOffline ? <ConnectivityNotice hasCachedData variant="offline" /> : null}
+        {isOffline ? (
+          <ConnectivityNotice hasCachedData variant="offline" />
+        ) : incidentsQuery.isError ? (
+          <ConnectivityNotice
+            hasCachedData
+            onRetry={() => void incidentsQuery.refetch()}
+            variant="refresh-error"
+          />
+        ) : null}
 
         <Card className="gap-4">
           <Text variant="heading">{t(($) => $.mobile.serviceDetails.reportPhoto)}</Text>

@@ -30,10 +30,12 @@ import {
   incidentIdFromRow,
   loadDatabaseIncident,
 } from '../../../lib/incident-queries.ts';
+import type { VerifiedImageUpload } from '../../../lib/incident-images.ts';
 import { toLegacyLlmAnswer } from '../../../lib/llm-classification.ts';
 import { claimVerifiedAnonymousIncidents } from '../../../lib/reporter-identity.ts';
 import type { DatabaseClient } from '../../../types.ts';
 import { DatabaseService } from '../database/database.service.ts';
+import type { IncidentClassification } from '../../../lib/llm-classification.ts';
 import { IncidentClassifier } from '../llm-gateway/incident-classifier.ts';
 import { IncidentMediaService } from '../media/incident-media.service.ts';
 import {
@@ -42,6 +44,11 @@ import {
   type ServiceIncidentMutationResult,
   type UpdateUserPermissionsCommand,
 } from './incident-domain.port.ts';
+import {
+  createWithIncidentReceipt,
+  incidentCreationReceiptIdentity,
+  readIncidentCreationReceipt,
+} from './incident-creation-receipt.ts';
 import { incidentPage, type IncidentPageRequest } from './incident-pagination.ts';
 import { ServiceCatalogSynchronizer } from './service-catalog-synchronizer.ts';
 
@@ -75,6 +82,17 @@ const INCIDENT_STATUS_UPDATE = `
         ELSE statement_timestamp()::time
       END`;
 
+const PUBLIC_RESOLVED_INCIDENT_SELECT = `
+  SELECT i.id_zgloszenia, i.opis_zgloszenia, i.adres_zgloszenia,
+              i.latitude, i.longitude, i.service_key AS typ_sluzby, i.status_incydentu,
+              resolution_image.image_ref AS zdjecie_incydentu_rozwiazanego,
+              TO_CHAR(i.data_zgloszenia, 'DD.MM.YYYY') || ' ' || TO_CHAR(i.godzina_zgloszenia, 'HH24:MI') AS data_godzina_zgloszenia,
+              TO_CHAR(i.data_rozwiazania, 'DD.MM.YYYY') || ' ' || TO_CHAR(i.godzina_rozwiazania, 'HH24:MI') AS data_godzina_rozwiazania
+       FROM incydenty i
+       LEFT JOIN incident_image_api_refs resolution_image
+         ON resolution_image.incident_id = i.id_zgloszenia AND resolution_image.kind = 'resolution'
+       WHERE i.status_incydentu = 'resolved'`;
+
 @Injectable()
 export class PostgresIncidentAdapter extends IncidentDomainPort {
   constructor(
@@ -93,59 +111,89 @@ export class PostgresIncidentAdapter extends IncidentDomainPort {
 
   async createIncident(command: CreateIncidentCommand): Promise<CurrentCreateIncidentResponse> {
     await this.ready();
-    const upload =
-      command.imageUploadId === null
-        ? null
-        : await this.media.verifyUpload('report', null, command.imageUploadId);
-    const { result: classification, diagnostics } = await this.classifier.classify(
+    const receipt = incidentCreationReceiptIdentity(command);
+    if (receipt !== null) {
+      const replay = await readIncidentCreationReceipt(this.database, receipt);
+      if (replay !== null) return replay;
+    }
+
+    let upload: VerifiedImageUpload | null = null;
+    if (command.imageUploadId !== null) {
+      try {
+        upload = await this.media.verifyUpload('report', null, command.imageUploadId);
+      } catch (error: unknown) {
+        // A concurrent request can commit the receipt and consume the upload
+        // after our first lookup but before we validate the upload.
+        if (receipt !== null) {
+          const replay = await readIncidentCreationReceipt(this.database, receipt);
+          if (replay !== null) return replay;
+        }
+        throw error;
+      }
+    }
+
+    const classification = await this.classifier.classify(
       command.description,
       command.requestedServiceKey,
     );
+    return this.database.transaction((client) =>
+      receipt === null
+        ? this.insertIncident(client, command, upload, classification)
+        : createWithIncidentReceipt(client, receipt, () =>
+            this.insertIncident(client, command, upload, classification),
+          ),
+    );
+  }
 
-    return this.database.transaction(async (client) => {
-      const result = await client.query(
-        `INSERT INTO incydenty (
-           opis_zgloszenia, mail_zglaszajacego, reporter_user_id, adres_zgloszenia,
-           latitude, longitude, service_key, llm_odpowiedz, llm_classification,
-           llm_model_available, llm_source, llm_reason,
-           llm_confidence_raw, llm_p_emergency_raw, llm_model_id, llm_model_revision,
-           llm_prompt_version, llm_latency_ms, llm_calibration_version
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
-           $13, $14, $15, $16, $17, $18, $19)
-         RETURNING id_zgloszenia`,
-        [
-          command.description,
-          command.reporterEmail,
-          command.reporterUserId,
-          command.address,
-          command.latitude,
-          command.longitude,
-          classification.serviceKey,
-          toLegacyLlmAnswer(classification.classification),
-          classification.classification,
-          classification.modelAvailable,
-          classification.source,
-          classification.reason,
-          diagnostics?.confidenceRaw ?? null,
-          diagnostics?.pEmergencyRaw ?? null,
-          diagnostics?.modelId ?? null,
-          diagnostics?.modelRevision ?? null,
-          diagnostics?.promptVersion ?? null,
-          diagnostics?.latencyMs ?? null,
-          diagnostics?.calibrationVersion ?? null,
-        ],
-      );
-      const row = result.rows[0] ?? null;
-      if (row === null) throw new Error('Database did not return the created incident');
-      const incidentId = incidentIdFromRow(row, 'createdIncidentId');
+  private async insertIncident(
+    client: DatabaseClient,
+    command: CreateIncidentCommand,
+    upload: VerifiedImageUpload | null,
+    { result: classification, diagnostics }: IncidentClassification,
+  ): Promise<CurrentCreateIncidentResponse> {
+    const result = await client.query(
+      `INSERT INTO incydenty (
+         opis_zgloszenia, mail_zglaszajacego, reporter_user_id, adres_zgloszenia,
+         latitude, longitude, service_key, llm_odpowiedz, llm_classification,
+         llm_model_available, llm_source, llm_reason,
+         llm_confidence_raw, llm_p_emergency_raw, llm_model_id, llm_model_revision,
+         llm_prompt_version, llm_latency_ms, llm_calibration_version
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
+         $13, $14, $15, $16, $17, $18, $19)
+       RETURNING id_zgloszenia`,
+      [
+        command.description,
+        command.reporterEmail,
+        command.reporterUserId,
+        command.address,
+        command.latitude,
+        command.longitude,
+        classification.serviceKey,
+        toLegacyLlmAnswer(classification.classification),
+        classification.classification,
+        classification.modelAvailable,
+        classification.source,
+        classification.reason,
+        diagnostics?.confidenceRaw ?? null,
+        diagnostics?.pEmergencyRaw ?? null,
+        diagnostics?.modelId ?? null,
+        diagnostics?.modelRevision ?? null,
+        diagnostics?.promptVersion ?? null,
+        diagnostics?.latencyMs ?? null,
+        diagnostics?.calibrationVersion ?? null,
+      ],
+    );
+    const row = result.rows[0] ?? null;
+    if (row === null) throw new Error('Database did not return the created incident');
+    const incidentId = incidentIdFromRow(row, 'createdIncidentId');
 
-      if (upload !== null) await this.media.attach(client, incidentId, upload);
-      return {
-        success: true,
-        incydent: await this.loadIncident(client, incidentId),
-        classification,
-      };
-    });
+    if (upload !== null) await this.media.attach(client, incidentId, upload);
+
+    return {
+      success: true,
+      incydent: await this.loadIncident(client, incidentId),
+      classification,
+    };
   }
 
   async listAdminIncidents(): Promise<readonly CurrentIncidentListItemDto[]> {
@@ -183,18 +231,19 @@ export class PostgresIncidentAdapter extends IncidentDomainPort {
     );
   }
 
+  async getResolvedIncident(incidentId: string): Promise<CurrentResolvedIncidentDto | null> {
+    await this.ready();
+    const { rows } = await this.database.query(
+      `${PUBLIC_RESOLVED_INCIDENT_SELECT} AND i.id_zgloszenia = $1`,
+      [incidentId],
+    );
+    return rows.length === 0 ? null : parseResolvedIncidentRow(rows[0], 'publicIncident');
+  }
+
   async listResolvedIncidents(): Promise<readonly CurrentResolvedIncidentDto[]> {
     await this.ready();
     const result = await this.database.query(
-      `SELECT i.id_zgloszenia, i.opis_zgloszenia, i.adres_zgloszenia,
-              i.latitude, i.longitude, i.service_key AS typ_sluzby, i.status_incydentu,
-              resolution_image.image_ref AS zdjecie_incydentu_rozwiazanego,
-              TO_CHAR(i.data_zgloszenia, 'DD.MM.YYYY') || ' ' || TO_CHAR(i.godzina_zgloszenia, 'HH24:MI') AS data_godzina_zgloszenia,
-              TO_CHAR(i.data_rozwiazania, 'DD.MM.YYYY') || ' ' || TO_CHAR(i.godzina_rozwiazania, 'HH24:MI') AS data_godzina_rozwiazania
-       FROM incydenty i
-       LEFT JOIN incident_image_api_refs resolution_image
-         ON resolution_image.incident_id = i.id_zgloszenia AND resolution_image.kind = 'resolution'
-       WHERE i.status_incydentu = 'resolved'
+      `${PUBLIC_RESOLVED_INCIDENT_SELECT}
        ORDER BY i.data_rozwiazania DESC NULLS LAST,
                 i.godzina_rozwiazania DESC NULLS LAST,
                 i.id_zgloszenia DESC

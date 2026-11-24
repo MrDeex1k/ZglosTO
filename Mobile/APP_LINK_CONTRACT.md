@@ -41,7 +41,8 @@ Token weryfikacji pozostaje w HTTPS request do Authorization i nie trafia do URL
 aplikacji. Ekran mobilny odświeża sesję z SecureStore i kieruje do panelu wynikającego
 ze zweryfikowanej roli. Bez aktywnej sesji proponuje ponowne logowanie.
 
-W development callback może wskazywać `zglosto://auth/email-verified`, ponieważ
+W preview i production `MOBILE_APP_LINK_HOST` jest wymagany i określa
+callback HTTPS. W development bez hosta callback wskazuje `zglosto://auth/email-verified`, ponieważ
 Authorization ma dokładny trusted origin `zglosto://`.
 
 ## Aktywacja domeny produkcyjnej
@@ -59,8 +60,7 @@ wyłączone, dopóki nie istnieje rzeczywisty host HTTPS. Po jego uzyskaniu:
    `linking/assetlinks.example.json`;
 5. ograniczyć ścieżki po stronie AASA do `/open/*` i
    `/auth/email-verified`;
-6. dodać dokładny origin do Better Auth tylko wtedy, gdy różni się od istniejącego
-   `frontendOrigin`;
+6. ustawić ten sam origin HTTPS jako `FRONTEND_ORIGIN` w Authorization;
 7. przebudować binaria — zmiana associated domains/intent filters nie jest zmianą
    wyłącznie JS/OTA.
 
@@ -78,5 +78,5 @@ Fallback nie może automatycznie przekazywać tokenów do custom scheme. Powinie
 - nigdy nie ujawniać istnienia prywatnego incydentu przed autoryzacją;
 - zachować zwykłą nawigację HTTPS, jeśli otwarcie aplikacji się nie powiedzie.
 
-Fallback web i pliki `.well-known` są blockerem przed aktywowaniem zmiennej w
-preview/production, nie blockerem lokalnego custom scheme.
+Trasy fallback są dostępne w aplikacji web. Przed dystrybucją buildów preview
+i production host musi serwować te trasy oraz pliki `.well-known`.

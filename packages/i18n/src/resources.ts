@@ -130,7 +130,7 @@ export const plPLTranslation = {
       title: 'Szczegóły zgłoszenia',
       loading: 'Ładowanie szczegółów…',
       back: 'Wróć na start',
-      notFoundDescription: 'Zgłoszenie nie znajduje się już w publicznym zestawieniu.',
+      notFoundDescription: 'To zgłoszenie nie jest publicznie dostępne.',
       notFoundTitle: 'Nie znaleziono zgłoszenia',
       information: 'Informacje',
       service: 'Służba odpowiedzialna',
@@ -253,14 +253,16 @@ export const plPLTranslation = {
     deepLinks: {
       invalidDescription: 'Ten link nie prowadzi do obsługiwanego zgłoszenia.',
       invalidTitle: 'Nieprawidłowy link',
+      openInApp: 'Otwórz w aplikacji',
       opening: 'Otwieranie właściwego ekranu…',
-      sessionError: 'Nie udało się potwierdzić sesji. Otwórz aplikację ponownie.',
+      sessionError: 'Nie udało się potwierdzić sesji.',
     },
     emailVerification: {
       checkingDescription: 'Odświeżamy sesję i sprawdzamy dostęp do konta.',
       checkingTitle: 'Sprawdzanie weryfikacji…',
       openDashboard: 'Otwórz panel',
       routeTitle: 'Weryfikacja e-maila',
+      webDescription: 'Zaloguj się, aby sprawdzić, czy adres e-mail został potwierdzony.',
       signIn: 'Przejdź do logowania',
       signInDescription:
         'Link został obsłużony, ale aplikacja nie ma potwierdzonej zweryfikowanej sesji. Zaloguj się ponownie.',
@@ -583,7 +585,7 @@ export const enTranslation = {
       title: 'Report details',
       loading: 'Loading details…',
       back: 'Back to home',
-      notFoundDescription: 'This report is no longer included in the public feed.',
+      notFoundDescription: 'This report is not publicly available.',
       notFoundTitle: 'Report not found',
       information: 'Information',
       service: 'Responsible service',
@@ -706,14 +708,16 @@ export const enTranslation = {
     deepLinks: {
       invalidDescription: 'This link does not point to a supported report.',
       invalidTitle: 'Invalid link',
+      openInApp: 'Open in the app',
       opening: 'Opening the appropriate screen…',
-      sessionError: 'The session could not be confirmed. Open the app again.',
+      sessionError: 'The session could not be confirmed.',
     },
     emailVerification: {
       checkingDescription: 'Refreshing the session and checking account access.',
       checkingTitle: 'Checking verification…',
       openDashboard: 'Open dashboard',
       routeTitle: 'Email verification',
+      webDescription: 'Sign in to check whether your email address has been verified.',
       signIn: 'Continue to sign in',
       signInDescription:
         'The link was handled, but the app has no confirmed verified session. Sign in again.',

@@ -105,10 +105,18 @@ function ReadyServiceHome({
     userId: session.userId,
   };
   const incidentsQuery = useQuery(serviceIncidentsQueryOptions(context));
-  const statisticsQuery = useQuery(serviceStatisticsQueryOptions(context));
+  const hasCompleteList = incidentsQuery.data !== undefined;
+  const needsStatistics = !hasCompleteList && incidentsQuery.isError;
+  const statisticsQuery = useQuery({
+    ...serviceStatisticsQueryOptions(context),
+    enabled: needsStatistics,
+  });
   const allIncidents = incidentsQuery.data ?? [];
   const incidents = filterServiceIncidents(allIncidents, filter);
-  const counts = serviceIncidentCounts(allIncidents, statisticsQuery.data);
+  const counts = serviceIncidentCounts(
+    allIncidents,
+    hasCompleteList ? undefined : statisticsQuery.data,
+  );
   const serviceLabel =
     runtime.config.services.find((service) => service.key === serviceKey)?.label[locale] ??
     serviceKey;
@@ -127,7 +135,10 @@ function ReadyServiceHome({
   }, [incidentsQuery.data]);
 
   const refreshQueue = async (): Promise<void> => {
-    await Promise.all([incidentsQuery.refetch(), statisticsQuery.refetch()]);
+    await Promise.all([
+      incidentsQuery.refetch(),
+      needsStatistics ? statisticsQuery.refetch() : undefined,
+    ]);
   };
 
   const logout = async () => {
@@ -202,7 +213,7 @@ function ReadyServiceHome({
           onRetry={() => void refreshQueue()}
           variant="refresh-error"
         />
-      ) : statisticsQuery.isError ? (
+      ) : needsStatistics && statisticsQuery.isError ? (
         <ConnectivityNotice
           hasCachedData
           onRetry={() => void statisticsQuery.refetch()}
@@ -278,7 +289,9 @@ function ReadyServiceHome({
         }
         ListHeaderComponent={header}
         onRefresh={() => void refreshQueue()}
-        refreshing={incidentsQuery.isRefetching || statisticsQuery.isRefetching}
+        refreshing={
+          incidentsQuery.isRefetching || (needsStatistics && statisticsQuery.isRefetching)
+        }
         renderItem={renderIncident}
         maxToRenderPerBatch={8}
         testID="service-queue-ready"

@@ -1,11 +1,12 @@
 import { View } from '@/components/ui/native';
 import { router } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useSession } from '@/auth/session-provider';
 import { routeForSession } from '@/auth/session-model';
 import { StatePanel } from '@/components/feedback/state-panel';
+import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import {
   type IncidentLinkTarget,
@@ -21,7 +22,8 @@ export function DeepLinkIncidentScreen({
   incidentId: string | null;
   target: IncidentLinkTarget | null;
 }) {
-  const { session } = useSession();
+  const { refreshSession, session } = useSession();
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { t } = useTranslation();
   const invalid = incidentId === null || target === null;
 
@@ -60,12 +62,26 @@ export function DeepLinkIncidentScreen({
   }
 
   return (
-    <View className="flex-1 items-center justify-center bg-canvas p-6">
+    <View className="flex-1 items-center justify-center gap-4 bg-canvas p-6">
       <Text accessibilityLiveRegion="polite" className="text-muted">
-        {session.status === 'stale'
+        {session.status === 'stale' && !isRefreshing
           ? t(($) => $.mobile.deepLinks.sessionError)
           : t(($) => $.mobile.deepLinks.opening)}
       </Text>
+      {session.status === 'stale' ? (
+        <Button
+          disabled={isRefreshing}
+          onPress={() => {
+            setIsRefreshing(true);
+            void refreshSession()
+              .catch(() => undefined)
+              .finally(() => setIsRefreshing(false));
+          }}
+          variant="secondary"
+        >
+          {t(($) => $.mobile.connectivity.retry)}
+        </Button>
+      ) : null}
     </View>
   );
 }

@@ -1,6 +1,6 @@
 import { ScrollView } from '@/components/ui/native';
 import { router } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useSession } from '@/auth/session-provider';
@@ -11,35 +11,39 @@ import { Text } from '@/components/ui/text';
 
 type VerificationState = 'checking' | 'sign-in' | 'verified' | 'unavailable';
 
+async function checkVerification(
+  refreshSession: ReturnType<typeof useSession>['refreshSession'],
+): Promise<VerificationState> {
+  try {
+    const session = await refreshSession();
+    return session.status === 'authenticated' && session.emailVerified === true
+      ? 'verified'
+      : 'sign-in';
+  } catch {
+    return 'unavailable';
+  }
+}
+
 export function EmailVerificationResultScreen() {
   const { refreshSession, session, signOut } = useSession();
   const { t } = useTranslation();
   const [state, setState] = useState<VerificationState>('checking');
   const [isNavigating, setIsNavigating] = useState(false);
-  const refreshStarted = useRef(false);
+  const sessionReady = session.status !== 'unknown';
+
+  const checkOnOpen = useEffectEvent(() => checkVerification(refreshSession));
 
   useEffect(() => {
-    if (refreshStarted.current) return;
-    refreshStarted.current = true;
+    if (!sessionReady) return;
     let active = true;
-    void refreshSession()
-      .then((nextSession) => {
-        if (active) {
-          setState(
-            nextSession.status === 'authenticated' && nextSession.emailVerified === true
-              ? 'verified'
-              : 'sign-in',
-          );
-        }
-        return undefined;
-      })
-      .catch(() => {
-        if (active) setState('unavailable');
-      });
+    void checkOnOpen().then((result) => {
+      if (active) setState(result);
+      return undefined;
+    });
     return () => {
       active = false;
     };
-  }, [refreshSession]);
+  }, [sessionReady]);
 
   const destination = routeForSession(session);
   const openNext = async () => {
@@ -85,6 +89,17 @@ export function EmailVerificationResultScreen() {
                 ? t(($) => $.mobile.emailVerification.signInDescription)
                 : t(($) => $.mobile.emailVerification.unavailableDescription)}
         </Text>
+        {state === 'unavailable' ? (
+          <Button
+            onPress={() => {
+              setState('checking');
+              void checkVerification(refreshSession).then(setState);
+            }}
+            variant="secondary"
+          >
+            {t(($) => $.mobile.connectivity.retry)}
+          </Button>
+        ) : null}
         {state === 'checking' ? null : (
           <Button disabled={isNavigating} onPress={() => void openNext()}>
             {state !== 'verified' || destination === null

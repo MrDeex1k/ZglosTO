@@ -17,7 +17,7 @@ import { Text } from '@/components/ui/text';
 import { type RuntimeConfigState, useRuntimeConfig } from '@/config/runtime-config';
 import { useLocale } from '@/i18n/i18n-provider';
 import { useNetworkAvailability } from '@/queries/network-state';
-import { publicIncidentsQueryOptions } from '@/queries/public-incidents';
+import { publicIncidentQueryOptions } from '@/queries/public-incidents';
 import { useMobileTheme } from '@/theme/theme-provider';
 
 interface IncidentDetailsScreenProps {
@@ -60,8 +60,8 @@ function ReadyIncidentDetailsScreen({
   const networkAvailability = useNetworkAvailability();
   const isOffline = networkAvailability === 'offline';
 
-  const query = useQuery(publicIncidentsQueryOptions(runtime.environment.apiOrigin));
-  const incident = query.data?.find((item) => item.id_zgloszenia === incidentId) ?? null;
+  const query = useQuery(publicIncidentQueryOptions(runtime.environment.apiOrigin, incidentId));
+  const incident = query.data ?? null;
   const service = incident
     ? runtime.config.services.find((item) => item.key === incident.typ_sluzby)
     : null;

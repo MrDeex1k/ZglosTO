@@ -1,8 +1,9 @@
 import { describe, expect, test, vi } from 'vitest';
 
-import { createApiClient } from './client';
+import { createApiClient, type MobileFetch } from './client';
 import { CREATE_INCIDENT_PATH, createIncident } from './create-incident';
 
+const idempotencyKey = '0de77abb-751d-4e6f-9c4a-79b24ca84d30';
 const request = {
   adres_zgloszenia: 'ul. Testowa 12',
   latitude: null,
@@ -49,16 +50,19 @@ const response = {
 
 describe('create incident API', () => {
   test('posts the normalized contract and parses the response', async () => {
-    const fetcher = vi.fn(async () => Response.json(response, { status: 201 }));
+    const fetcher = vi.fn<MobileFetch>(async () => Response.json(response, { status: 201 }));
     const client = createApiClient({ fetcher, origin: 'https://city.example' });
 
-    await expect(createIncident({ client, request })).resolves.toEqual(response);
+    await expect(createIncident({ client, idempotencyKey, request })).resolves.toEqual(response);
     expect(fetcher).toHaveBeenCalledWith(
       new URL(`https://city.example${CREATE_INCIDENT_PATH}`),
       expect.objectContaining({
         body: JSON.stringify(request),
         method: 'POST',
       }),
+    );
+    expect(new Headers(fetcher.mock.lastCall?.[1]?.headers).get('Idempotency-Key')).toBe(
+      idempotencyKey,
     );
   });
 
@@ -68,7 +72,9 @@ describe('create incident API', () => {
       origin: 'https://city.example',
     });
 
-    await expect(createIncident({ client, request })).rejects.toMatchObject({ kind: 'contract' });
+    await expect(createIncident({ client, idempotencyKey, request })).rejects.toMatchObject({
+      kind: 'contract',
+    });
   });
 
   test('preserves rate-limit status for presentation logic', async () => {
@@ -77,7 +83,7 @@ describe('create incident API', () => {
       origin: 'https://city.example',
     });
 
-    await expect(createIncident({ client, request })).rejects.toMatchObject({
+    await expect(createIncident({ client, idempotencyKey, request })).rejects.toMatchObject({
       kind: 'http',
       status: 429,
     });

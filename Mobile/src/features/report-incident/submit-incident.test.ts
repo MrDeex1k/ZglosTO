@@ -1,10 +1,12 @@
 import { describe, expect, test, vi } from 'vitest';
 
 import { createApiClient } from '@/api/client';
+import { ApiError } from '@/api/errors';
 
 import type { SelectedIncidentImage } from './selected-image';
 import { submitIncidentWithOptionalImage } from './submit-incident';
 
+const idempotencyKey = '0de77abb-751d-4e6f-9c4a-79b24ca84d30';
 const client = createApiClient({ origin: 'https://api.example.test' });
 const image: SelectedIncidentImage = {
   fileName: 'problem.jpg',
@@ -40,6 +42,7 @@ describe('incident submission with an optional image', () => {
     });
 
     await submitIncidentWithOptionalImage({
+      attempt: { idempotencyKey },
       client,
       dependencies: {
         checksumImage: async () => {
@@ -62,6 +65,7 @@ describe('incident submission with an optional image', () => {
     expect(order).toEqual(['checksum', 'initiate', 'upload', 'create']);
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
+        idempotencyKey,
         request: expect.objectContaining({
           zdjecie_incydentu_zglaszanego_upload_id: upload.uploadId,
         }),
@@ -69,11 +73,45 @@ describe('incident submission with an optional image', () => {
     );
   });
 
+  test('retries a lost POST response with the same key and the same uploaded image', async () => {
+    const create = vi
+      .fn()
+      .mockRejectedValueOnce(new ApiError('Response lost', { kind: 'timeout' }))
+      .mockResolvedValueOnce({ success: true });
+    const initiateUpload = vi.fn(async () => upload);
+    const uploadImage = vi.fn(async () => {});
+    const options = {
+      attempt: { idempotencyKey },
+      client,
+      dependencies: {
+        checksumImage: async () => ({
+          checksumSha256: 'a'.repeat(64),
+          mimeType: 'image/jpeg' as const,
+          sizeBytes: 1024,
+        }),
+        create,
+        initiateUpload,
+        uploadImage,
+      },
+      image,
+      request,
+    };
+    await expect(submitIncidentWithOptionalImage(options)).rejects.toMatchObject({
+      kind: 'timeout',
+    });
+    await expect(submitIncidentWithOptionalImage(options)).resolves.toEqual({ success: true });
+    expect(initiateUpload).toHaveBeenCalledOnce();
+    expect(uploadImage).toHaveBeenCalledOnce();
+    expect(create).toHaveBeenCalledTimes(2);
+    expect(create.mock.calls[1]).toEqual(create.mock.calls[0]);
+  });
+
   test('does not create an incident when the binary upload fails', async () => {
     const create = vi.fn(() => Promise.resolve(undefined as never));
 
     await expect(
       submitIncidentWithOptionalImage({
+        attempt: { idempotencyKey },
         client,
         dependencies: {
           checksumImage: async () => ({

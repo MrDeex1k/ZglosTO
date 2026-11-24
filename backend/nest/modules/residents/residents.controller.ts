@@ -2,9 +2,11 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   HttpCode,
   HttpStatus,
   Inject,
+  Param,
   Post,
   Query,
   Req,
@@ -29,9 +31,10 @@ import {
   type InitiateImageUploadRequest,
   type InitiateImageUploadResponse,
 } from '@zglosto/contracts';
-import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiHeader, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
+import { badRequest, notFound } from '../../application-error.ts';
 import { ApiContract } from '../../openapi/api-contract.decorator.ts';
 import {
   RUNTIME_CONFIGURATION,
@@ -118,21 +121,43 @@ export class ResidentsController {
     return incidents;
   }
 
+  @Get('incydenty/glowna/:id')
+  @PublicEndpoint()
+  @ApiOperation({ summary: 'Get a public resolved incident by ID' })
+  @ApiContract({
+    authenticated: false,
+    errorStatuses: [404, 500],
+    successSchema: CurrentResolvedIncidentSchema,
+  })
+  getResolved(@Param('id') id: string): Promise<CurrentResolvedIncidentDto> {
+    if (!z.guid().safeParse(id).success) throw notFound('Incident not found');
+    return this.useCases.getResolved(id);
+  }
+
   @Post('incydenty')
   @HttpCode(HttpStatus.CREATED)
   @OptionalSession()
   @UseInterceptors(DistributedIncidentRateLimitInterceptor)
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: false,
+    schema: { type: 'string', format: 'uuid' },
+  })
   @ApiOperation({ summary: 'Create an incident with an optional verified resident session' })
   @ApiContract({
     authenticated: false,
-    errorStatuses: [400, 401, 403, 413, 429, 500, 503],
+    errorStatuses: [400, 401, 403, 409, 413, 429, 500, 503],
     successSchema: CurrentCreateIncidentResponseSchema,
     successStatus: 201,
   })
   create(
     @Body({ schema: CurrentCreateIncidentRequestSchema }) body: CurrentCreateIncidentRequest,
     @Req() request: Request,
+    @Headers('idempotency-key') idempotencyKey?: string,
   ): Promise<CurrentCreateIncidentResponse> {
-    return this.useCases.create(body, this.authContext.user(request));
+    if (idempotencyKey !== undefined && !z.uuidv4().safeParse(idempotencyKey).success) {
+      throw badRequest('Idempotency-Key must be a UUID v4');
+    }
+    return this.useCases.create(body, this.authContext.user(request), idempotencyKey);
   }
 }

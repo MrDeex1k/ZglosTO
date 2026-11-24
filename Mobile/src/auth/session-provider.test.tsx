@@ -29,6 +29,7 @@ vi.mock('@/storage/private-image-cache', () => ({ clearPrivateImageCache: mocks.
 vi.mock('@/queries/query-client', () => ({ clearPrivateQueries: mocks.clearQueries }));
 vi.mock('@/observability/logger', () => ({ logger: { warn: vi.fn() } }));
 vi.mock('./auth-client', () => ({ createMobileAuthClient: vi.fn() }));
+vi.mock('./email-verification-callback', () => ({ emailVerificationCallback: vi.fn() }));
 vi.mock('./auth-storage', () => ({ clearMobileAuthStorage: vi.fn() }));
 import { SessionProvider } from './session-provider';
 

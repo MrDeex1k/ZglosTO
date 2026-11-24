@@ -20,6 +20,7 @@ import type { IncidentPageRequest } from './incident-pagination.ts';
 export interface CreateIncidentCommand {
   address: string;
   description: string;
+  idempotencyKey?: string;
   imageUploadId: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -59,6 +60,7 @@ export abstract class IncidentDomainPort {
   abstract listAdminIncidents(): Promise<readonly CurrentIncidentListItemDto[]>;
   abstract listAdminStatistics(): Promise<readonly AdminIncidentStatisticsItem[]>;
   abstract listResidentIncidents(userId: string): Promise<readonly CurrentIncidentListItemDto[]>;
+  abstract getResolvedIncident(incidentId: string): Promise<CurrentResolvedIncidentDto | null>;
   abstract listResolvedIncidents(): Promise<readonly CurrentResolvedIncidentDto[]>;
   abstract listServiceIncidents(serviceKey: string): Promise<readonly ServiceIncidentListItemDto[]>;
   abstract listServiceStatistics(
@@ -140,6 +142,10 @@ export class PendingIncidentInfrastructureAdapter extends IncidentDomainPort {
   }
 
   listResidentIncidents(_userId: string): Promise<readonly CurrentIncidentListItemDto[]> {
+    return this.pending();
+  }
+
+  getResolvedIncident(_incidentId: string): Promise<CurrentResolvedIncidentDto | null> {
     return this.pending();
   }
 

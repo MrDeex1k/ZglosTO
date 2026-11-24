@@ -11,7 +11,7 @@ function openApiPath(internalPath: string): string {
 }
 
 async function run(): Promise<void> {
-  assert.equal(BACKEND_HTTP_CONTRACT.length, 22, 'post-cutover backend route inventory');
+  assert.equal(BACKEND_HTTP_CONTRACT.length, 23, 'post-cutover backend route inventory');
 
   const contract = BACKEND_HTTP_CONTRACT;
   for (const entry of contract) {

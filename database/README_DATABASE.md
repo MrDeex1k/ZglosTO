@@ -414,7 +414,13 @@ Nie mają CREATE w schemacie ani TEMP w bazie. Obiekty pozostają własnością 
 Trigger `provision_application_user` używa SECURITY DEFINER z ustalonym search_path i zawsze
 nadaje wyłącznie `mieszkaniec`; jego bezpośrednie EXECUTE jest odebrane runtime/PUBLIC.
 Granty nie otwierają automatycznie przyszłych tabel ani funkcji. Zmiana aktualnego
-schematu musi uwzględniać jawne uprawnienia w `init-scripts/runtime-role-grants.txt`. PgBouncer nie zawiera `user=` ani hasła w wpisie upstream;
+schematu musi uwzględniać jawne uprawnienia w `init-scripts/runtime-role-grants.txt`.
+
+Przed wdrożeniem API przyjmującego `Idempotency-Key` uruchom jako właściciel bazy
+`init-scripts/07-incident-creation-receipts.sql` na istniejącej bazie. Na świeżej
+bazie skrypt uruchamia się automatycznie po utworzeniu ról.
+
+PgBouncer nie zawiera `user=` ani hasła w wpisie upstream;
 łączy się z PostgreSQL jako uwierzytelniona rola klienta. Trzy hasła są w prywatnym pliku
 userlist na tmpfs w produkcji/Kubernetes, potrzebnym do SCRAM obu odcinków.
 

@@ -9,12 +9,11 @@ import { clearPrivateImageCache } from '@/storage/private-image-cache';
 
 import { createMobileAuthClient, type MobileAuthClient } from './auth-client';
 import { clearMobileAuthStorage } from './auth-storage';
+import { emailVerificationCallback } from './email-verification-callback';
 import { MobileAuthOperationError } from './errors';
 import type { MobileSessionState } from './route-access';
 import { clearLocalPrivateState, clearPrivateRuntimeState } from './session-cleanup';
 import { parseAuthenticatedSession, privateSessionScope } from './session-model';
-
-const EMAIL_VERIFICATION_CALLBACK = 'zglosto://auth/email-verified';
 
 class MobileAuthenticationError extends Error {
   constructor(message: string) {
@@ -173,7 +172,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
     let result: Awaited<ReturnType<MobileAuthClient['signUp']['email']>>;
     try {
       result = await client.signUp.email({
-        callbackURL: EMAIL_VERIFICATION_CALLBACK,
+        callbackURL: emailVerificationCallback(),
         email: input.email,
         name: input.name,
         password: input.password,
@@ -203,7 +202,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
     let result: Awaited<ReturnType<MobileAuthClient['sendVerificationEmail']>>;
     try {
       result = await client.sendVerificationEmail({
-        callbackURL: EMAIL_VERIFICATION_CALLBACK,
+        callbackURL: emailVerificationCallback(),
         email,
       });
     } catch (error) {

@@ -61,6 +61,12 @@ GRANT SELECT, INSERT, UPDATE ON public.service_types TO zglosto_backend;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.incydenty, public.incident_images,
   public.image_uploads, public.media_processing_jobs, public.outbox_events TO zglosto_backend;
 GRANT SELECT ON public.incident_image_api_refs TO zglosto_backend;
+-- The receipt table is installed in step 07 on fresh databases.
+DO $$ BEGIN
+  IF to_regclass('public.incident_creation_receipts') IS NOT NULL THEN
+    GRANT SELECT, INSERT, UPDATE ON public.incident_creation_receipts TO zglosto_backend;
+  END IF;
+END$$;
 
 GRANT SELECT, UPDATE ON public.incident_images, public.media_processing_jobs TO zglosto_media_worker;
 GRANT SELECT, DELETE ON public.image_uploads TO zglosto_media_worker;
