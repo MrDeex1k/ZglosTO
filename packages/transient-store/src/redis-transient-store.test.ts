@@ -61,11 +61,12 @@ function createStore(
   client = new FakeRedisClient(),
   commandTimeoutMs = 500,
   onOperation?: (event: TransientStoreOperationEvent) => void,
+  createClient = () => client,
 ): {
   client: FakeRedisClient;
   store: RedisTransientStore;
 } {
-  const store = new RedisTransientStore(client as unknown as RedisClientType, {
+  const store = new RedisTransientStore(() => createClient() as unknown as RedisClientType, {
     commandTimeoutMs,
     connectTimeoutMs: 1_000,
     keyPrefix: 'zglosto',
@@ -146,7 +147,7 @@ describe('RedisTransientStore', () => {
     expect(client.isReady).toBe(true);
   });
 
-  it('bounds a shared attempt and waits for the canceled client before retrying', async () => {
+  it('retries on a fresh client while a timed-out connection is still pending', async () => {
     vi.useFakeTimers();
     try {
       const client = new FakeRedisClient();
@@ -155,7 +156,9 @@ describe('RedisTransientStore', () => {
         client.isOpen = true;
         return pending.promise;
       });
-      const { store } = createStore(client);
+      const replacement = new FakeRedisClient();
+      const factory = vi.fn(() => replacement).mockReturnValueOnce(client);
+      const { store } = createStore(client, 500, undefined, factory);
 
       const first = store.connect();
       const second = store.connect();
@@ -166,13 +169,15 @@ describe('RedisTransientStore', () => {
       await vi.advanceTimersByTimeAsync(1_000);
       await Promise.all([firstError, secondError]);
       expect(client.destroyed).toBe(true);
-      expect(store.connect()).toBe(first);
+      await expect(store.connect()).resolves.toBeUndefined();
+      expect(factory).toHaveBeenCalledTimes(2);
       expect(connect).toHaveBeenCalledOnce();
 
       pending.reject(new Error('Canceled socket closed'));
       await Promise.resolve();
-      await expect(store.connect()).resolves.toBeUndefined();
-      expect(connect).toHaveBeenCalledTimes(2);
+      expect(replacement.isReady).toBe(true);
+      await store.ping();
+      expect(replacement.ping).toHaveBeenCalledOnce();
     } finally {
       vi.useRealTimers();
     }
@@ -256,6 +261,7 @@ describe('RedisTransientStore', () => {
 
   it('destroys the client once and rejects operations after close', async () => {
     const { client, store } = createStore();
+    await store.connect();
 
     store.close();
     store.close();

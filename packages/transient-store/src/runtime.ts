@@ -89,17 +89,17 @@ export function createTransientStoreRuntime(
           connectTimeout: connectTimeoutMs,
           reconnectStrategy: false as const,
         };
-  const client = createRedisClient({
-    socket,
-    url: parsedUrl.toString(),
-  }) as RedisClientType;
-  client.on('error', () => {
-    // Adapter errors are surfaced by operations; the mandatory listener prevents EventEmitter crashes.
-  });
+  const createStoreClient = () => {
+    const client = createRedisClient({ socket, url: parsedUrl.toString() }) as RedisClientType;
+    client.on('error', () => {
+      // Adapter operations surface errors to callers.
+    });
+    return client;
+  };
 
   return {
     mode: configuration.mode,
-    store: new RedisTransientStore(client, {
+    store: new RedisTransientStore(createStoreClient, {
       commandTimeoutMs: configuration.commandTimeoutMs,
       connectTimeoutMs: configuration.connectTimeoutMs,
       keyPrefix: configuration.keyPrefix,

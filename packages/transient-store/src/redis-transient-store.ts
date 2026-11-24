@@ -78,7 +78,8 @@ function incrementResult(value: unknown): TransientIncrementResult {
 }
 
 export class RedisTransientStore implements TransientStore {
-  readonly #client: RedisClientType;
+  readonly #createClient: () => RedisClientType;
+  #activeClient: RedisClientType | undefined;
   readonly #commandTimeoutMs: number;
   readonly #connectTimeoutMs: number;
   readonly #keyPrefix: string;
@@ -86,8 +87,9 @@ export class RedisTransientStore implements TransientStore {
   #connecting: Promise<void> | undefined;
   #closed = false;
 
-  constructor(client: RedisClientType, options: RedisTransientStoreOptions) {
-    this.#client = client;
+  constructor(createClient: () => RedisClientType, options: RedisTransientStoreOptions) {
+    this.#createClient = createClient;
+    this.#activeClient = createClient();
     this.#commandTimeoutMs = positiveInteger('commandTimeoutMs', options.commandTimeoutMs);
     this.#connectTimeoutMs = positiveInteger('connectTimeoutMs', options.connectTimeoutMs);
     this.#keyPrefix = validKey(options.keyPrefix);
@@ -104,38 +106,28 @@ export class RedisTransientStore implements TransientStore {
     }
     if (this.#connecting !== undefined) return this.#connecting;
 
-    let interruptedConnection: Promise<unknown> | undefined;
-    const attempt = this.#execute(
+    this.#connecting = this.#execute(
       'connect',
       async (signal) => {
-        if (this.#client.isReady) return;
-        if (this.#client.isOpen) this.#client.destroy();
-        const connection = this.#client.connect();
+        const client = this.#client;
+        if (client.isReady) return;
+        if (client.isOpen) client.destroy();
         const abort = () => {
-          interruptedConnection = connection;
-          if (this.#client.isOpen) this.#client.destroy();
+          // A canceled provider attempt can settle after the next connection starts.
+          this.#activeClient = undefined;
+          if (client.isOpen) client.destroy();
         };
         signal.addEventListener('abort', abort, { once: true });
         try {
-          await connection;
+          await client.connect();
         } finally {
           signal.removeEventListener('abort', abort);
+          if (signal.aborted && client.isOpen) client.destroy();
         }
       },
       this.#connectTimeoutMs,
-    );
-    const clearAttempt = () => {
+    ).finally(() => {
       this.#connecting = undefined;
-    };
-    this.#connecting = attempt.finally(() => {
-      if (interruptedConnection === undefined) {
-        clearAttempt();
-        return;
-      }
-
-      // A timeout releases callers while the canceled socket attempt finishes unwinding.
-      // Reusing the client before then could let the previous attempt disturb the new one.
-      void interruptedConnection.then(clearAttempt, clearAttempt);
     });
     return this.#connecting;
   }
@@ -212,7 +204,12 @@ export class RedisTransientStore implements TransientStore {
   close(): void {
     if (this.#closed) return;
     this.#closed = true;
-    this.#client.destroy();
+    if (this.#activeClient?.isOpen) this.#activeClient.destroy();
+    this.#activeClient = undefined;
+  }
+
+  get #client(): RedisClientType {
+    return (this.#activeClient ??= this.#createClient());
   }
 
   #qualifiedKey(key: string): string {

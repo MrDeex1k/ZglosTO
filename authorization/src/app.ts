@@ -195,8 +195,7 @@ export function createAuthorizationApp(
     return context.json(
       {
         correlationId: context.get('correlationId'),
-        error: message,
-        errorCode: 'EMAIL_VERIFICATION_UNAVAILABLE',
+        code: 'EMAIL_VERIFICATION_UNAVAILABLE',
         message,
       },
       503,

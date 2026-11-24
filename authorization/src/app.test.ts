@@ -102,7 +102,7 @@ test('advertises disabled email delivery and rejects delivery requests without i
   });
   expect(response.status).toBe(503);
   expect(response.headers.get('cache-control')).toBe('no-store');
-  expect(await response.json()).toMatchObject({ errorCode: 'EMAIL_VERIFICATION_UNAVAILABLE' });
+  expect(await response.json()).toMatchObject({ code: 'EMAIL_VERIFICATION_UNAVAILABLE' });
   expect(mocks.handler).not.toHaveBeenCalled();
 });
 
