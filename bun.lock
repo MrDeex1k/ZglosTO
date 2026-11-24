@@ -8,6 +8,7 @@
         "@commitlint/cli": "21.2.4",
         "@commitlint/config-conventional": "21.2.4",
         "@oxlint/plugins": "1.93.0",
+        "@playwright/test": "npm:flashwright-test@1.64.1-flashwright.12",
         "@shadcn/lint": "0.2.5",
         "@types/node": "26.6.6",
         "husky": "9.1.7",
@@ -1275,6 +1276,8 @@
     "@pagefind/windows-arm64": ["@pagefind/windows-arm64@1.6.0", "", { "os": "win32", "cpu": "arm64" }, "sha512-wUrniW3REr7VWJHz6xE6F/p/AQgHDFpGZiY9sbWT71KfEijDE5Jnc37V8zc7cilV9h/QkwJGXoEP2+ZLwDmhtw=="],
 
     "@pagefind/windows-x64": ["@pagefind/windows-x64@1.6.0", "", { "os": "win32", "cpu": "x64" }, "sha512-cUA2+yXfbymdJllyMjY5YTBwuOgh0/H53Pn5fYKjDnDjk154Ft4U5RVj3TenWySPL/jG6zJfARUWSlyUyXHlZw=="],
+
+    "@playwright/test": ["flashwright-test@1.64.1-flashwright.12", "", { "dependencies": { "playwright": "npm:flashwright@1.64.1-flashwright.12" }, "bin": { "playwright": "cli.js" } }, "sha512-s++qu9esGJKFscRU2BuEX7QJdYtaLDpibUfEnjPLosKxjhGqECLQ11B/g/LMRpJtbxnFehnr+2o0eUvF4LJAHg=="],
 
     "@protobufjs/aspromise": ["@protobufjs/aspromise@1.1.2", "", {}, "sha512-j+gKExEuLmKwvz3OgROXtrJ2UG2x8Ch2YZUxahh+s1F2HZ+wAceUNLkvy6zKCPVRkU++ZWQrdxsUeQXmcg4uoQ=="],
 
@@ -2795,6 +2798,10 @@
     "picomatch": ["picomatch@4.0.7", "", {}, "sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA=="],
 
     "pkg-up": ["pkg-up@3.1.0", "", { "dependencies": { "find-up": "3.0.0" } }, "sha512-nDywThFk1i4BQK4twPQ6TA4RT8bDY96yeuCVBWL3ePARCiEKDRSrNGbFIgUJpLp+XeIR65v8ra7WuJOFUBtkMA=="],
+
+    "playwright": ["flashwright@1.64.1-flashwright.12", "", { "dependencies": { "playwright-core": "npm:flashwright-core@1.64.1-flashwright.12" }, "bin": { "playwright": "cli.js" } }, "sha512-uHVbEdcIcMz+/4kvfqYXE5oOMo9EObjQ/AN8yJystNDN6oY5eKa9aRkfwHWaPdlND5V+J/W5qoVQYzxNy3Q8xg=="],
+
+    "playwright-core": ["flashwright-core@1.64.1-flashwright.12", "", { "bin": { "playwright-core": "cli.js" } }, "sha512-iuK+eMGQufE4BjzsPQeLMrE35pgrJt1th63zzDHfogw0mVtwAzIXHazeBQv2RetMIiUUFtrPQTYuvJ19bDr85A=="],
 
     "plist": ["plist@3.1.1", "", { "dependencies": { "@xmldom/xmldom": "0.9.11", "base64-js": "1.5.1", "xmlbuilder": "15.1.1" } }, "sha512-ZIfcLJC+7E7FBFnDxm9MPmt7D+DidyQ26lewieO75AdhA2ayMtsJSES0iWzqJQbcVRSrTufQoy0DR94xHue0oA=="],
 
