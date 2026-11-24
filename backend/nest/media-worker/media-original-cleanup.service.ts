@@ -10,10 +10,8 @@ const CleanupRowSchema = z.object({
   revision: z.number().int().positive(),
 });
 
-const ExpiredUploadRowSchema = z.object({
-  id: z.string().uuid(),
-  object_key: z.string().min(1),
-});
+const ExpiredUploadRowSchema = z.object({ id: z.string().uuid() });
+const ClaimedUploadRowSchema = z.object({ object_key: z.string().min(1) });
 
 @Injectable()
 export class MediaOriginalCleanupService {
@@ -60,7 +58,7 @@ export class MediaOriginalCleanupService {
     }
 
     const expired = await this.database.query(
-      `SELECT id::text, object_key
+      `SELECT id::text
        FROM image_uploads
        WHERE status = 'pending' AND expires_at <= CURRENT_TIMESTAMP
        ORDER BY expires_at
@@ -69,14 +67,21 @@ export class MediaOriginalCleanupService {
     for (const raw of expired.rows) {
       const row = ExpiredUploadRowSchema.parse(raw);
       try {
-        // S3 DeleteObject is idempotent, including uploads that were never completed.
+        // The conditional DELETE obtains the row lock before S3 cleanup. If attachment
+        // wins the lock, PostgreSQL rechecks the status and returns no key to delete.
         // oxlint-disable-next-line no-await-in-loop
-        await this.storage.deleteObject(row.object_key);
-        // oxlint-disable-next-line no-await-in-loop
-        await this.database.query(
-          `DELETE FROM image_uploads WHERE id = $1 AND status = 'pending'`,
-          [row.id],
-        );
+        await this.database.transaction(async (transaction) => {
+          const removed = await transaction.query(
+            `DELETE FROM image_uploads
+             WHERE id = $1 AND status = 'pending' AND expires_at <= CURRENT_TIMESTAMP
+             RETURNING object_key`,
+            [row.id],
+          );
+          const upload = removed.rows[0];
+          if (upload !== undefined) {
+            await this.storage.deleteObject(ClaimedUploadRowSchema.parse(upload).object_key);
+          }
+        });
       } catch (error: unknown) {
         this.logger.warn(
           {

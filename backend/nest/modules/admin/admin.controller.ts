@@ -1,8 +1,12 @@
-import { Body, Controller, Get, Param, Patch } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
 import {
   IncidentIdParamsSchema,
   AdminIncidentStatisticsItemSchema,
   CurrentIncidentListItemSchema,
+  CurrentIncidentPageSchema,
+  IncidentListQuerySchema,
+  type IncidentListQuery,
+  type IncidentPage,
   IncidentMutationResponseSchema,
   UpdateIncidentServiceRequestSchema,
   UpdateIncidentStatusRequestSchema,
@@ -18,9 +22,10 @@ import {
   type UpdateUserPermissionsRequest,
   type UpdateUserPermissionsResponse,
 } from '@zglosto/contracts';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ApiContract } from '../../openapi/api-contract.decorator.ts';
+import { incidentPageRequest } from '../incidents/incident-pagination.ts';
 import { RequireRoles } from '../auth-bridge/auth.decorators.ts';
 import type { IncidentMutationResponse } from '../incidents/incident-domain.port.ts';
 import { AdminUseCases } from './admin.use-cases.ts';
@@ -45,14 +50,22 @@ export class AdminController {
 
   @Get('incydenty')
   @ApiOperation({ summary: 'List all incidents' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    schema: { type: 'integer', minimum: 1, maximum: 100 },
+  })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
   @ApiContract({
     authenticated: true,
-    errorStatuses: [401, 403, 500, 503],
-    serializationSchema: CurrentIncidentListItemSchema,
-    successSchema: z.array(CurrentIncidentListItemSchema),
+    errorStatuses: [400, 401, 403, 500, 503],
+    serializationSchema: z.union([CurrentIncidentListItemSchema, CurrentIncidentPageSchema]),
+    successSchema: z.union([z.array(CurrentIncidentListItemSchema), CurrentIncidentPageSchema]),
   })
-  list(): Promise<readonly CurrentIncidentListItemDto[]> {
-    return this.useCases.list();
+  list(
+    @Query({ schema: IncidentListQuerySchema }) query: IncidentListQuery,
+  ): Promise<readonly CurrentIncidentListItemDto[] | IncidentPage<CurrentIncidentListItemDto>> {
+    return this.useCases.list(incidentPageRequest(query));
   }
 
   @Patch('incydenty/:id/sprawdzenie')
