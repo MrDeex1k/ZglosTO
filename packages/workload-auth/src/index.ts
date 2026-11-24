@@ -89,8 +89,15 @@ export function createWorkloadAuthHeaders(
   };
 }
 
+interface ReplayEntry {
+  identifier: string;
+  expiresAt: number;
+}
+
 export class WorkloadReplayCache {
-  readonly #entries = new Map<string, number>();
+  readonly #entries = new Set<string>();
+  // Signed timestamps can arrive out of order, so expire entries with a min-heap.
+  readonly #expirations: ReplayEntry[] = [];
 
   constructor(private readonly maximumEntries: number) {
     if (!Number.isSafeInteger(maximumEntries) || maximumEntries <= 0) {
@@ -99,16 +106,51 @@ export class WorkloadReplayCache {
   }
 
   accept(identifier: string, expiresAt: number, now: number): boolean {
-    for (const [key, expiry] of this.#entries) {
-      if (expiry < now) this.#entries.delete(key);
+    let next = this.#expirations[0];
+    while (next !== undefined && next.expiresAt < now) {
+      this.#entries.delete(next.identifier);
+      this.#removeEarliestExpiration();
+      next = this.#expirations[0];
     }
     if (this.#entries.has(identifier)) return false;
     if (this.#entries.size >= this.maximumEntries) {
       // Never evict a live nonce: it would make an accepted signature replayable.
       return false;
     }
-    this.#entries.set(identifier, expiresAt);
+    this.#entries.add(identifier);
+    const entry = { identifier, expiresAt: Number.isNaN(expiresAt) ? Infinity : expiresAt };
+    let position = this.#expirations.length;
+    while (position > 0) {
+      const parentPosition = Math.floor((position - 1) / 2);
+      const parent = this.#expirations[parentPosition]!;
+      if (parent.expiresAt <= entry.expiresAt) break;
+      this.#expirations[position] = parent;
+      position = parentPosition;
+    }
+    this.#expirations[position] = entry;
     return true;
+  }
+
+  #removeEarliestExpiration(): void {
+    const last = this.#expirations.pop()!;
+    if (this.#expirations.length === 0) return;
+
+    let position = 0;
+    while (position * 2 + 1 < this.#expirations.length) {
+      const leftPosition = position * 2 + 1;
+      const left = this.#expirations[leftPosition]!;
+      const right = this.#expirations[leftPosition + 1];
+      let childPosition = leftPosition;
+      let child = left;
+      if (right !== undefined && right.expiresAt < left.expiresAt) {
+        childPosition += 1;
+        child = right;
+      }
+      if (child.expiresAt >= last.expiresAt) break;
+      this.#expirations[position] = child;
+      position = childPosition;
+    }
+    this.#expirations[position] = last;
   }
 }
 
