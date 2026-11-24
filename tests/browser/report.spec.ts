@@ -56,9 +56,9 @@ async function openReportForm(page: Page) {
   const form = page.getByRole('dialog', { name: 'Zgłoś nowy incydent' });
   await form.getByRole('combobox', { name: /Wybierz służbę/ }).click();
   await page.getByRole('option', { name: 'Zarząd Dróg' }).click();
-  await form.getByLabel(/Adres/).fill(address);
+  await form.getByLabel(/^Adres \*/).fill(address);
   await form.getByLabel(/Opis zgłoszenia/).fill(description);
-  await form.getByLabel(/Email/).fill(email);
+  await form.getByLabel(/Adres e-mail/).fill(email);
   return form;
 }
 

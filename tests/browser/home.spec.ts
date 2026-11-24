@@ -22,7 +22,11 @@ test.beforeEach(async ({ page }) => {
 test('opens the details of a resolved incident', async ({ page }) => {
   await page.route(feed, (route) => route.fulfill({ json: [resolvedIncident] }));
   await page.goto('/');
-  await page.getByText(resolvedIncident.opis_zgloszenia, { exact: true }).click();
+  await page
+    .getByRole('button', {
+      name: `Otwórz szczegóły zgłoszenia ${resolvedIncident.opis_zgloszenia}`,
+    })
+    .click();
   await expect(page.getByRole('dialog')).toContainText(resolvedIncident.adres_zgloszenia);
 });
 
@@ -35,7 +39,10 @@ test('recovers the public feed after the API becomes available', async ({ page }
   );
 
   await page.goto('/');
-  await expect(page.getByRole('alert')).toContainText('Nie udało się załadować zgłoszeń');
+  await expect(page.getByRole('alert')).toContainText(
+    'Nie udało się załadować rozwiązanych zgłoszeń.',
+  );
+  await expect(page.getByRole('button', { name: 'ZGŁOŚ INCYDENT' })).toBeVisible();
   feedAvailable = true;
   await page.getByRole('button', { name: 'Spróbuj ponownie' }).click();
   await expect(page.getByText('Brak rozwiązanych zgłoszeń')).toBeVisible();
