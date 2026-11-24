@@ -122,7 +122,8 @@ export class RedisTransientStore implements TransientStore {
           await client.connect();
         } finally {
           signal.removeEventListener('abort', abort);
-          if (signal.aborted && client.isOpen) client.destroy();
+          // A late socket can exist even when cancellation already cleared isOpen.
+          if (signal.aborted) client.destroy();
         }
       },
       this.#connectTimeoutMs,

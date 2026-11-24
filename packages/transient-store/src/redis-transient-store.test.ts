@@ -44,11 +44,13 @@ class FakeRedisClient {
 }
 
 function pendingConnection() {
+  let resolve!: (client: FakeRedisClient) => void;
   let reject!: (error: Error) => void;
-  const promise = new Promise<FakeRedisClient>((_resolve, rejectPromise) => {
+  const promise = new Promise<FakeRedisClient>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
     reject = rejectPromise;
   });
-  return { promise, reject };
+  return { promise, resolve, reject };
 }
 
 const stores: RedisTransientStore[] = [];
@@ -147,41 +149,56 @@ describe('RedisTransientStore', () => {
     expect(client.isReady).toBe(true);
   });
 
-  it('retries on a fresh client while a timed-out connection is still pending', async () => {
-    vi.useFakeTimers();
-    try {
-      const client = new FakeRedisClient();
-      const pending = pendingConnection();
-      const connect = vi.spyOn(client, 'connect').mockImplementationOnce(() => {
-        client.isOpen = true;
-        return pending.promise;
-      });
-      const replacement = new FakeRedisClient();
-      const factory = vi.fn(() => replacement).mockReturnValueOnce(client);
-      const { store } = createStore(client, 500, undefined, factory);
+  it.each(['resolves', 'rejects'] as const)(
+    'disposes the timed-out client if its connection later %s',
+    async (outcome) => {
+      vi.useFakeTimers();
+      try {
+        const client = new FakeRedisClient();
+        const pending = pendingConnection();
+        const connect = vi.spyOn(client, 'connect').mockImplementationOnce(() => {
+          client.isOpen = true;
+          return pending.promise;
+        });
+        const destroy = vi.spyOn(client, 'destroy');
+        const replacement = new FakeRedisClient();
+        const factory = vi.fn(() => replacement).mockReturnValueOnce(client);
+        const { store } = createStore(client, 500, undefined, factory);
 
-      const first = store.connect();
-      const second = store.connect();
-      const firstError = expect(first).rejects.toThrow('Transient store operation failed: connect');
-      const secondError = expect(second).rejects.toThrow(
-        'Transient store operation failed: connect',
-      );
-      await vi.advanceTimersByTimeAsync(1_000);
-      await Promise.all([firstError, secondError]);
-      expect(client.destroyed).toBe(true);
-      await expect(store.connect()).resolves.toBeUndefined();
-      expect(factory).toHaveBeenCalledTimes(2);
-      expect(connect).toHaveBeenCalledOnce();
+        const first = store.connect();
+        const second = store.connect();
+        const firstError = expect(first).rejects.toThrow(
+          'Transient store operation failed: connect',
+        );
+        const secondError = expect(second).rejects.toThrow(
+          'Transient store operation failed: connect',
+        );
+        await vi.advanceTimersByTimeAsync(1_000);
+        await Promise.all([firstError, secondError]);
+        expect(destroy).toHaveBeenCalledOnce();
+        expect(client.isOpen).toBe(false);
+        await expect(store.connect()).resolves.toBeUndefined();
+        expect(factory).toHaveBeenCalledTimes(2);
+        expect(connect).toHaveBeenCalledOnce();
 
-      pending.reject(new Error('Canceled socket closed'));
-      await Promise.resolve();
-      expect(replacement.isReady).toBe(true);
-      await store.ping();
-      expect(replacement.ping).toHaveBeenCalledOnce();
-    } finally {
-      vi.useRealTimers();
-    }
-  });
+        if (outcome === 'resolves') {
+          // The provider can assign a socket after clearing its open flag on cancellation.
+          client.isReady = true;
+          pending.resolve(client);
+        } else {
+          pending.reject(new Error('Canceled socket closed'));
+        }
+        await Promise.resolve();
+        expect(destroy).toHaveBeenCalledTimes(2);
+        expect(client.isReady).toBe(false);
+        expect(replacement.isReady).toBe(true);
+        await store.ping();
+        expect(replacement.ping).toHaveBeenCalledOnce();
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
 
   it('acquires a lease with SET NX PX and releases only the matching token', async () => {
     const { client, store } = createStore();
