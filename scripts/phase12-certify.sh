@@ -87,23 +87,29 @@ cleanup_load_environment() {
 }
 
 phase12_load_compose() {
-  docker compose \
-    --project-name "${INTEGRATION_PROJECT_NAME}-load" \
+  local project="${INTEGRATION_PROJECT_NAME}-load"
+  INTEGRATION_PROJECT_NAME="$project" INTEGRATION_HTTP_PORT="$INTEGRATION_HTTP_PORT" docker compose \
+    --project-name "$project" \
     --env-file "$ROOT_DIR/tests/integration/integration.env" \
     --file "$ROOT_DIR/docker-compose.no-rustfs.yml" \
     --file "$ROOT_DIR/docker-compose.rustfs.yml" \
     --file "$ROOT_DIR/docker-compose.integration.yml" \
+    --file "$ROOT_DIR/docker-compose.redis.local.yml" \
     "$@"
 }
 
 load_gate() {
   require_destructive_guard
   prepare_artifacts
-  trap cleanup_load_environment EXIT INT TERM
+  source "$ROOT_DIR/scripts/lib/phase12-integration-redis.sh"
+  source "$ROOT_DIR/scripts/lib/phase12-media.sh"
+  trap cleanup_load_environment EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
   INTEGRATION_PROJECT_NAME="${INTEGRATION_PROJECT_NAME}-load" \
     INTEGRATION_HTTP_PORT="$INTEGRATION_HTTP_PORT" \
     INTEGRATION_KEEP_RUNNING=1 \
-    INTEGRATION_REDIS_MODE=disabled \
+    INTEGRATION_REDIS_MODE=local \
     "$ROOT_DIR/scripts/test-phase0-integration.sh" \
     2>&1 | tee "$ARTIFACT_DIR/integration-load.log"
   PHASE12_BASE_URL="http://127.0.0.1:$INTEGRATION_HTTP_PORT" \
@@ -114,22 +120,7 @@ load_gate() {
     PHASE12_LOAD_SCENARIO=incident-write \
     PHASE12_EVIDENCE_FILE="$ARTIFACT_DIR/load-incident-write.json" \
     bun "$ROOT_DIR/scripts/phase12-load-test.ts"
-  media_drained=0
-  for _attempt in $(seq 1 60); do
-    phase12_load_compose exec -T backend bun --input-type=module -e \
-      "import { NestFactory } from '@nestjs/core'; import { AppModule } from './dist/nest/app.module.js'; import { OutboxPublisherService } from './dist/nest/modules/jobs/outbox-publisher.service.js'; const app = await NestFactory.createApplicationContext(AppModule, { logger: false }); await app.get(OutboxPublisherService).tickOnce(); await app.close();"
-    active_jobs="$(
-      phase12_load_compose exec -T database /usr/local/bin/load-container-secrets sh -c \
-        'psql "$DATABASE_DIRECT_URL" -tAc "SELECT count(*) FROM media_processing_jobs WHERE status IN ('"'"'pending'"'"', '"'"'processing'"'"');"' \
-        | tr -d '[:space:]'
-    )"
-    if [ "$active_jobs" = '0' ]; then
-      media_drained=1
-      break
-    fi
-    sleep 1
-  done
-  [ "$media_drained" = '1' ] || fail 'media_worker did not drain incident-write jobs in 60 s'
+  verify_phase12_media_jobs "$ARTIFACT_DIR/load-incident-write.json" phase12_load_compose
   cleanup_load_environment
   trap - EXIT INT TERM
 }

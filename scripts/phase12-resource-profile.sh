@@ -8,7 +8,7 @@ TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 ARTIFACT_DIR="${PHASE12_ARTIFACT_DIR:-$ROOT_DIR/.state/phase-12/resources/${TIMESTAMP}-${PROFILE}}"
 PROJECT_NAME="zglosto-phase12-resource-${PROFILE}"
 MONITOR_PID=
-MONITOR_STOPPED=0
+MONITOR_DIR=
 
 fail() {
   printf '[phase-12-resource] ERROR: %s\n' "$*" >&2
@@ -17,15 +17,12 @@ fail() {
 
 case "$PROFILE" in
   minimal)
-    REDIS_MODE=disabled
     HTTP_PORT="${INTEGRATION_HTTP_PORT:-12535}"
     ;;
   recommended)
-    REDIS_MODE=local
     HTTP_PORT="${INTEGRATION_HTTP_PORT:-12536}"
     ;;
   observability)
-    REDIS_MODE=disabled
     HTTP_PORT="${INTEGRATION_HTTP_PORT:-12537}"
     ;;
   *)
@@ -41,6 +38,10 @@ export INCIDENT_IP_RATE_LIMIT_MAX_REQUESTS="${INCIDENT_IP_RATE_LIMIT_MAX_REQUEST
 export INCIDENT_USER_RATE_LIMIT_MAX_REQUESTS="${INCIDENT_USER_RATE_LIMIT_MAX_REQUESTS:-100}"
 export INCIDENT_GLOBAL_RATE_LIMIT_MAX_REQUESTS="${INCIDENT_GLOBAL_RATE_LIMIT_MAX_REQUESTS:-1000}"
 
+source "$ROOT_DIR/scripts/lib/phase12-integration-redis.sh"
+source "$ROOT_DIR/scripts/lib/phase12-media.sh"
+export INTEGRATION_PROJECT_NAME="$PROJECT_NAME" INTEGRATION_HTTP_PORT="$HTTP_PORT"
+
 compose() {
   docker compose \
     --project-name "$PROJECT_NAME" \
@@ -48,102 +49,108 @@ compose() {
     --file "$ROOT_DIR/docker-compose.no-rustfs.yml" \
     --file "$ROOT_DIR/docker-compose.rustfs.yml" \
     --file "$ROOT_DIR/docker-compose.integration.yml" \
+    --file "$ROOT_DIR/docker-compose.redis.local.yml" \
     "$@"
 }
 
 stop_monitor() {
-  if [ "$MONITOR_STOPPED" = '1' ] || [ -z "$MONITOR_PID" ]; then
-    return
-  fi
-  if kill -0 "$MONITOR_PID" >/dev/null 2>&1; then
-    kill -INT "$MONITOR_PID"
-  fi
-  wait "$MONITOR_PID" || true
-  MONITOR_STOPPED=1
+  if [ -z "$MONITOR_PID" ]; then return 0; fi
+  # The monitor writes its final report on SIGTERM, or when its deadline elapses.
+  kill -TERM "$MONITOR_PID" 2>/dev/null || true
+  local pid=$MONITOR_PID
+  MONITOR_PID=
+  wait "$pid"
 }
 
 cleanup() {
-  stop_monitor
+  stop_monitor || true
+  if [ -n "$MONITOR_DIR" ]; then rm -rf -- "$MONITOR_DIR"; fi
   compose down --volumes --remove-orphans >/dev/null 2>&1 || true
 }
 
-drain_media_jobs() {
-  local active_jobs
-  for _attempt in $(seq 1 60); do
-    compose exec -T backend bun --input-type=module -e \
-      "import { NestFactory } from '@nestjs/core'; import { AppModule } from './dist/nest/app.module.js'; import { OutboxPublisherService } from './dist/nest/modules/jobs/outbox-publisher.service.js'; const app = await NestFactory.createApplicationContext(AppModule, { logger: false }); await app.get(OutboxPublisherService).tickOnce(); await app.close();"
-    active_jobs="$(
-      compose exec -T database /usr/local/bin/load-container-secrets sh -c \
-        'psql "$DATABASE_DIRECT_URL" -tAc "SELECT count(*) FROM media_processing_jobs WHERE status IN ('"'"'pending'"'"', '"'"'processing'"'"');"' \
-        | tr -d '[:space:]'
-    )"
-    if [ "$active_jobs" = '0' ]; then
-      return
-    fi
-    sleep 1
-  done
-  fail 'media_worker did not drain resource-test jobs in 60 seconds'
+finish_measurement() {
+  stop_monitor || fail 'resource monitor exited unsuccessfully'
+  bun -e '
+    import { readFileSync } from "node:fs";
+    const [file, project, profile] = process.argv.slice(1);
+    const report = JSON.parse(readFileSync(file, "utf8"));
+    if (report.schemaVersion !== 1 || report.kind !== "local-resource-measurement" ||
+        report.project !== project || report.profile !== profile ||
+        report.completion !== "signal" ||
+        !Number.isSafeInteger(report.samples) || report.samples <= 0 ||
+        !Array.isArray(report.containers) || report.containers.length === 0) {
+      throw new Error("Invalid resource measurement");
+    }
+    if (profile === "minimal" &&
+        !report.containers.some(({ name }) => name === "docker-model-runner")) {
+      throw new Error("Docker Model Runner was not sampled");
+    }
+  ' "$MONITOR_DIR/resources.json" "$PROJECT_NAME" "$PROFILE" ||
+    fail 'resource monitor did not produce a valid report for this run'
+  mv -f "$MONITOR_DIR/resources.json" "$ARTIFACT_DIR/resources.json"
+  rmdir "$MONITOR_DIR"
+  MONITOR_DIR=
+  compose down --volumes --remove-orphans
+  trap - EXIT INT TERM
+  printf '[phase-12-resource] Completed %s; evidence: %s\n' "$PROFILE" "$ARTIFACT_DIR"
 }
 
 mkdir -p "$ARTIFACT_DIR"
 chmod 0700 "$ARTIFACT_DIR"
-exec > >(tee "$ARTIFACT_DIR/run.log") 2>&1
-trap cleanup EXIT INT TERM
+run_profile() {
+  MONITOR_DIR=$(mktemp -d "$ARTIFACT_DIR/.monitor.XXXXXX")
+  trap cleanup EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
 
-monitor_arguments=(
-  "$ROOT_DIR/scripts/phase12-resource-monitor.ts"
-  --project "$PROJECT_NAME"
-  --profile "$PROFILE"
-  --output "$ARTIFACT_DIR/resources.json"
-  --duration-seconds "${PHASE12_RESOURCE_DURATION_SECONDS:-1800}"
-  --exclude-service model_runner_stub
-)
-if [ "$PROFILE" = 'minimal' ]; then
-  monitor_arguments+=(--include-name docker-model-runner)
-fi
-bun "${monitor_arguments[@]}" &
-MONITOR_PID=$!
+  monitor_arguments=(
+    "$ROOT_DIR/scripts/phase12-resource-monitor.ts"
+    --project "$PROJECT_NAME"
+    --profile "$PROFILE"
+    --output "$MONITOR_DIR/resources.json"
+    --duration-seconds "${PHASE12_RESOURCE_DURATION_SECONDS:-1800}"
+    --exclude-service model_runner_stub
+  )
+  if [ "$PROFILE" = 'minimal' ]; then
+    monitor_arguments+=(--include-name docker-model-runner)
+  fi
+  bun "${monitor_arguments[@]}" &
+  MONITOR_PID=$!
 
-if [ "$PROFILE" = 'observability' ]; then
-  PHASE12_ALLOW_DESTRUCTIVE=1 \
-    PHASE12_OBSERVABILITY_PROJECT="$PROJECT_NAME" \
-    PHASE12_OBSERVABILITY_HTTP_PORT="$HTTP_PORT" \
-    PHASE12_EVIDENCE_FILE="$ARTIFACT_DIR/observability-local.json" \
-    bun "$ROOT_DIR/scripts/phase12-observability-drill.ts"
+  if [ "$PROFILE" = 'observability' ]; then
+    PHASE12_ALLOW_DESTRUCTIVE=1 \
+      PHASE12_OBSERVABILITY_PROJECT="$PROJECT_NAME" \
+      PHASE12_OBSERVABILITY_HTTP_PORT="$HTTP_PORT" \
+      PHASE12_EVIDENCE_FILE="$ARTIFACT_DIR/observability-local.json" \
+      bun "$ROOT_DIR/scripts/phase12-observability-drill.ts"
 
-  stop_monitor
-  trap - EXIT INT TERM
-  compose down --volumes --remove-orphans
-  printf '[phase-12-resource] Completed %s; evidence: %s\n' "$PROFILE" "$ARTIFACT_DIR"
-  exit
-fi
+    finish_measurement
+    return
+  fi
 
-INTEGRATION_PROJECT_NAME="$PROJECT_NAME" \
-  INTEGRATION_HTTP_PORT="$HTTP_PORT" \
   INTEGRATION_KEEP_RUNNING=1 \
-  INTEGRATION_REDIS_MODE="$REDIS_MODE" \
-  "$ROOT_DIR/scripts/test-phase0-integration.sh"
+    INTEGRATION_REDIS_MODE=local \
+    "$ROOT_DIR/scripts/test-phase0-integration.sh"
 
-PHASE12_BASE_URL="http://127.0.0.1:$HTTP_PORT" \
-  PHASE12_LOAD_SCENARIO=public-read \
-  PHASE12_EVIDENCE_FILE="$ARTIFACT_DIR/load-public-read.json" \
-  bun "$ROOT_DIR/scripts/phase12-load-test.ts"
+  PHASE12_BASE_URL="http://127.0.0.1:$HTTP_PORT" \
+    PHASE12_LOAD_SCENARIO=public-read \
+    PHASE12_EVIDENCE_FILE="$ARTIFACT_DIR/load-public-read.json" \
+    bun "$ROOT_DIR/scripts/phase12-load-test.ts"
 
-PHASE12_BASE_URL="http://127.0.0.1:$HTTP_PORT" \
-  PHASE12_LOAD_SCENARIO=incident-write \
-  PHASE12_EVIDENCE_FILE="$ARTIFACT_DIR/load-incident-write.json" \
-  bun "$ROOT_DIR/scripts/phase12-load-test.ts"
+  PHASE12_BASE_URL="http://127.0.0.1:$HTTP_PORT" \
+    PHASE12_LOAD_SCENARIO=incident-write \
+    PHASE12_EVIDENCE_FILE="$ARTIFACT_DIR/load-incident-write.json" \
+    bun "$ROOT_DIR/scripts/phase12-load-test.ts"
 
-drain_media_jobs
+  verify_phase12_media_jobs "$ARTIFACT_DIR/load-incident-write.json" compose
 
-if [ "$PROFILE" = 'minimal' ]; then
-  PHASE12_EVIDENCE_FILE="$ARTIFACT_DIR/dmr.json" \
-    bun "$ROOT_DIR/scripts/phase12-dmr-test.ts"
-fi
+  if [ "$PROFILE" = 'minimal' ]; then
+    PHASE12_EVIDENCE_FILE="$ARTIFACT_DIR/dmr.json" \
+      bun "$ROOT_DIR/scripts/phase12-dmr-test.ts"
+  fi
 
-sleep "${PHASE12_RESOURCE_SETTLE_SECONDS:-10}"
-stop_monitor
-trap - EXIT INT TERM
-compose down --volumes --remove-orphans
+  sleep "${PHASE12_RESOURCE_SETTLE_SECONDS:-10}"
+  finish_measurement
+}
 
-printf '[phase-12-resource] Completed %s; evidence: %s\n' "$PROFILE" "$ARTIFACT_DIR"
+run_profile 2>&1 | tee "$ARTIFACT_DIR/run.log"

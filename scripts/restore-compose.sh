@@ -9,8 +9,6 @@ fi
 
 backup_directory=$1
 shift
-compose=(docker compose "$@")
-operations_compose=("${compose[@]}" --file "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/docker-compose.storage.operations.yml")
 source "$(dirname "${BASH_SOURCE[0]}")/lib/compose-maintenance.sh"
 umask 077
 
@@ -34,13 +32,14 @@ else
   (cd "$backup_directory" && shasum -a 256 --check SHA256SUMS)
 fi
 
+prepare_maintenance_compose "$@"
 temporary_pgbouncer=false
 restore_failed() {
   local result=$?
   if [ "$temporary_pgbouncer" = true ]; then
     "${compose[@]}" stop pgbouncer >/dev/null || printf '[restore] Could not stop temporary PgBouncer\n' >&2
   fi
-  if [ "$result" -ne 0 ]; then
+  if [ "$result" -ne 0 ] && [ "${#services_to_resume[@]}" -gt 0 ]; then
     printf '[restore] Failed; application writers remain stopped. Complete restore and audit before restarting services.\n' >&2
   fi
   return "$result"

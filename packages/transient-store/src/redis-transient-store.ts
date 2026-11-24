@@ -25,6 +25,16 @@ end
 return 0
 `;
 
+const GET_OR_CREATE_PERSISTENT_SCRIPT = `
+local value = redis.call('GET', KEYS[1])
+if value then
+  redis.call('PERSIST', KEYS[1])
+  return value
+end
+redis.call('SET', KEYS[1], ARGV[1])
+return ARGV[1]
+`;
+
 export interface RedisTransientStoreOptions {
   commandTimeoutMs: number;
   connectTimeoutMs: number;
@@ -115,6 +125,19 @@ export class RedisTransientStore implements TransientStore {
     return this.#execute('get', (signal) =>
       this.#client.withAbortSignal(signal).get(this.#qualifiedKey(key)),
     );
+  }
+
+  async getOrCreatePersistent(key: string, value: string): Promise<string> {
+    return this.#execute('get-or-create-persistent', async (signal) => {
+      const result = await this.#client
+        .withAbortSignal(signal)
+        .eval(GET_OR_CREATE_PERSISTENT_SCRIPT, {
+          arguments: [value],
+          keys: [this.#qualifiedKey(key)],
+        });
+      if (typeof result !== 'string') throw new Error('Redis returned an invalid persistent value');
+      return result;
+    });
   }
 
   async set(key: string, value: string, ttlMs: number): Promise<void> {

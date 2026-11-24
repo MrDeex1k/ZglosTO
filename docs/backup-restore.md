@@ -34,6 +34,10 @@ Wariant NoRustFS z zewnętrznym bucketem:
 ```
 
 Skrypt zatrzymuje kolejno Nginx, Authorization, backend i wszystkie repliki workera mediów.
+Dla instrukcji backupu i restore Compose rozwiązuje bazową konfigurację z przekazanych
+opcji, `COMPOSE_FILE` albo domyślnych plików projektu. Skrypty dodają profil poświadczeń
+operacyjnych do kontenerów audytu i archiwizacji. Obie konfiguracje oraz stan usług
+muszą przejść sprawdzenie przed zatrzymaniem pierwszego procesu zapisującego dane.
 Daje każdej usłudze 120 sekund na zakończenie pracy; SIGKILL przerywa backup przed dumpem.
 Auth także zapisuje dane (przypisanie anonimowych zgłoszeń), a worker aktualizuje referencje
 i usuwa oryginały. Izolowane kontenery `run --rm --no-deps` wykonują audyt i eksport S3,

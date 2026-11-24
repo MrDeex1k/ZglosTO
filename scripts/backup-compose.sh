@@ -9,8 +9,6 @@ fi
 
 backup_directory=$1
 shift
-compose=(docker compose "$@")
-operations_compose=("${compose[@]}" --file "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/docker-compose.storage.operations.yml")
 source "$(dirname "${BASH_SOURCE[0]}")/lib/compose-maintenance.sh"
 umask 077
 
@@ -41,6 +39,7 @@ while :; do
 done
 mkdir -m 0700 -- "$backup_directory"
 backup_directory=$(cd "$backup_directory" && pwd -P)
+prepare_maintenance_compose "$@"
 
 finish_backup() {
   local result=$?

@@ -22,6 +22,7 @@ export class TransientStoreOperationError extends Error {
       | 'connect'
       | 'delete'
       | 'get'
+      | 'get-or-create-persistent'
       | 'increment'
       | 'ping'
       | 'release-lease'

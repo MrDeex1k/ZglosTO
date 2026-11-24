@@ -6,6 +6,11 @@ Pomiar wykonano 2026-07-27 na aktualnym kodzie i obrazach projektu. Jest to pods
 wstępnego doboru hosta dla wdrożeń Docker Compose. Nie jest to certyfikacja wydajności
 produkcyjnego Ubuntu Server.
 
+Poniższe wyniki pochodzą z konfiguracji z dnia pomiaru. Aktualna procedura używa
+lokalnego Redisa również w profilu `minimal` i w scenariuszu obserwowalności,
+ponieważ aktywny gateway wymaga wspólnej ochrony przed replay. Kolejny pomiar
+powinien uwzględnić tę zmianę i model Basal Mini Q5.
+
 | Mierzony zestaw                                                                |               Maksimum CPU |    Maksimum RAM kontenerów | Wynik scenariusza |
 | ------------------------------------------------------------------------------ | -------------------------: | -------------------------: | ----------------- |
 | `minimal`: RustFS local, Redis disabled, observability disabled, lokalny DMR   | `557,56%` = `5,58` rdzenia | `2765,86 MiB` = `2,70 GiB` | PASS              |

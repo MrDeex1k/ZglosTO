@@ -1,7 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { createClient, type RedisClientType } from 'redis';
 import { RedisTransientStore, type TransientStoreOperationEvent } from './redis-transient-store.js';
-import type { TransientStore } from './port.js';
 
 interface DisabledRedisConfiguration {
   commandTimeoutMs: number;
@@ -25,7 +24,7 @@ export type TransientStoreConfiguration = DisabledRedisConfiguration | EnabledRe
 
 export type TransientStoreRuntime =
   | { mode: 'disabled'; store: null }
-  | { mode: 'external' | 'local'; store: TransientStore };
+  | { mode: 'external' | 'local'; store: RedisTransientStore };
 
 interface RuntimeDependencies {
   createRedisClient?: typeof createClient;
