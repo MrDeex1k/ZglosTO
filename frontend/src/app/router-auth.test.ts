@@ -1,3 +1,4 @@
+import { QueryClient } from '@tanstack/react-query';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('../config/services', () => ({
@@ -9,7 +10,7 @@ vi.mock('../lib/incident-status', () => ({
 }));
 
 import { incidentQueryKeys } from '../queries/incidents';
-import { dashboardIncidentQueryOptions } from './dashboard-query-options';
+import { ensureDashboardIncidentData } from './dashboard-query-options';
 import type { RouteUserRole } from './route-access';
 import {
   dashboardPathForUser,
@@ -75,14 +76,39 @@ describe('dashboard query guard', () => {
     serviceKey: null,
   };
 
-  it('creates private query options only for the dashboard owned by the user', () => {
-    expect(dashboardIncidentQueryOptions(authenticatedResident, 'mieszkaniec').queryKey).toEqual(
-      incidentQueryKeys.resident(authenticatedResident.email),
+  it('loads the private list for the dashboard owned by the user', async () => {
+    const client = new QueryClient();
+    const ensure = vi.spyOn(client, 'ensureQueryData').mockResolvedValue([]);
+
+    await ensureDashboardIncidentData(client, authenticatedResident, 'mieszkaniec');
+
+    expect(ensure).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: incidentQueryKeys.resident(authenticatedResident.email),
+      }),
     );
   });
 
-  it('redirects before exposing query options for another role', () => {
-    expect(() => dashboardIncidentQueryOptions(authenticatedResident, 'admin')).toThrow();
+  it('scopes the service loader cache to the assigned service key', async () => {
+    const client = new QueryClient();
+    const ensure = vi.spyOn(client, 'ensureQueryData').mockResolvedValue([]);
+    const viewer = { ...authenticatedResident, role: 'sluzby', serviceKey: 'roads' } as const;
+
+    await ensureDashboardIncidentData(client, viewer, 'sluzby');
+
+    expect(ensure).toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: incidentQueryKeys.service(viewer.email, 'roads') }),
+    );
+  });
+
+  it('redirects before loading another role’s private list', async () => {
+    const client = new QueryClient();
+    const ensure = vi.spyOn(client, 'ensureQueryData');
+
+    await expect(
+      ensureDashboardIncidentData(client, authenticatedResident, 'admin'),
+    ).rejects.toBeDefined();
+    expect(ensure).not.toHaveBeenCalled();
   });
 });
 

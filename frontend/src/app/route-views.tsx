@@ -21,6 +21,7 @@ export function HomeRouteView() {
       visibleCount={state.visibleIncidents}
       isLoading={state.isLoadingIncidents}
       error={state.incidentsError}
+      onRetry={state.retryIncidents}
       onShowMore={state.showAllVisibleIncidents}
       onIncidentClick={state.openIncident}
       selectedIncident={state.selectedIncident}
@@ -90,11 +91,6 @@ export function ServiceDashboardRouteView({
       visibleCount={state.visibleServiceIncidents}
       onStatusFilterChange={state.setServiceStatusFilter}
       onShowMore={state.showMoreServiceIncidents}
-      onIncidentClick={state.openIncident}
-      onUpdate={state.updateServiceIncident}
-      selectedIncident={state.selectedIncident}
-      isOpen={state.isDetailsDialogOpen}
-      onOpenChange={state.setIsDetailsDialogOpen}
     />
   );
 }

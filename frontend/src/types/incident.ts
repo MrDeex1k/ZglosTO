@@ -18,4 +18,8 @@ export interface Incident {
   resolvedAt: string | null;
 }
 
+export interface ServiceIncident extends Incident {
+  revision: number;
+}
+
 export type NewIncidentDraft = Omit<Incident, 'id' | 'status' | 'createdAt' | 'resolvedAt'>;

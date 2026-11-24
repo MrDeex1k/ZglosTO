@@ -11,10 +11,9 @@ import {
 } from '../hooks/use-incident-mutations';
 import { getIncidentStatusLabel } from '../lib/incident-status';
 import {
-  createServicePermissionFormSchema,
-  rolePermissionFormSchema,
+  createRolePermissionFormSchema,
+  type IncidentStatusFormValues,
   type RolePermissionFormValues,
-  type ServicePermissionFormValues,
 } from '../forms/schemas';
 import { submitClientForm } from '../forms/submit';
 import { incidentQueryKeys } from '../queries/incidents';
@@ -41,10 +40,7 @@ const INCIDENT_STATUS_FILTERS: ReadonlyArray<'ALL' | IncidentStatusCode> = [
 const ROLE_DEFAULT_VALUES: RolePermissionFormValues = {
   email: '',
   role: 'mieszkaniec',
-};
-const SERVICE_DEFAULT_VALUES: ServicePermissionFormValues = {
-  email: '',
-  service: '',
+  serviceKey: '',
 };
 
 interface AdminPanelProps {
@@ -122,12 +118,7 @@ interface IncidentListViewProps {
   onFilterChange: (filter: 'ALL' | IncidentStatusCode) => void;
   onShowAllChange: (showAll: boolean) => void;
   onUpdateService: (incidentId: string, service: string) => Promise<void>;
-  onUpdate: (
-    incidentId: string,
-    checked: boolean,
-    status: IncidentStatusCode,
-    resolvedImageFile: File | null,
-  ) => Promise<void>;
+  onUpdate: (incident: Incident, values: IncidentStatusFormValues) => Promise<void>;
 }
 
 function IncidentListView({
@@ -235,7 +226,7 @@ function PermissionsView({ onBack }: { onBack: () => void }) {
   const queryClient = useQueryClient();
   const [alert, setAlert] = useState<PermissionsAlert | null>(null);
   const assignableServiceKeys = assignableServices.map((service) => service.key);
-  const servicePermissionSchema = createServicePermissionFormSchema(assignableServiceKeys);
+  const rolePermissionSchema = createRolePermissionFormSchema(assignableServiceKeys);
   const permissionsMutation = useMutation({
     mutationFn: ({
       userEmail,
@@ -251,15 +242,15 @@ function PermissionsView({ onBack }: { onBack: () => void }) {
   const roleForm = useForm({
     defaultValues: ROLE_DEFAULT_VALUES,
     validators: {
-      onSubmit: rolePermissionFormSchema,
+      onSubmit: rolePermissionSchema,
     },
     onSubmit: async ({ value }) => {
-      const permission = rolePermissionFormSchema.parse(value);
+      const permission = rolePermissionSchema.parse(value);
       try {
         await permissionsMutation.mutateAsync({
           userEmail: permission.email,
           userRole: permission.role,
-          serviceKey: null,
+          serviceKey: permission.role === 'sluzby' ? permission.serviceKey : null,
         });
         setAlert({ type: 'success', message: 'Rola użytkownika została zaktualizowana.' });
         roleForm.reset();
@@ -268,27 +259,6 @@ function PermissionsView({ onBack }: { onBack: () => void }) {
       }
     },
   });
-  const serviceForm = useForm({
-    defaultValues: SERVICE_DEFAULT_VALUES,
-    validators: {
-      onSubmit: servicePermissionSchema,
-    },
-    onSubmit: async ({ value }) => {
-      const permission = servicePermissionSchema.parse(value);
-      try {
-        await permissionsMutation.mutateAsync({
-          userEmail: permission.email,
-          userRole: 'sluzby',
-          serviceKey: permission.service,
-        });
-        setAlert({ type: 'success', message: 'Służba została przypisana do konta.' });
-        serviceForm.reset();
-      } catch {
-        setAlert({ type: 'error', message: 'Nie udało się przypisać służby.' });
-      }
-    },
-  });
-
   useEffect(() => {
     if (!alert) return;
     const timer = setTimeout(() => setAlert(null), 10000);
@@ -363,6 +333,41 @@ function PermissionsView({ onBack }: { onBack: () => void }) {
                 </fieldset>
               )}
             </roleForm.Field>
+            <roleForm.Subscribe selector={(state) => state.values.role === 'sluzby'}>
+              {(isServiceRole) =>
+                isServiceRole ? (
+                  <roleForm.Field name="serviceKey">
+                    {(field) => (
+                      <div className="space-y-2">
+                        <Label htmlFor="permissions-service">Wybierz rodzaj służby</Label>
+                        <select
+                          id="permissions-service"
+                          name={field.name}
+                          value={field.state.value}
+                          onBlur={field.handleBlur}
+                          onChange={(event) => field.handleChange(event.target.value)}
+                          aria-invalid={field.state.meta.errors.length > 0}
+                          aria-describedby="permissions-service-errors"
+                          disabled={permissionsMutation.isPending}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white"
+                        >
+                          <option value="">-- Wybierz służbę --</option>
+                          {assignableServices.map((configuredService) => (
+                            <option key={configuredService.key} value={configuredService.key}>
+                              {configuredService.label[getCurrentLocale()]}
+                            </option>
+                          ))}
+                        </select>
+                        <FieldErrors
+                          id="permissions-service-errors"
+                          errors={field.state.meta.errors}
+                        />
+                      </div>
+                    )}
+                  </roleForm.Field>
+                ) : null
+              }
+            </roleForm.Subscribe>
             <roleForm.Subscribe
               selector={(state) => [state.canSubmit, state.isSubmitting] as const}
             >
@@ -377,71 +382,6 @@ function PermissionsView({ onBack }: { onBack: () => void }) {
             </roleForm.Subscribe>
           </Card>
         </form>
-
-        <form noValidate onSubmit={(event) => submitClientForm(event, serviceForm.handleSubmit)}>
-          <Card className="p-6 space-y-4">
-            <serviceForm.Field name="email">
-              {(field) => (
-                <div className="space-y-2">
-                  <Label htmlFor="service-permissions-email">Adres e-mail użytkownika</Label>
-                  <Input
-                    id="service-permissions-email"
-                    name={field.name}
-                    type="email"
-                    value={field.state.value}
-                    onBlur={field.handleBlur}
-                    onChange={(event) => field.handleChange(event.target.value)}
-                    aria-invalid={field.state.meta.errors.length > 0}
-                    aria-describedby="service-permissions-email-errors"
-                    disabled={permissionsMutation.isPending}
-                  />
-                  <FieldErrors
-                    id="service-permissions-email-errors"
-                    errors={field.state.meta.errors}
-                  />
-                </div>
-              )}
-            </serviceForm.Field>
-            <serviceForm.Field name="service">
-              {(field) => (
-                <div className="space-y-2">
-                  <Label htmlFor="permissions-service">Wybierz rodzaj służby</Label>
-                  <select
-                    id="permissions-service"
-                    name={field.name}
-                    value={field.state.value}
-                    onBlur={field.handleBlur}
-                    onChange={(event) => field.handleChange(event.target.value)}
-                    aria-invalid={field.state.meta.errors.length > 0}
-                    aria-describedby="permissions-service-errors"
-                    disabled={permissionsMutation.isPending}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white"
-                  >
-                    <option value="">-- Wybierz służbę --</option>
-                    {assignableServices.map((configuredService) => (
-                      <option key={configuredService.key} value={configuredService.key}>
-                        {configuredService.label[getCurrentLocale()]}
-                      </option>
-                    ))}
-                  </select>
-                  <FieldErrors id="permissions-service-errors" errors={field.state.meta.errors} />
-                </div>
-              )}
-            </serviceForm.Field>
-            <serviceForm.Subscribe
-              selector={(state) => [state.canSubmit, state.isSubmitting] as const}
-            >
-              {([canSubmit, isSubmitting]) => (
-                <Button
-                  type="submit"
-                  disabled={!canSubmit || isSubmitting || permissionsMutation.isPending}
-                >
-                  Przypisz służbę
-                </Button>
-              )}
-            </serviceForm.Subscribe>
-          </Card>
-        </form>
       </div>
     </div>
   );
@@ -452,30 +392,16 @@ export function AdminPanel({ incidents, owner }: AdminPanelProps) {
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'ALL' | IncidentStatusCode>('ALL');
-  const statusMutation = useAdminIncidentStatusMutation(owner);
+  const statusMutation = useAdminIncidentStatusMutation();
   const serviceMutation = useAdminIncidentServiceMutation(owner);
-  const sortedIncidents = [...incidents].sort(
-    (first, second) => new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime(),
-  );
-  const unassignedIncidents = sortedIncidents.filter((incident) =>
-    isFallbackService(incident.service),
-  );
+  const unassignedIncidents = incidents.filter((incident) => isFallbackService(incident.service));
   const backToMenu = () => {
     setView('menu');
     setShowAll(false);
     setStatusFilter('ALL');
   };
-  const updateIncident = async (
-    incidentId: string,
-    checked: boolean,
-    adminStatus: IncidentStatusCode,
-  ) => {
-    await statusMutation.mutateAsync({
-      incidentId,
-      checked,
-      adminStatus,
-      resolvedImageFile: null,
-    });
+  const updateIncident = async (incident: Incident, values: IncidentStatusFormValues) => {
+    await statusMutation.mutateAsync({ incident, values });
   };
   const updateService = async (incidentId: string, service: string) => {
     await serviceMutation.mutateAsync({ incidentId, service });
@@ -496,7 +422,7 @@ export function AdminPanel({ incidents, owner }: AdminPanelProps) {
   return (
     <IncidentListView
       title={view === 'all' ? 'Wszystkie zgłoszenia' : 'Nieprzypisane zgłoszenia'}
-      incidents={view === 'all' ? sortedIncidents : unassignedIncidents}
+      incidents={view === 'all' ? incidents : unassignedIncidents}
       selectedIncident={selectedIncident}
       showStatusFilters={view === 'all'}
       statusFilter={statusFilter}

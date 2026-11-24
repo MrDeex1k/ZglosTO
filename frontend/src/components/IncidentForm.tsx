@@ -2,6 +2,7 @@ import { incidentSubmissionNotice } from '@zglosto/i18n';
 import { useForm } from '@tanstack/react-form';
 import { Loader2 } from 'lucide-react';
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { enabledServices, getServiceLabel, normalizeServiceKey } from '../config/services';
 import { getLocalizedText, whiteLabelConfig } from '../config/white-label';
@@ -27,6 +28,7 @@ interface IncidentFormProps {
 }
 
 export function IncidentForm({ onSubmit, reporterEmail }: IncidentFormProps) {
+  const { t } = useTranslation();
   const createIncidentMutation = useCreateIncidentMutation();
   const pendingSubmit = useRef<NewIncidentDraft | null>(null);
   const [alertState, setAlertState] = useState<{
@@ -41,7 +43,10 @@ export function IncidentForm({ onSubmit, reporterEmail }: IncidentFormProps) {
     message: '',
   });
   const enabledServiceKeys = enabledServices.map((service) => service.key);
-  const incidentSchema = createIncidentFormSchema(enabledServiceKeys);
+  const incidentSchema = createIncidentFormSchema(
+    enabledServiceKeys,
+    t(($) => $.incidents.reportForm.validation, { returnObjects: true }),
+  );
   const defaultValues: IncidentFormValues = {
     service: '',
     description: '',
@@ -100,8 +105,8 @@ export function IncidentForm({ onSubmit, reporterEmail }: IncidentFormProps) {
         setAlertState({
           isOpen: true,
           type: 'error',
-          title: 'Błąd wysyłania',
-          message: 'Nie udało się wysłać zgłoszenia. Spróbuj ponownie później.',
+          title: t(($) => $.incidents.reportForm.errorTitle),
+          message: t(($) => $.incidents.reportForm.errorMessage),
         });
       }
     },
@@ -128,7 +133,8 @@ export function IncidentForm({ onSubmit, reporterEmail }: IncidentFormProps) {
             {(field) => (
               <div className="space-y-2">
                 <Label htmlFor={field.name}>
-                  Wybierz służbę <span className="text-destructive">*</span>
+                  {t(($) => $.incidents.reportForm.service)}{' '}
+                  <span className="text-destructive">*</span>
                 </Label>
                 <Select
                   items={serviceItems}
@@ -142,7 +148,9 @@ export function IncidentForm({ onSubmit, reporterEmail }: IncidentFormProps) {
                     aria-invalid={field.state.meta.errors.length > 0}
                     aria-describedby={`${field.name}-errors`}
                   >
-                    <SelectValue placeholder="Wybierz właściwą służbę" />
+                    <SelectValue
+                      placeholder={t(($) => $.incidents.reportForm.servicePlaceholder)}
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {enabledServices.map((configuredService) => (
@@ -161,7 +169,8 @@ export function IncidentForm({ onSubmit, reporterEmail }: IncidentFormProps) {
             {(field) => (
               <div className="space-y-2">
                 <Label htmlFor={field.name}>
-                  Adres <span className="text-destructive">*</span>
+                  {t(($) => $.incidents.reportForm.address)}{' '}
+                  <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id={field.name}
@@ -185,7 +194,8 @@ export function IncidentForm({ onSubmit, reporterEmail }: IncidentFormProps) {
             {(field) => (
               <div className="space-y-2">
                 <Label htmlFor={field.name}>
-                  Opis zgłoszenia <span className="text-destructive">*</span>
+                  {t(($) => $.incidents.reportForm.description)}{' '}
+                  <span className="text-destructive">*</span>
                 </Label>
                 <Textarea
                   id={field.name}
@@ -193,7 +203,7 @@ export function IncidentForm({ onSubmit, reporterEmail }: IncidentFormProps) {
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(event) => field.handleChange(event.target.value)}
-                  placeholder="Opisz szczegółowo problem..."
+                  placeholder={t(($) => $.incidents.reportForm.descriptionPlaceholder)}
                   rows={8}
                   aria-invalid={field.state.meta.errors.length > 0}
                   aria-describedby={`${field.name}-errors`}
@@ -207,7 +217,7 @@ export function IncidentForm({ onSubmit, reporterEmail }: IncidentFormProps) {
             {(field) => (
               <div className="space-y-2">
                 <Label htmlFor={field.name}>
-                  Email <span className="text-destructive">*</span>
+                  {t(($) => $.auth.email)} <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id={field.name}
@@ -215,7 +225,7 @@ export function IncidentForm({ onSubmit, reporterEmail }: IncidentFormProps) {
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(event) => field.handleChange(event.target.value)}
-                  placeholder="np. jan.kowalski@example.com"
+                  placeholder={t(($) => $.auth.emailPlaceholder)}
                   type="email"
                   readOnly={reporterEmail !== null}
                   aria-invalid={field.state.meta.errors.length > 0}
@@ -251,10 +261,10 @@ export function IncidentForm({ onSubmit, reporterEmail }: IncidentFormProps) {
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Wysyłanie...
+                  {t(($) => $.incidents.reportForm.submitting)}
                 </>
               ) : (
-                'Wyślij zgłoszenie'
+                t(($) => $.incidents.reportForm.submit)
               )}
             </Button>
           )}

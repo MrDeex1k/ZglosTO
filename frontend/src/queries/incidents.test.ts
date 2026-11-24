@@ -202,8 +202,9 @@ it('isolates cached queues after a service reassignment for the same account', (
   const client = createAppQueryClient();
   const oldScope = serviceIncidentsQueryOptions('worker@example.test', 'roads');
   const newScope = serviceIncidentsQueryOptions('worker@example.test', 'water');
-  client.setQueryData(oldScope.queryKey, [incident]);
+  const serviceIncident = { ...incident, revision: 1 };
+  client.setQueryData(oldScope.queryKey, [serviceIncident]);
   expect(client.getQueryData(newScope.queryKey)).toBeUndefined();
-  expect(client.getQueryData(oldScope.queryKey)).toEqual([incident]);
+  expect(client.getQueryData(oldScope.queryKey)).toEqual([serviceIncident]);
   client.clear();
 });

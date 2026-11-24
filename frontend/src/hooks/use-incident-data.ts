@@ -7,7 +7,7 @@ import {
   resolvedIncidentsQueryOptions,
   serviceIncidentsQueryOptions,
 } from '../queries/incidents';
-import type { Incident } from '../types/incident';
+import type { Incident, ServiceIncident } from '../types/incident';
 
 interface UseIncidentDataOptions {
   pathname: string;
@@ -22,9 +22,10 @@ export interface IncidentData {
   incidents: Incident[];
   residentIncidents: Incident[];
   allIncidents: Incident[];
-  serviceIncidents: Incident[];
+  serviceIncidents: ServiceIncident[];
   isLoadingIncidents: boolean;
-  incidentsError: string | null;
+  incidentsError: boolean;
+  retryIncidents: () => void;
 }
 
 export function useIncidentData({
@@ -59,9 +60,11 @@ export function useIncidentData({
     residentIncidents: residentQuery.data ?? [],
     allIncidents: canLoadAdminData ? (adminQuery.data ?? []) : [],
     serviceIncidents: serviceQuery.data ?? [],
-    isLoadingIncidents: pathname === '/' && resolvedQuery.isLoading,
-    incidentsError: resolvedQuery.isError
-      ? 'Nie udało się załadować zgłoszeń. Spróbuj odświeżyć stronę.'
-      : null,
+    isLoadingIncidents:
+      pathname === '/' && resolvedQuery.isFetching && resolvedQuery.data === undefined,
+    incidentsError: resolvedQuery.isError,
+    retryIncidents: () => {
+      void resolvedQuery.refetch();
+    },
   };
 }

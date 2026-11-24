@@ -18,6 +18,9 @@ vi.mock('../lib/incident-status', () => ({
 }));
 vi.mock('../services/api', () => apiMocks);
 
+vi.mock('../app/route-views', () => ({ HomeRouteView: vi.fn() }));
+
+import { Route as homeRoute } from '../routes/_app.index';
 import { createAppQueryClient } from '../lib/query-client';
 import {
   adminIncidentsQueryOptions,
@@ -66,7 +69,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   apiMocks.fetchAllIncidents.mockResolvedValue([privateIncident]);
   apiMocks.fetchResolvedIncidents.mockResolvedValue([resolvedIncident]);
-  apiMocks.fetchServiceIncidents.mockResolvedValue([privateIncident]);
+  apiMocks.fetchServiceIncidents.mockResolvedValue([{ ...privateIncident, revision: 7 }]);
   apiMocks.fetchUserIncidents.mockResolvedValue([privateIncident]);
 });
 
@@ -75,11 +78,48 @@ describe('incident route prefetching', () => {
     const queryClient = createAppQueryClient();
     const loaderOptions = resolvedIncidentsQueryOptions();
 
-    const loaderData = await queryClient.ensureQueryData(loaderOptions);
+    await queryClient.prefetchQuery(loaderOptions);
     const componentData = await queryClient.fetchQuery(resolvedIncidentsQueryOptions());
 
-    expect(loaderData).toEqual(componentData);
+    expect(componentData).toEqual(queryClient.getQueryData(loaderOptions.queryKey));
     expect(apiMocks.fetchResolvedIncidents).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves public list errors in the query cache so the route can render', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    apiMocks.fetchResolvedIncidents.mockRejectedValueOnce(new Error('Service unavailable'));
+
+    const loader = homeRoute.options.loader;
+    if (typeof loader !== 'function') throw new Error('Missing home loader');
+    const context = { queryClient } as Parameters<typeof loader>[0]['context'];
+    expect(loader({ context } as Parameters<typeof loader>[0])).toBeUndefined();
+    await queryClient.prefetchQuery(resolvedIncidentsQueryOptions());
+    expect(queryClient.getQueryState(incidentQueryKeys.resolved())?.status).toBe('error');
+  });
+
+  it('preserves the API order for public and admin dates in DD.MM.YYYY format', async () => {
+    const queryClient = createAppQueryClient();
+    const ids = ['first', 'second'];
+    const dates = ['02.11.2026 09:00:00', '03.10.2026 09:00:00'];
+    apiMocks.fetchResolvedIncidents.mockResolvedValueOnce(
+      ids.map((id, index) => ({
+        ...resolvedIncident,
+        id_zgloszenia: id,
+        data_godzina_rozwiazania: dates[index],
+      })),
+    );
+    apiMocks.fetchAllIncidents.mockResolvedValueOnce(
+      ids.map((id, index) => ({
+        ...privateIncident,
+        id_zgloszenia: id,
+        data_godzina_zgloszenia: dates[index],
+      })),
+    );
+
+    const resolved = await queryClient.fetchQuery(resolvedIncidentsQueryOptions());
+    const admin = await queryClient.fetchQuery(adminIncidentsQueryOptions('admin@example.com'));
+    expect(resolved.map(({ id }) => id)).toEqual(ids);
+    expect(admin.map(({ id }) => id)).toEqual(ids);
   });
 
   it('keeps private cache entries isolated between session owners', async () => {
@@ -99,7 +139,10 @@ describe('incident route prefetching', () => {
     const queryClient = createAppQueryClient();
 
     await queryClient.ensureQueryData(adminIncidentsQueryOptions('admin@example.com'));
-    await queryClient.ensureQueryData(serviceIncidentsQueryOptions('service@example.com'));
+    const service = await queryClient.ensureQueryData(
+      serviceIncidentsQueryOptions('service@example.com'),
+    );
+    expect(service[0]?.revision).toBe(7);
     await queryClient.ensureQueryData(residentIncidentsQueryOptions('resident@example.com'));
 
     expect(apiMocks.fetchAllIncidents).toHaveBeenCalledTimes(1);

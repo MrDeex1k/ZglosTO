@@ -1,14 +1,16 @@
 import { useForm } from '@tanstack/react-form';
-import { isIncidentStatus, type IncidentStatusCode } from '@zglosto/contracts';
+import { isIncidentStatus } from '@zglosto/contracts';
 import { Calendar, CheckCircle2, Image as ImageIcon } from 'lucide-react';
 import { useState } from 'react';
 
 import { getServiceBadgeStyle, getServiceLabel, getServiceShortLabel } from '../config/services';
 import { serviceIncidentFormSchema, type ServiceIncidentFormValues } from '../forms/schemas';
 import { submitClientForm } from '../forms/submit';
+import { useServiceIncidentMutation } from '../hooks/use-incident-mutations';
 import { getCurrentLocale } from '../i18n';
 import { getIncidentStatusLabel } from '../lib/incident-status';
-import type { Incident } from '../types/incident';
+import { ApiResponseError } from '../services/api';
+import type { ServiceIncident } from '../types/incident';
 import { formatPolishDate } from '../utils/dateUtils';
 import { FieldErrors } from './forms/field-errors';
 import { IncidentAddressDirectionsLink } from './IncidentAddressDirectionsLink';
@@ -23,15 +25,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 interface ServiceIncidentDialogProps {
-  incident: Incident | null;
-  open: boolean;
+  incident: ServiceIncident | null;
   onOpenChange: (open: boolean) => void;
-  onUpdate: (
-    incidentId: string,
-    checked: boolean,
-    adminStatus: IncidentStatusCode,
-    resolvedImageFile: File | null,
-  ) => Promise<void>;
 }
 
 function SelectedResolutionImagePreview({ file }: Readonly<{ file: File }>) {
@@ -55,31 +50,89 @@ function SelectedResolutionImagePreview({ file }: Readonly<{ file: File }>) {
   );
 }
 
-export function ServiceIncidentDialog({
-  incident,
-  open,
-  onOpenChange,
-  onUpdate,
-}: ServiceIncidentDialogProps) {
+function ServiceIncidentInformation({ incident }: Readonly<{ incident: ServiceIncident }>) {
+  return (
+    <section className="min-w-0 space-y-6 xl:pr-6" aria-labelledby="service-incident-info">
+      <h3 id="service-incident-info" className="font-semibold text-gray-900">
+        Informacje
+      </h3>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge style={getServiceBadgeStyle(incident.service)}>
+          {getServiceShortLabel(incident.service, getCurrentLocale())}
+        </Badge>
+        <Badge
+          variant="outline"
+          className={
+            incident.adminStatus === 'resolved'
+              ? 'border-success bg-success/10 text-success'
+              : incident.adminStatus === 'in_progress'
+                ? 'border-orange-500 bg-orange-100 text-orange-700'
+                : 'border-gray-500 bg-gray-100 text-gray-700'
+          }
+        >
+          {getIncidentStatusLabel(incident.adminStatus)}
+        </Badge>
+      </div>
+
+      <div>
+        <div className="mb-1 text-gray-500">Służba odpowiedzialna</div>
+        <div className="text-gray-900">{getServiceLabel(incident.service, getCurrentLocale())}</div>
+      </div>
+
+      <div className="flex items-start gap-2">
+        <Calendar className="mt-0.5 h-4 w-4 text-gray-500" />
+        <div>
+          <div className="text-gray-500">Data zgłoszenia</div>
+          <div className="text-gray-900">{formatPolishDate(incident.createdAt)}</div>
+        </div>
+      </div>
+
+      {incident.resolvedAt !== null && (
+        <div className="flex items-start gap-2">
+          <CheckCircle2 className="mt-0.5 h-4 w-4 text-success" />
+          <div>
+            <div className="text-gray-500">Data rozwiązania</div>
+            <div className="text-gray-900">{formatPolishDate(incident.resolvedAt)}</div>
+          </div>
+        </div>
+      )}
+
+      <div>
+        <div className="mb-1 text-gray-500">Opis zgłoszenia</div>
+        <p className="text-gray-900">{incident.description}</p>
+      </div>
+
+      <div>
+        <div className="mb-1 text-gray-500">Adres</div>
+        <IncidentAddressDirectionsLink address={incident.address} />
+      </div>
+
+      <div>
+        <div className="mb-1 text-gray-500">Email zgłaszającego</div>
+        <div className="break-all text-gray-900">{incident.email}</div>
+      </div>
+    </section>
+  );
+}
+
+export function ServiceIncidentDialog({ incident, onOpenChange }: ServiceIncidentDialogProps) {
   if (!incident) return null;
 
   return (
     <ServiceIncidentDialogContent
       key={incident.id}
       incident={incident}
-      open={open}
       onOpenChange={onOpenChange}
-      onUpdate={onUpdate}
     />
   );
 }
 
 function ServiceIncidentDialogContent({
   incident,
-  open,
   onOpenChange,
-  onUpdate,
-}: Omit<ServiceIncidentDialogProps, 'incident'> & { incident: Incident }) {
+}: Omit<ServiceIncidentDialogProps, 'incident'> & { incident: ServiceIncident }) {
+  const mutation = useServiceIncidentMutation();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const isFixed = incident.adminStatus === 'resolved';
   const statusItems = (['reported', 'in_progress', 'resolved'] as const).map((status) => ({
@@ -98,18 +151,27 @@ function ServiceIncidentDialogContent({
     },
     onSubmit: async ({ value }) => {
       const update = serviceIncidentFormSchema.parse(value);
-      setSubmitError(null);
+      if (submitError !== null) return;
       try {
-        await onUpdate(incident.id, update.checked, update.adminStatus, update.resolvedImageFile);
+        await mutation.mutateAsync({ incident, values: update });
         onOpenChange(false);
-      } catch {
-        setSubmitError('Nie udało się zapisać zmian. Spróbuj ponownie.');
+      } catch (error) {
+        setSubmitError(
+          error instanceof ApiResponseError && error.status === 409
+            ? 'Zgłoszenie zmieniło się w trakcie edycji. Zamknij okno i otwórz zgłoszenie ponownie, aby sprawdzić aktualne dane.'
+            : 'Zapis nie został potwierdzony. Zamknij okno i otwórz zgłoszenie ponownie, aby sprawdzić, które zmiany zapisano.',
+        );
       }
     },
   });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!form.state.isSubmitting) onOpenChange(open);
+      }}
+    >
       <DialogContent className={INCIDENT_MANAGEMENT_DIALOG_CONTENT_CLASS_NAME}>
         <DialogHeader className="pr-10">
           <DialogTitle>Szczegóły zgłoszenia - Panel Służby</DialogTitle>
@@ -119,69 +181,7 @@ function ServiceIncidentDialogContent({
         </DialogHeader>
 
         <div className={INCIDENT_DIALOG_THREE_SECTION_CLASS_NAME}>
-          <section className="min-w-0 space-y-6 xl:pr-6" aria-labelledby="service-incident-info">
-            <h3 id="service-incident-info" className="font-semibold text-gray-900">
-              Informacje
-            </h3>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge style={getServiceBadgeStyle(incident.service)}>
-                {getServiceShortLabel(incident.service, getCurrentLocale())}
-              </Badge>
-              <Badge
-                variant="outline"
-                className={
-                  incident.adminStatus === 'resolved'
-                    ? 'border-success bg-success/10 text-success'
-                    : incident.adminStatus === 'in_progress'
-                      ? 'border-orange-500 bg-orange-100 text-orange-700'
-                      : 'border-gray-500 bg-gray-100 text-gray-700'
-                }
-              >
-                {getIncidentStatusLabel(incident.adminStatus)}
-              </Badge>
-            </div>
-
-            <div>
-              <div className="mb-1 text-gray-500">Służba odpowiedzialna</div>
-              <div className="text-gray-900">
-                {getServiceLabel(incident.service, getCurrentLocale())}
-              </div>
-            </div>
-
-            <div className="flex items-start gap-2">
-              <Calendar className="mt-0.5 h-4 w-4 text-gray-500" />
-              <div>
-                <div className="text-gray-500">Data zgłoszenia</div>
-                <div className="text-gray-900">{formatPolishDate(incident.createdAt)}</div>
-              </div>
-            </div>
-
-            {incident.resolvedAt !== null && (
-              <div className="flex items-start gap-2">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 text-success" />
-                <div>
-                  <div className="text-gray-500">Data rozwiązania</div>
-                  <div className="text-gray-900">{formatPolishDate(incident.resolvedAt)}</div>
-                </div>
-              </div>
-            )}
-
-            <div>
-              <div className="mb-1 text-gray-500">Opis zgłoszenia</div>
-              <p className="text-gray-900">{incident.description}</p>
-            </div>
-
-            <div>
-              <div className="mb-1 text-gray-500">Adres</div>
-              <IncidentAddressDirectionsLink address={incident.address} />
-            </div>
-
-            <div>
-              <div className="mb-1 text-gray-500">Email zgłaszającego</div>
-              <div className="break-all text-gray-900">{incident.email}</div>
-            </div>
-          </section>
+          <ServiceIncidentInformation incident={incident} />
 
           <section
             className={`${INCIDENT_DIALOG_DIVIDED_SECTION_CLASS_NAME} xl:pr-6`}
@@ -319,8 +319,10 @@ function ServiceIncidentDialogContent({
                     <input
                       type="file"
                       accept="image/png,image/jpeg"
-                      className="hidden"
+                      className="peer sr-only"
                       id="resolved-image-upload"
+                      aria-invalid={field.state.meta.errors.length > 0}
+                      aria-describedby="resolved-image-upload-errors"
                       onChange={(event) => {
                         const file = event.target.files?.[0];
                         if (!file) return;
@@ -329,7 +331,7 @@ function ServiceIncidentDialogContent({
                     />
                     <label
                       htmlFor="resolved-image-upload"
-                      className="cursor-pointer rounded-lg bg-gray-100 px-3 py-2 text-gray-800 hover:bg-gray-200"
+                      className="cursor-pointer rounded-lg bg-gray-100 px-3 py-2 text-gray-800 hover:bg-gray-200 peer-focus-visible:ring-2 peer-focus-visible:ring-ring"
                     >
                       Wybierz zdjęcie
                     </label>
@@ -357,7 +359,7 @@ function ServiceIncidentDialogContent({
                 <Button
                   type="submit"
                   className="w-full bg-brand-primary hover:bg-brand-primary/90"
-                  disabled={!canSubmit || isSubmitting}
+                  disabled={!canSubmit || isSubmitting || submitError !== null}
                 >
                   Zapisz zmiany
                 </Button>

@@ -28,8 +28,8 @@ describe('route-scoped incident loading', () => {
     ['/dashboard/mieszkaniec', true, false],
     ['/', true, true],
     ['/', false, false],
-  ])('reports active public loading on %s (fetching: %s)', (pathname, isLoading, expected) => {
-    query.mockReturnValue({ isPending: true, isLoading });
+  ])('reports active public loading on %s (fetching: %s)', (pathname, isFetching, expected) => {
+    query.mockReturnValue({ isPending: true, isFetching });
     expect(renderToStaticMarkup(createElement(Probe, { pathname }))).toBe(
       `<span>${expected}</span>`,
     );

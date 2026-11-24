@@ -1,3 +1,4 @@
+import type { QueryClient } from '@tanstack/react-query';
 import type { UserRole } from '@zglosto/contracts';
 
 import {
@@ -7,18 +8,21 @@ import {
 } from '../queries/incidents';
 import { requireUserRole, type AuthenticatedRouteUser } from './router-auth';
 
-export function dashboardIncidentQueryOptions(
+export async function ensureDashboardIncidentData(
+  queryClient: QueryClient,
   user: AuthenticatedRouteUser,
   expectedRole: UserRole,
-) {
+): Promise<void> {
   requireUserRole(user, expectedRole);
 
   switch (expectedRole) {
     case 'admin':
-      return adminIncidentsQueryOptions(user.email);
+      await queryClient.ensureQueryData(adminIncidentsQueryOptions(user.email));
+      return;
     case 'mieszkaniec':
-      return residentIncidentsQueryOptions(user.email);
+      await queryClient.ensureQueryData(residentIncidentsQueryOptions(user.email));
+      return;
     case 'sluzby':
-      return serviceIncidentsQueryOptions(user.email);
+      await queryClient.ensureQueryData(serviceIncidentsQueryOptions(user.email, user.serviceKey));
   }
 }

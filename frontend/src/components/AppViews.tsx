@@ -1,9 +1,10 @@
 import type { IncidentStatusCode, UserRole } from '@zglosto/contracts';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getServiceLabel } from '../config/services';
 import { getCurrentLocale } from '../i18n';
 import { getIncidentStatusLabel } from '../lib/incident-status';
-import type { Incident, NewIncidentDraft } from '../types/incident';
+import type { Incident, NewIncidentDraft, ServiceIncident } from '../types/incident';
 import { Footer } from './Footer';
 import { Header } from './Header';
 import { IncidentCard } from './IncidentCard';
@@ -119,22 +120,15 @@ export function ResidentDashboard({
   );
 }
 
-interface ServiceDashboardProps extends IncidentDialogProps {
+interface ServiceDashboardProps {
   navigation: NavigationProps;
   userDisplayName: string;
   serviceKey: string | null;
-  incidents: Incident[];
+  incidents: ServiceIncident[];
   statusFilter: 'ALL' | IncidentStatusCode;
   visibleCount: number;
   onStatusFilterChange: (status: 'ALL' | IncidentStatusCode) => void;
   onShowMore: () => void;
-  onIncidentClick: (incident: Incident) => void;
-  onUpdate: (
-    incidentId: string,
-    checked: boolean,
-    status: IncidentStatusCode,
-    resolvedImageFile: File | null,
-  ) => Promise<void>;
 }
 
 export function ServiceDashboard({
@@ -144,14 +138,10 @@ export function ServiceDashboard({
   incidents,
   statusFilter,
   visibleCount,
-  selectedIncident,
-  isOpen,
-  onOpenChange,
   onStatusFilterChange,
   onShowMore,
-  onIncidentClick,
-  onUpdate,
 }: ServiceDashboardProps) {
+  const [selectedIncident, setSelectedIncident] = useState<ServiceIncident | null>(null);
   const filteredIncidents =
     statusFilter === 'ALL'
       ? incidents
@@ -202,7 +192,7 @@ export function ServiceDashboard({
                   <IncidentCard
                     key={incident.id}
                     incident={incident}
-                    onClick={() => onIncidentClick(incident)}
+                    onClick={() => setSelectedIncident(incident)}
                   />
                 ))}
               </div>
@@ -219,9 +209,9 @@ export function ServiceDashboard({
       </main>
       <ServiceIncidentDialog
         incident={selectedIncident}
-        open={isOpen}
-        onOpenChange={onOpenChange}
-        onUpdate={onUpdate}
+        onOpenChange={(open) => {
+          if (!open) setSelectedIncident(null);
+        }}
       />
     </AppShell>
   );
@@ -236,7 +226,8 @@ interface HomeViewProps extends IncidentDialogProps {
   incidents: Incident[];
   visibleCount: number;
   isLoading: boolean;
-  error: string | null;
+  error: boolean;
+  onRetry: () => void;
   onShowMore: () => void;
   onIncidentClick: (incident: Incident) => void;
 }
@@ -251,6 +242,7 @@ export function HomeView({
   visibleCount,
   isLoading,
   error,
+  onRetry,
   selectedIncident,
   isOpen,
   onOpenChange,
@@ -289,13 +281,15 @@ export function HomeView({
               </div>
             ) : error ? (
               <div className="text-center py-12 bg-white rounded-lg border border-destructive/30">
-                <p className="text-destructive mb-4">{error}</p>
+                <p role="alert" className="text-destructive mb-4">
+                  {t(($) => $.home.loadError)}
+                </p>
                 <Button
                   variant="outline"
-                  onClick={() => window.location.reload()}
+                  onClick={onRetry}
                   className="border-destructive/30 text-destructive hover:bg-destructive/10"
                 >
-                  {t(($) => $.common.refresh)}
+                  {t(($) => $.home.retry)}
                 </Button>
               </div>
             ) : incidents.length === 0 ? (
