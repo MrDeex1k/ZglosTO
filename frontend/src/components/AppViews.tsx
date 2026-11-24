@@ -125,6 +125,7 @@ interface ServiceDashboardProps {
   userDisplayName: string;
   serviceKey: string | null;
   incidents: ServiceIncident[];
+  retryIncidents: (() => void) | null;
   statusFilter: 'ALL' | IncidentStatusCode;
   visibleCount: number;
   onStatusFilterChange: (status: 'ALL' | IncidentStatusCode) => void;
@@ -136,11 +137,13 @@ export function ServiceDashboard({
   userDisplayName,
   serviceKey,
   incidents,
+  retryIncidents,
   statusFilter,
   visibleCount,
   onStatusFilterChange,
   onShowMore,
 }: ServiceDashboardProps) {
+  const { t } = useTranslation();
   const [selectedIncident, setSelectedIncident] = useState<ServiceIncident | null>(null);
   const filteredIncidents =
     statusFilter === 'ALL'
@@ -162,7 +165,14 @@ export function ServiceDashboard({
             }
           />
           <h3 className="text-gray-900 mb-6">Zgłoszenia dla Twojej służby</h3>
-          {incidents.length === 0 ? (
+          {retryIncidents !== null ? (
+            <div className="rounded-lg border bg-card p-6 text-center">
+              <p role="alert">{t(($) => $.incidents.management.loadFailed)}</p>
+              <Button type="button" variant="outline" className="mt-3" onClick={retryIncidents}>
+                {t(($) => $.home.retry)}
+              </Button>
+            </div>
+          ) : incidents.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-lg border">
               <p className="text-gray-500">Brak zgłoszeń dla tej służby</p>
             </div>

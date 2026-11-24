@@ -41,11 +41,11 @@ export async function saveServiceIncident(
       ? null
       : await stageResolvedImageService(incident.id, resolvedImageFile);
   const revision =
-    adminStatus === incident.adminStatus
+    checked === incident.checked
       ? incident.revision
-      : await updateIncidentStatusService(incident.id, adminStatus, incident.revision);
-  if (checked !== incident.checked) {
-    await updateIncidentVerificationService(incident.id, checked, revision);
+      : await updateIncidentVerificationService(incident.id, checked, incident.revision);
+  if (adminStatus !== incident.adminStatus) {
+    await updateIncidentStatusService(incident.id, adminStatus, revision);
   }
   if (uploadId !== null) {
     await attachResolvedImageService(incident.id, uploadId);

@@ -102,7 +102,7 @@ it('uses the returned revision in the next PATCH instead of guessing it', async 
 
   expect(fetch).toHaveBeenNthCalledWith(
     1,
-    '/api/sluzby/incydenty/report-1/status',
+    '/api/sluzby/incydenty/report-1/sprawdzenie',
     expect.objectContaining({
       method: 'PATCH',
       headers: expect.objectContaining({ 'If-Match': '"incident-7"' }),
@@ -110,11 +110,34 @@ it('uses the returned revision in the next PATCH instead of guessing it', async 
   );
   expect(fetch).toHaveBeenNthCalledWith(
     2,
-    '/api/sluzby/incydenty/report-1/sprawdzenie',
+    '/api/sluzby/incydenty/report-1/status',
     expect.objectContaining({
       method: 'PATCH',
       headers: expect.objectContaining({ 'If-Match': '"incident-12"' }),
     }),
+  );
+});
+
+it('can finish resolving a report after verification succeeded and status failed', async () => {
+  const verified = { ...incident, checked: true, revision: 8 };
+  const fetch = stubFetch()
+    .mockResolvedValueOnce(Response.json({ success: true, incydent: updatedIncident, revision: 8 }))
+    .mockResolvedValueOnce(new Response(null, { status: 503 }))
+    .mockResolvedValueOnce(
+      Response.json({ success: true, incydent: updatedIncident, revision: 9 }),
+    );
+
+  await expect(saveServiceIncident(incident, changes)).rejects.toMatchObject({ status: 503 });
+  await expect(saveServiceIncident(verified, changes)).resolves.toBeUndefined();
+
+  expect(fetch.mock.calls.map(([url]) => url)).toEqual([
+    '/api/sluzby/incydenty/report-1/sprawdzenie',
+    '/api/sluzby/incydenty/report-1/status',
+    '/api/sluzby/incydenty/report-1/status',
+  ]);
+  expect(fetch).toHaveBeenLastCalledWith(
+    '/api/sluzby/incydenty/report-1/status',
+    expect.objectContaining({ headers: expect.objectContaining({ 'If-Match': '"incident-8"' }) }),
   );
 });
 
@@ -141,8 +164,8 @@ it('stops on a revision conflict without attaching a staged photo', async () => 
   expect(fetch.mock.calls.map(([url]) => url)).toEqual([
     '/api/sluzby/incydenty/report-1/obrazy/uploads',
     uploadUrl,
-    '/api/sluzby/incydenty/report-1/status',
     '/api/sluzby/incydenty/report-1/sprawdzenie',
+    '/api/sluzby/incydenty/report-1/status',
   ]);
 });
 

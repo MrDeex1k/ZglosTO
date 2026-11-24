@@ -23,6 +23,7 @@ export interface IncidentData {
   residentIncidents: Incident[];
   allIncidents: Incident[];
   serviceIncidents: ServiceIncident[];
+  retryServiceIncidents: (() => void) | null;
   isLoadingIncidents: boolean;
   incidentsError: boolean;
   retryIncidents: () => void;
@@ -60,6 +61,11 @@ export function useIncidentData({
     residentIncidents: residentQuery.data ?? [],
     allIncidents: canLoadAdminData ? (adminQuery.data ?? []) : [],
     serviceIncidents: serviceQuery.data ?? [],
+    retryServiceIncidents: serviceQuery.isError
+      ? () => {
+          void serviceQuery.refetch();
+        }
+      : null,
     isLoadingIncidents:
       pathname === '/' && resolvedQuery.isFetching && resolvedQuery.data === undefined,
     incidentsError: resolvedQuery.isError,

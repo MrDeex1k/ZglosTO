@@ -2,6 +2,7 @@ import { useForm } from '@tanstack/react-form';
 import { isIncidentStatus } from '@zglosto/contracts';
 import { Calendar, CheckCircle2, Image as ImageIcon } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { getServiceBadgeStyle, getServiceLabel, getServiceShortLabel } from '../config/services';
 import { serviceIncidentFormSchema, type ServiceIncidentFormValues } from '../forms/schemas';
@@ -132,6 +133,7 @@ function ServiceIncidentDialogContent({
   incident,
   onOpenChange,
 }: Omit<ServiceIncidentDialogProps, 'incident'> & { incident: ServiceIncident }) {
+  const { t } = useTranslation();
   const mutation = useServiceIncidentMutation();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const isFixed = incident.adminStatus === 'resolved';
@@ -158,8 +160,8 @@ function ServiceIncidentDialogContent({
       } catch (error) {
         setSubmitError(
           error instanceof ApiResponseError && error.status === 409
-            ? 'Zgłoszenie zmieniło się w trakcie edycji. Zamknij okno i otwórz zgłoszenie ponownie, aby sprawdzić aktualne dane.'
-            : 'Zapis nie został potwierdzony. Zamknij okno i otwórz zgłoszenie ponownie, aby sprawdzić, które zmiany zapisano.',
+            ? t(($) => $.incidents.management.conflict)
+            : t(($) => $.incidents.management.saveUnconfirmed),
         );
       }
     },

@@ -69,6 +69,14 @@ export const plPLTranslation = {
     errorTitle: 'Ups...',
   },
   incidents: {
+    management: {
+      conflict:
+        'Zgłoszenie zmieniło się w trakcie edycji. Zamknij okno i otwórz zgłoszenie ponownie, aby sprawdzić aktualne dane.',
+      saveUnconfirmed:
+        'Zapis nie został potwierdzony. Zamknij okno i otwórz zgłoszenie ponownie, aby sprawdzić, które zmiany zapisano.',
+      loadFailed: 'Nie udało się pobrać aktualnej listy zgłoszeń.',
+      openDetails: 'Otwórz szczegóły zgłoszenia {{description}}',
+    },
     submission: {
       acceptedTitle: 'Zgłoszenie przyjęte',
       acceptedMessage: 'Zgłoszenie zostało przyjęte w systemie. Służba obsługująca: {{service}}.',
@@ -552,6 +560,14 @@ export const enTranslation = {
     errorTitle: 'Oops...',
   },
   incidents: {
+    management: {
+      conflict:
+        'The report changed while you were editing it. Close this window and reopen the report to review the current data.',
+      saveUnconfirmed:
+        'The save could not be confirmed. Close this window and reopen the report to see which changes were saved.',
+      loadFailed: 'Could not load the latest reports.',
+      openDetails: 'Open report details for {{description}}',
+    },
     submission: {
       acceptedTitle: 'Report received',
       acceptedMessage:
