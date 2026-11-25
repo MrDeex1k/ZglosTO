@@ -96,11 +96,14 @@ if (!app.requestSingleInstanceLock()) {
     }
   };
 
-  void app.whenReady().then(() => {
+  async function start() {
+    await app.whenReady();
     showWindow();
     app.on('activate', showWindow);
     app.on('second-instance', showWindow);
-  });
+  }
+
+  void start();
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();
   });

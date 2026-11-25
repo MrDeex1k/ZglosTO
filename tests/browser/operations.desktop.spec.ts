@@ -120,8 +120,12 @@ test('packaged Electron restricts operations access and retains the session afte
   });
   server.listen(14435, '127.0.0.1');
 
-  const env = { ...process.env };
-  delete env.ELECTRON_RUN_AS_NODE;
+  const env = Object.fromEntries(
+    Object.entries(process.env).filter(
+      (entry): entry is [string, string] =>
+        entry[0] !== 'ELECTRON_RUN_AS_NODE' && typeof entry[1] === 'string',
+    ),
+  );
   const launch = () =>
     _electron.launch({
       executablePath,

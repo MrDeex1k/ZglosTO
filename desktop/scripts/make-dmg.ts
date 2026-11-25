@@ -5,7 +5,9 @@ if (process.platform !== 'darwin') throw new Error('Obraz DMG można utworzyć n
 
 const product = 'ZgłosTO Desktop';
 const output = resolve('out');
-const source = resolve(output, `${product}-darwin-${process.arch}`, `${product}.app`);
+const source = resolve(output, `${product}-darwin-${process.arch}`);
+const app = resolve(source, `${product}.app`);
+execFileSync('codesign', ['--force', '--deep', '--sign', '-', app], { stdio: 'inherit' });
 execFileSync(
   'hdiutil',
   [

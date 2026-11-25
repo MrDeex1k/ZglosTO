@@ -8,7 +8,7 @@ test('a release targets the operations page of a specific HTTPS instance', () =>
     'https://city.example.com:8443/operacje',
   );
   assert.throws(() => operationsURL('http://localhost:1235'));
-  assert.throws(() => operationsURL('https://login@city.example.com'));
+  assert.throws(() => operationsURL('https://login@example.test'));
   assert.throws(() => operationsURL('https://city.example.com/dashboard'));
   assert.throws(() => operationsURL('https://city.example.com/?untrusted=true'));
 });

@@ -58,7 +58,7 @@
     "mobile:demo:seed": "./scripts/mobile-demo.sh seed",
     "mobile:demo:status": "./scripts/mobile-demo.sh status",
     "mobile:demo:up": "./scripts/mobile-demo.sh up",
-    "mobile:regression": "./Mobile/scripts/run-phase7-regression.sh",
+    "mobile:regression": "sh ./Mobile/scripts/run-mobile-e2e.sh",
     "lint": "bun run --bun oxlint",
     "lint:fix": "bun run --bun oxlint --fix",
     "format": "bun run --bun oxfmt",

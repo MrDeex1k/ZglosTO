@@ -1,16 +1,18 @@
 import {
   context,
+  logs,
   metrics,
   propagation,
+  SeverityNumber,
   SpanStatusCode,
   SpanKind,
   trace,
   type Attributes,
   type Context,
+  type LogRecord,
   type TextMapGetter,
   type TextMapSetter,
 } from '@opentelemetry/api';
-import { logs, SeverityNumber, type AnyValueMap } from '@opentelemetry/api-logs';
 
 export type ObservabilityMode = 'disabled' | 'external' | 'local';
 
@@ -170,7 +172,7 @@ export function setGauge(name: string, value: number, attributes: Attributes = {
 }
 
 export interface TelemetryLogRecord {
-  attributes?: AnyValueMap;
+  attributes?: NonNullable<LogRecord['attributes']>;
   body: string;
   severity: 'debug' | 'error' | 'fatal' | 'info' | 'warn';
 }

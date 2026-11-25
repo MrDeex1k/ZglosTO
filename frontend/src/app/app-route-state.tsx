@@ -63,9 +63,13 @@ const AppRouteStateContext = createContext<AppRouteState | null>(null);
 export function AppRouteStateProvider({ children }: Readonly<{ children: ReactNode }>) {
   const { data: session, isPending } = useSession();
   return (
-    <SessionAppRouteStateProvider session={session} isSessionLoading={isPending}>
+    <ScopedAppRouteStateProvider
+      key={sessionScope(session)}
+      session={session}
+      isSessionLoading={isPending}
+    >
       {children}
-    </SessionAppRouteStateProvider>
+    </ScopedAppRouteStateProvider>
   );
 }
 
@@ -77,16 +81,18 @@ interface SessionAppRouteStateProps {
 }
 
 export function SessionAppRouteStateProvider(props: Readonly<SessionAppRouteStateProps>) {
-  const { session } = props;
+  return <ScopedAppRouteStateProvider key={sessionScope(props.session)} {...props} />;
+}
+
+function sessionScope(session: AuthSession | null): string {
   // Remount local dialogs/forms at the session boundary: query eviction alone does
   // not discard a selected private incident or an unfinished report from React state.
-  const scope = JSON.stringify([
+  return JSON.stringify([
     session?.session.id ?? null,
     session?.user.id ?? null,
     session?.user.uprawnienia ?? null,
     session?.user.serviceKey ?? null,
   ]);
-  return <ScopedAppRouteStateProvider key={scope} {...props} />;
 }
 
 function ScopedAppRouteStateProvider({
