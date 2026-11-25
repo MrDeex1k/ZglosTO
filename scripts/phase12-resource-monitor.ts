@@ -187,7 +187,8 @@ process.once('SIGTERM', () => {
 // eslint-disable-next-line no-unmodified-loop-condition
 while (!stopRequested && Date.now() < deadline) {
   try {
-    const ids = new Set(projectContainerIds(project));
+    const projectIds = new Set(projectContainerIds(project));
+    const ids = new Set(projectIds);
     for (const name of includedNames) {
       const id = namedContainerId(name);
       if (id !== null) ids.add(id);
@@ -202,6 +203,7 @@ while (!stopRequested && Date.now() < deadline) {
     const rows = parseStats(
       docker(['stats', '--no-stream', '--format', '{{json .}}', ...Array.from(ids)]),
     );
+    const containerSamples: ContainerPeak[] = [];
     let totalCpuPercent = 0;
     let totalMemoryBytes = 0;
     let observedContainers = 0;
@@ -226,7 +228,7 @@ while (!stopRequested && Date.now() < deadline) {
       observedContainers += 1;
 
       const previous = peaks.get(row.Name);
-      peaks.set(row.Name, {
+      containerSamples.push({
         id: row.ID,
         name: row.Name,
         service,
@@ -238,6 +240,13 @@ while (!stopRequested && Date.now() < deadline) {
       });
     }
 
+    if (!containerSamples.some(({ id }) => projectIds.has(id))) {
+      // The optional model runner alone does not represent a stack measurement.
+      // eslint-disable-next-line no-await-in-loop
+      await sleep(intervalMilliseconds);
+      continue;
+    }
+    for (const peak of containerSamples) peaks.set(peak.name, peak);
     samples += 1;
     maximumObservedContainers = Math.max(maximumObservedContainers, observedContainers);
     if (totalCpuPercent > maximumTotalCpuPercent) {
@@ -270,6 +279,7 @@ const result = {
   hostClassification: 'macos-arm64-orbstack',
   startedAt: startedAt.toISOString(),
   finishedAt: finishedAt.toISOString(),
+  completion: stopRequested ? 'signal' : 'deadline',
   durationSeconds: (finishedAt.getTime() - startedAt.getTime()) / 1000,
   requestedDurationSeconds: durationSeconds,
   intervalMilliseconds,

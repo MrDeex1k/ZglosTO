@@ -1,9 +1,14 @@
 import { createHash } from 'node:crypto';
-import type { TransientStore } from '@zglosto/transient-store';
+import type { RedisTransientStore } from '@zglosto/transient-store';
+
+type ReplayStore = Pick<
+  RedisTransientStore,
+  'connect' | 'get' | 'getOrCreatePersistent' | 'acquireLease'
+>;
 
 // A new Redis generation must outlive all signatures issued before data loss.
 // Deploy Redis with noeviction: evicting live nonce keys would permit replay.
-export function sharedNonceConsumer(store: TransientStore | null, skewSeconds: number) {
+export function sharedNonceConsumer(store: ReplayStore | null, skewSeconds: number) {
   const epochKey = 'llm:replay:epoch';
   const windowMs = (2 * skewSeconds + 1) * 1_000;
   let connection: Promise<void> | null = null;
@@ -15,12 +20,13 @@ export function sharedNonceConsumer(store: TransientStore | null, skewSeconds: n
       connection = null;
     });
     await connection;
-    let readyAt = await store.get(epochKey);
-    if (readyAt === null) {
-      await store.acquireLease(epochKey, String(Date.now() + windowMs), 86_400_000);
-      readyAt = await store.get(epochKey);
-    }
-    if (readyAt === null || !/^\d+$/u.test(readyAt) || Date.now() < Number(readyAt)) {
+    // Preserve the existing generation and remove its legacy TTL atomically.
+    const readyAt = await store.getOrCreatePersistent(epochKey, String(Date.now() + windowMs));
+    if (
+      !/^\d+$/u.test(readyAt) ||
+      !Number.isSafeInteger(Number(readyAt)) ||
+      Date.now() < Number(readyAt)
+    ) {
       throw new Error('Shared replay protection is warming up');
     }
     return readyAt;

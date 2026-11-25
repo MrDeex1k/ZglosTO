@@ -5,7 +5,13 @@
 Podstawowy `docker compose up` nie pobiera ani nie uruchamia modelu. `llm_gateway` działa
 wtedy z `LLM_RUNTIME=disabled`, a backend zapisuje zgłoszenie z kontrolowanym fallbackiem.
 
-Inferencję włącza osobny wariant:
+Inferencję włącza osobny wariant z lokalnym Redisem. Gateway używa Redisa do atomowego
+odrzucania powtórzeń podpisanych żądań we wszystkich replikach. Przed uruchomieniem
+ustaw w `.env` ścieżki `REDIS_ACL_FILE`, `REDIS_URL_SECRET_FILE` oraz
+`RATE_LIMIT_HMAC_KEY_SECRET_FILE` zgodnie z [konfiguracją Redis](environment-variables.md).
+Użytkownik gatewaya potrzebuje uprawnień `GET`, `SET`, `PERSIST` i `EVAL`
+w swoim prefiksie kluczy. Po utracie danych Redis gateway czeka przez okno ochrony
+przed replay, zanim zacznie przyjmować podpisane żądania.
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.llm.yml -f docker-compose.redis.local.yml up -d --build
@@ -14,7 +20,8 @@ docker compose -f docker-compose.yml -f docker-compose.llm.yml -f docker-compose
 Wymagany jest włączony [Docker Model Runner](https://docs.docker.com/ai/model-runner/) oraz
 Docker Compose obsługujący top-level `models` (minimum 2.38).
 
-W produkcyjnym selektorze odpowiada temu `LLM_MODE=local`. `LLM_MODE=external` nie
+W produkcyjnym selektorze ustaw `LLM_MODE=local` oraz `REDIS_MODE=local` lub
+`REDIS_MODE=external`. `LLM_MODE=external` nie
 uruchamia DMR: dodaje adapter API zgodnego z OpenAI, izolowaną sieć egress i plik klucza
 API montowany wyłącznie do gatewaya. `LLM_MODE=disabled` pozostaje domyślne.
 

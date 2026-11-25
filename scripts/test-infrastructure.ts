@@ -108,25 +108,48 @@ const dockerMock = `#!${process.execPath}
 const fs = require('node:fs');
 const args = process.argv.slice(2);
 fs.appendFileSync(process.env.MOCK_LOG, JSON.stringify(args)+'\\n');
-if (args[0] === 'inspect') {
-  console.log(process.env.MOCK_FORCE_KILL && args.at(-1).includes(process.env.MOCK_FORCE_KILL) ? 137 : 0);
-  process.exit(0);
-}
-const commands = ['ps','stop','start','run','exec','up'];
+const commands = ['config','ps','stop','start','run','exec','up'];
 const position = args.findIndex(arg => commands.includes(arg));
 const command = args[position];
 const tail = args.slice(position+1);
 let stopped = new Set(JSON.parse(fs.readFileSync(process.env.MOCK_STATE,'utf8')));
-if (command === 'ps') {
-  const service = tail.at(-1);
-  if (!stopped.has(service)) {
-    console.log('id-'+service+'-1');
-    if (service === 'media_worker') console.log('id-media_worker-2');
+if (args[0] === 'inspect') {
+  const id = args.at(-1);
+  const service = id.replace(/^id-/, '').replace(/-[12]$/, '');
+  if (args[2].includes('ExitCode')) {
+    console.log(process.env.MOCK_FORCE_KILL && id.includes(process.env.MOCK_FORCE_KILL) ? 137 : 0);
+  } else if (process.env.MOCK_RESTARTING === id) {
+    console.log('restarting');
+  } else {
+    console.log(stopped.has(service) || stopped.has(id) ? 'exited' : 'running');
   }
+  process.exit(0);
+}
+if (command === 'config') {
+  if (tail.includes('--environment')) {
+    for (const name of ['COMPOSE_FILE','COMPOSE_PATH_SEPARATOR']) {
+      if (process.env[name]) console.log(name+'='+process.env[name]);
+    }
+  } else if (process.env.MOCK_FAIL === 'overlay' && args.some(arg => arg.endsWith('storage.operations.yml'))) {
+    process.exit(19);
+  }
+} else if (command === 'ps') {
+  const service = tail.at(-1);
+  if (process.env.MOCK_PS_FAIL === service) process.exit(23);
+  console.log('id-'+service+'-1');
+  if (service === 'media_worker') console.log('id-media_worker-2');
 } else if (command === 'stop') {
   stopped.add(tail.at(-1));
 } else if (command === 'start') {
-  stopped.delete(tail.at(-1));
+  if (args[0] === 'start') {
+    for (const id of tail) {
+      stopped.delete(id);
+      stopped.delete(id.replace(/^id-/, '').replace(/-[12]$/, ''));
+    }
+  } else {
+    stopped.delete(tail.at(-1));
+    if (tail.at(-1) === 'media_worker') stopped.delete('id-media_worker-2');
+  }
 } else if (command === 'up') {
   throw Error('Must preserve existing replicas with start');
 } else {
@@ -160,8 +183,8 @@ function maintenanceFixture() {
     MOCK_STATE: state,
     MOCK_LOG: log,
   };
-  const run = (script: string, backup: string, overrides = {}) =>
-    spawnSync('bash', [join(root, 'scripts', script), backup], {
+  const run = (script: string, backup: string, overrides = {}, options: string[] = []) =>
+    spawnSync('bash', [join(root, 'scripts', script), backup, ...options], {
       cwd: root,
       env: { ...environment, ...overrides },
       encoding: 'utf8',
@@ -207,6 +230,34 @@ test('backup failure resumes services; failed restore leaves writers stopped', (
     const stopped = JSON.parse(readFileSync(fixture.state, 'utf8')) as string[];
     for (const writer of ['nginx', 'authorization', 'backend', 'media_worker'])
       assert.ok(stopped.includes(writer));
+  } finally {
+    rmSync(fixture.directory, { recursive: true, force: true });
+  }
+});
+
+test('maintenance rejects restarting writers before it stops any service', () => {
+  const fixture = maintenanceFixture();
+  try {
+    const result = fixture.run('backup-compose.sh', join(fixture.directory, 'backup'), {
+      MOCK_RESTARTING: 'id-media_worker-1',
+    });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /restarting/u);
+    assert.doesNotMatch(readFileSync(fixture.log, 'utf8'), /"(?:stop|run|exec)"/u);
+  } finally {
+    rmSync(fixture.directory, { recursive: true, force: true });
+  }
+});
+
+test('maintenance resumes only the originally running worker replica', () => {
+  const fixture = maintenanceFixture();
+  try {
+    const stopped = ['id-media_worker-2'];
+    writeFileSync(fixture.state, JSON.stringify(stopped));
+    const result = fixture.run('backup-compose.sh', join(fixture.directory, 'backup'));
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(JSON.parse(readFileSync(fixture.state, 'utf8')), stopped);
+    assert.match(readFileSync(fixture.log, 'utf8'), /\["start","id-media_worker-1"\]/u);
   } finally {
     rmSync(fixture.directory, { recursive: true, force: true });
   }
@@ -495,10 +546,245 @@ test('archive/audit one-off overlay selects operations credentials without expos
   const overlay = readFileSync(join(root, 'docker-compose.storage.operations.yml'), 'utf8');
   assert.match(overlay, /S3_ACCESS_KEY_ID_FILE: \/run\/secrets\/s3_operations_access_key_id/u);
   assert.doesNotMatch(overlay, /rustfs_root/u);
+  const helper = readFileSync(join(root, 'scripts/lib/compose-maintenance.sh'), 'utf8');
+  assert.match(helper, /operations_compose\+=\(--file "\$operations_file"\)/u);
   for (const file of ['backup-compose.sh', 'restore-compose.sh']) {
     const script = readFileSync(join(root, 'scripts', file), 'utf8');
-    assert.match(script, /operations_compose=.*docker-compose\.storage\.operations\.yml/u);
+    assert.match(script, /prepare_maintenance_compose "\$@"/u);
     assert.doesNotMatch(script, /"\$\{compose\[@\]\}" run.*backend/u);
+  }
+});
+
+test('maintenance appends operations to default, environment and explicit Compose files', () => {
+  const fixture = maintenanceFixture();
+  const overlay = join(root, 'docker-compose.storage.operations.yml');
+  const base = join(root, 'docker-compose.yml');
+  try {
+    for (const { environment, options, files } of [
+      { environment: { COMPOSE_FILE: '' }, options: [], files: [base] },
+      {
+        environment: {
+          COMPOSE_FILE: 'base.yml;override with spaces.yml',
+          COMPOSE_PATH_SEPARATOR: ';',
+        },
+        options: ['--project-name', 'isolated'],
+        files: ['base.yml', 'override with spaces.yml'],
+      },
+      {
+        environment: { COMPOSE_FILE: 'ignored.yml' },
+        options: ['--file=explicit.yml', '-f', 'last.yml'],
+        files: ['--file=explicit.yml', '-f', 'last.yml'],
+      },
+    ]) {
+      writeFileSync(fixture.log, '');
+      const backup = join(fixture.directory, `backup-${files.length}-${options.length}`);
+      const result = fixture.run('backup-compose.sh', backup, environment, options);
+      assert.equal(result.status, 0, result.stderr);
+      const commands = readFileSync(fixture.log, 'utf8')
+        .trim()
+        .split('\n')
+        .map((line) => JSON.parse(line) as string[]);
+      const [baseConfig, operationsConfig] = commands.filter(
+        (command) => command.includes('config') && command.includes('--quiet'),
+      );
+      assert.deepEqual(baseConfig, ['compose', ...options, 'config', '--quiet']);
+      const operationsOptions = options[0]?.startsWith('--file=')
+        ? options
+        : [...options, ...files.flatMap((file) => ['--file', file])];
+      assert.deepEqual(operationsConfig, [
+        'compose',
+        ...operationsOptions,
+        '--file',
+        overlay,
+        'config',
+        '--quiet',
+      ]);
+      assert.ok(commands.indexOf(operationsConfig!) < commands.findIndex((c) => c.includes('ps')));
+      assert.ok(commands.filter((c) => c.includes('run')).every((c) => c.includes(overlay)));
+      assert.ok(commands.filter((c) => c.includes('exec')).every((c) => !c.includes(overlay)));
+    }
+  } finally {
+    rmSync(fixture.directory, { recursive: true, force: true });
+  }
+});
+
+test('maintenance aborts before any stop or data operation when validation or compose ps fails', () => {
+  const fixture = maintenanceFixture();
+  try {
+    const backup = join(fixture.directory, 'complete');
+    const saved = fixture.run('backup-compose.sh', backup);
+    assert.equal(saved.status, 0, saved.stderr);
+    for (const script of ['backup-compose.sh', 'restore-compose.sh']) {
+      for (const environment of [{ MOCK_FAIL: 'overlay' }, { MOCK_PS_FAIL: 'media_worker' }]) {
+        writeFileSync(fixture.log, '');
+        const destination =
+          script === 'restore-compose.sh'
+            ? backup
+            : join(fixture.directory, JSON.stringify(environment));
+        const result = fixture.run(script, destination, environment);
+        assert.notEqual(result.status, 0);
+        const commands = readFileSync(fixture.log, 'utf8').trim().split('\n');
+        assert.ok(commands.length >= 2);
+        assert.doesNotMatch(commands.join('\n'), /"(?:stop|start|run|exec)"/u);
+        assert.deepEqual(JSON.parse(readFileSync(fixture.state, 'utf8')), []);
+      }
+    }
+  } finally {
+    rmSync(fixture.directory, { recursive: true, force: true });
+  }
+});
+
+test('phase 12 media evidence requires successful jobs for the exact uploaded images', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'zglosto-media-evidence-'));
+  try {
+    const report = join(directory, 'load.json');
+    writeFileSync(
+      report,
+      JSON.stringify({
+        scenario: 'incident-write',
+        passed: true,
+        requests: 1,
+        failures: 0,
+        mediaTargets: [
+          {
+            incidentId: '00000000-0000-4000-8000-000000000001',
+            imageId: '00000000-0000-4000-8000-000000000002',
+          },
+        ],
+      }),
+    );
+    const run = (state: string, storageFailure = false) =>
+      spawnSync(
+        'bash',
+        [
+          '-e',
+          '-c',
+          `
+      source scripts/lib/phase12-media.sh
+      compose() {
+        if [ "$3" = database ]; then
+          query=$(cat)
+          printf '%s\\n' "$query" >&2
+          case "$query" in
+            *json_agg*) printf '%s\\n' '[{"processedKey":"processed"}]' ;;
+            *) printf '%s\\n' "$MOCK_MEDIA_STATE" ;;
+          esac
+        elif [ "$3" = media_worker ]; then
+          cat >&2
+          [ "$MOCK_STORAGE_FAILURE" = false ]
+        fi
+      }
+      verify_phase12_media_jobs "$1" compose
+    `,
+          'bash',
+          report,
+        ],
+        {
+          cwd: root,
+          env: {
+            ...process.env,
+            MOCK_MEDIA_STATE: state,
+            MOCK_STORAGE_FAILURE: String(storageFailure),
+          },
+          encoding: 'utf8',
+        },
+      );
+    const failed = run('0|1|0|1');
+    assert.equal(failed.status, 1);
+    assert.match(failed.stderr, /media jobs failed or are missing/u);
+    assert.match(failed.stderr, /00000000-0000-4000-8000-000000000002/u);
+    assert.match(failed.stderr, /job\.image_revision = image\.revision/u);
+    assert.match(failed.stderr, /processed_mime_type = 'image\/webp'/u);
+    const verified = run('0|0|1|1');
+    assert.equal(verified.status, 0, verified.stderr);
+    assert.match(verified.stdout, /Verified 1 load-test media jobs/u);
+    assert.match(verified.stderr, /"processedKey":"processed"/u);
+    const missing = run('0|0|1|1', true);
+    assert.equal(missing.status, 1);
+    assert.doesNotMatch(missing.stdout, /Verified/u);
+    writeFileSync(
+      report,
+      '{"scenario":"incident-write","passed":true,"requests":0,"failures":0,"mediaTargets":[]}',
+    );
+    const empty = run('0|0|0|0');
+    assert.equal(empty.status, 1);
+    assert.match(empty.stderr, /Missing or invalid incident-write media targets/u);
+    assert.doesNotMatch(empty.stderr, /SELECT/u);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('resource sizing requires a successful monitor and fresh evidence', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'zglosto-resource-evidence-'));
+  try {
+    const bin = join(directory, 'bin');
+    mkdirSync(bin);
+    writeFileSync(join(bin, 'docker'), '#!/bin/bash\nexit 0\n', { mode: 0o755 });
+    writeFileSync(
+      join(bin, 'bun'),
+      `#!${process.execPath}
+      const fs = require('node:fs');
+      const path = require('node:path');
+      const args = process.argv.slice(2);
+      const field = key => args[args.indexOf(key) + 1];
+      const ready = path.join(process.env.PHASE12_ARTIFACT_DIR, 'monitor-ready');
+      if (args[0].endsWith('phase12-resource-monitor.ts')) {
+        process.on('SIGTERM', () => {
+          if (process.env.MONITOR_RESULT === 'bad-status') process.exit(7);
+          if (process.env.MONITOR_RESULT === 'ok') {
+            const report = { schemaVersion: 1, kind: 'local-resource-measurement',
+              project: field('--project'), profile: field('--profile'),
+              completion: 'signal', samples: 1, containers: [{name: 'test-backend'}] };
+            fs.writeFileSync(field('--output'), JSON.stringify(report));
+          }
+          process.exit(0);
+        });
+        fs.writeFileSync(ready, '');
+        setInterval(() => {}, 1000);
+      } else if (args[0].endsWith('phase12-observability-drill.ts')) {
+        const deadline = Date.now() + 3000;
+        while (!fs.existsSync(ready) && Date.now() < deadline) Bun.sleepSync(10);
+        process.exit(fs.existsSync(ready) ? 0 : 1);
+      } else {
+        process.exit(require('node:child_process').spawnSync(process.execPath, args, {stdio: 'inherit'}).status ?? 1);
+      }
+    `,
+      { mode: 0o755 },
+    );
+    for (const result of ['bad-status', 'no-report', 'ok']) {
+      const artifacts = join(directory, result);
+      mkdirSync(artifacts);
+      writeFileSync(join(artifacts, 'resources.json'), '{"stale":true}');
+      const measured = spawnSync('bash', ['scripts/phase12-resource-profile.sh', 'observability'], {
+        cwd: root,
+        env: {
+          ...process.env,
+          PATH: `${bin}:${process.env.PATH}`,
+          PHASE12_ALLOW_DESTRUCTIVE: '1',
+          PHASE12_ARTIFACT_DIR: artifacts,
+          MONITOR_RESULT: result,
+        },
+        encoding: 'utf8',
+        timeout: 10_000,
+      });
+      const report = readFileSync(join(artifacts, 'resources.json'), 'utf8');
+      const runLog = readFileSync(join(artifacts, 'run.log'), 'utf8');
+      if (result === 'ok') {
+        assert.equal(measured.status, 0, measured.stderr + runLog);
+        assert.match(report, /local-resource-measurement/u);
+      } else {
+        assert.equal(measured.status, 1, measured.stderr + runLog);
+        assert.match(
+          runLog,
+          /resource monitor (?:exited unsuccessfully|did not produce)/u,
+          measured.stderr,
+        );
+        assert.equal(report, '{"stale":true}');
+      }
+    }
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
   }
 });
 

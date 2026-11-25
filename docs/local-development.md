@@ -180,11 +180,12 @@ Szczegółowe wymagania, prebuild, credentials i cleanup znajdują się w
 
 ### Docker Model Runner / LLM
 
-Bazowy profil celowo nie wymaga modelu. Jeśli Docker Model Runner jest dostępny, włącz
-lokalny wariant:
+Bazowy profil działa bez modelu. Lokalny wariant DMR potrzebuje Redisa do wspólnej
+ochrony przed powtórzeniami podpisanych żądań. Przygotuj model oraz pliki sekretów
+profilu Redis opisane w [instrukcji Docker Model Runner](docker-model-runner.md).
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.llm.yml up -d --build
+docker compose -f docker-compose.yml -f docker-compose.llm.yml -f docker-compose.redis.local.yml up -d --build
 ```
 
 Sprawdź stan:

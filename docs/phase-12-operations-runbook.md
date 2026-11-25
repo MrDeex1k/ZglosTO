@@ -20,15 +20,19 @@ Testy integracyjne usuwają wyłącznie izolowane projekty i wolumeny o nazwach 
 ale celowo niszczą dane wewnątrz nich. Wymagają jawnej zgody:
 
 ```bash
-PHASE12_ALLOW_DESTRUCTIVE=1 bun run phase12:integration:minimal
 PHASE12_ALLOW_DESTRUCTIVE=1 bun run phase12:integration:recommended
 PHASE12_ALLOW_DESTRUCTIVE=1 bun run phase12:load
 PHASE12_ALLOW_DESTRUCTIVE=1 bun run phase12:observability
 ```
 
-Lokalny pomiar zasobów uruchamia te same izolowane scenariusze, ale dodatkowo próbkuje
-`docker stats`. Profil `minimal` mierzy prawdziwy Docker Model Runner, a oba profile
-wykluczają testowy `model_runner_stub`:
+Brama `phase12:integration:minimal` wymaga osobnego wariantu testowego z wyłączonym LLM.
+`local-all` pomija tę bramę i uruchamia wariant z Redisem oraz test obciążeniowy.
+
+Lokalny pomiar zasobów uruchamia izolowane scenariusze i próbkuje `docker stats`.
+Pomiar używa lokalnego Redisa, którego wymaga wspólna ochrona przed replay aktywnego
+gatewaya. Profil `minimal` dodatkowo mierzy rzeczywisty Docker Model Runner. Wszystkie
+profile pomijają statystyki `model_runner_stub`. Wynik wymaga poprawnego zakończenia
+monitora po przebiegu oraz raportu `resources.json` z próbkami tego projektu.
 
 ```bash
 PHASE12_ALLOW_DESTRUCTIVE=1 bun run phase12:resources:minimal
@@ -41,6 +45,17 @@ macOS/ARM64 z OrbStack nie zastępuje certyfikacji Ubuntu/AMD64 i nie obejmuje n
 Dockera, cache systemu plików ani hosta. Izolowany sizing podnosi limity zapisu wyłącznie
 wewnątrz projektu testowego, aby mierzyć przepustowość zamiast ponownie testować osobną
 bramkę rate limitingu.
+
+`phase12:load` wysyła zdjęcie z każdym zgłoszeniem. Raport `load-incident-write.json`
+zawiera identyfikatory zgłoszeń i zdjęć użyte do sprawdzenia zakończenia odpowiadających
+im zadań, zapisu WebP i usunięcia oryginałów.
+
+`phase12:dmr` sprawdza klasy obu rodzajów zgłoszeń bezpośrednio na adapterze DMR.
+Do osobnego pomiaru prywatnego transportu uruchom
+`PHASE12_LOAD_SCENARIO=llm bun scripts/phase12-load-test.ts` z sieci, która ma dostęp
+do gatewaya, z tymi samymi zmiennymi `LLM_GATEWAY_*` i plikami mTLS/HMAC co backend
+oraz po zbudowaniu jego pakietów workspace. Test wymaga odpowiedzi modelu z oczekiwaną
+klasą i zalicza fallback jako nieudaną próbę.
 
 Aktualny wynik, wymagania per konfiguracja oraz reguły interpretacji zawiera
 [raport lokalnego sizingu](phase-12-local-resource-sizing.md).

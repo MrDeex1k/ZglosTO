@@ -15,6 +15,7 @@ const composeFiles = [
   'docker-compose.no-rustfs.yml',
   'docker-compose.rustfs.yml',
   'docker-compose.integration.yml',
+  'docker-compose.redis.local.yml',
   'docker-compose.observability.local.yml',
 ] as const;
 const environment = {
@@ -22,6 +23,9 @@ const environment = {
   GRAFANA_ADMIN_PASSWORD_FILE: resolve('tests/fixtures/secrets/better_auth_secret'),
   INTEGRATION_HTTP_PORT: httpPort,
   INTEGRATION_PROJECT_NAME: projectName,
+  REDIS_ACL_FILE: resolve('tests/fixtures/redis/users.acl'),
+  REDIS_URL_SECRET_FILE: resolve('tests/fixtures/redis/url'),
+  RATE_LIMIT_HMAC_KEY_SECRET_FILE: resolve('tests/fixtures/redis/rate-limit-hmac'),
 };
 
 function compose(arguments_: readonly string[], capture = false): string {

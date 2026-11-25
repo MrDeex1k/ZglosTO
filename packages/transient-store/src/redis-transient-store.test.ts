@@ -218,6 +218,17 @@ describe('RedisTransientStore', () => {
     });
   });
 
+  it('atomically preserves an existing value and removes its legacy TTL', async () => {
+    const { client, store } = createStore();
+    client.eval.mockResolvedValueOnce('1000');
+
+    await expect(store.getOrCreatePersistent('llm:replay:epoch', '2000')).resolves.toBe('1000');
+    const [script, options] = client.eval.mock.calls[0] ?? [];
+    expect(script).toContain("redis.call('PERSIST', KEYS[1])");
+    expect(script).toContain("redis.call('SET', KEYS[1], ARGV[1])");
+    expect(options).toEqual({ arguments: ['2000'], keys: ['zglosto:llm:replay:epoch'] });
+  });
+
   it('wraps provider errors without including values or connection details', async () => {
     const client = new FakeRedisClient();
     client.get.mockRejectedValueOnce(new Error('redis://default:secret@redis:6379'));
