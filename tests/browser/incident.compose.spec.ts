@@ -29,7 +29,7 @@ test('submits a report with a photo and changes its status as the assigned servi
   await page.goto('/dashboard/sluzby');
   await page.getByLabel(/Adres e-mail/).fill('phase0.service@example.com');
   await page.getByLabel(/^Hasło/).fill('Phase0!Pass123');
-  await page.getByRole('button', { name: 'Zaloguj się', exact: true }).click();
+  await page.locator('form').getByRole('button', { name: 'ZALOGUJ SIĘ', exact: true }).click();
   await expect(page).toHaveURL('/dashboard/sluzby');
 
   const details = page.getByRole('button', { name: `Otwórz szczegóły zgłoszenia ${description}` });

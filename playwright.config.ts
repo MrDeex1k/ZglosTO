@@ -9,7 +9,14 @@ export default defineConfig({
   testMatch: composeURL ? '**/*.compose.spec.ts' : '**/*.spec.ts',
   testIgnore: composeURL ? [] : '**/*.compose.spec.ts',
   workers: composeURL ? 1 : 2,
-  reporter: [['list'], ['html', { open: 'never' }]],
+  outputDir: composeURL ? 'output/browser-compose/results' : 'test-results',
+  reporter: [
+    ['list'],
+    [
+      'html',
+      { open: 'never', ...(composeURL ? { outputFolder: 'output/browser-compose/report' } : {}) },
+    ],
+  ],
   use: {
     baseURL: composeURL ?? baseURL,
     locale: 'pl-PL',
