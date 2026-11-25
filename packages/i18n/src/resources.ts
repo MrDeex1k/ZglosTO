@@ -71,7 +71,15 @@ export const plPLTranslation = {
   incidents: {
     management: {
       conflict:
-        'Zgłoszenie zmieniło się w trakcie edycji. Zamknij okno i otwórz zgłoszenie ponownie, aby sprawdzić aktualne dane.',
+        'Zgłoszenie zmieniło się w trakcie edycji. Pobierz aktualne dane, aby sprawdzić swoje zmiany przed ponownym zapisem.',
+      serviceSaveUnconfirmed:
+        'Zapis nie został potwierdzony. Pobierz aktualne dane, aby sprawdzić, które zmiany zapisano.',
+      reloadReport: 'Pobierz aktualne dane',
+      removeDraftPhoto: 'Usuń wybrane zdjęcie',
+      reviewDraft:
+        'Stan w systemie: {{status}}, {{verified}}. Sprawdź formularz i zapisz pozostałe zmiany.',
+      verified: 'sprawdzone',
+      unverified: 'niesprawdzone',
       saveUnconfirmed:
         'Zapis nie został potwierdzony. Zamknij okno i otwórz zgłoszenie ponownie, aby sprawdzić, które zmiany zapisano.',
       loadFailed: 'Nie udało się pobrać aktualnej listy zgłoszeń.',
@@ -562,7 +570,15 @@ export const enTranslation = {
   incidents: {
     management: {
       conflict:
-        'The report changed while you were editing it. Close this window and reopen the report to review the current data.',
+        'The report changed while you were editing it. Reload the current data to review your changes before trying again.',
+      serviceSaveUnconfirmed:
+        'The save could not be confirmed. Reload the current data to see which changes were saved.',
+      reloadReport: 'Reload current data',
+      removeDraftPhoto: 'Remove selected photo',
+      reviewDraft:
+        'Current report: {{status}}, {{verified}}. Review the form and save any remaining changes.',
+      verified: 'verified',
+      unverified: 'unverified',
       saveUnconfirmed:
         'The save could not be confirmed. Close this window and reopen the report to see which changes were saved.',
       loadFailed: 'Could not load the latest reports.',

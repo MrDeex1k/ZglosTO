@@ -125,7 +125,8 @@ interface ServiceDashboardProps {
   userDisplayName: string;
   serviceKey: string | null;
   incidents: ServiceIncident[];
-  retryIncidents: (() => void) | null;
+  incidentsError: boolean;
+  refreshIncidents: () => Promise<ServiceIncident[] | null>;
   statusFilter: 'ALL' | IncidentStatusCode;
   visibleCount: number;
   onStatusFilterChange: (status: 'ALL' | IncidentStatusCode) => void;
@@ -137,14 +138,17 @@ export function ServiceDashboard({
   userDisplayName,
   serviceKey,
   incidents,
-  retryIncidents,
+  incidentsError,
+  refreshIncidents,
   statusFilter,
   visibleCount,
   onStatusFilterChange,
   onShowMore,
 }: ServiceDashboardProps) {
   const { t } = useTranslation();
-  const [selectedIncident, setSelectedIncident] = useState<ServiceIncident | null>(null);
+  const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
+  const selectedIncident = incidents.find(({ id }) => id === selectedIncidentId);
+  const closeIncident = () => setSelectedIncidentId(null);
   const filteredIncidents =
     statusFilter === 'ALL'
       ? incidents
@@ -165,10 +169,15 @@ export function ServiceDashboard({
             }
           />
           <h3 className="text-gray-900 mb-6">Zgłoszenia dla Twojej służby</h3>
-          {retryIncidents !== null ? (
+          {incidentsError ? (
             <div className="rounded-lg border bg-card p-6 text-center">
               <p role="alert">{t(($) => $.incidents.management.loadFailed)}</p>
-              <Button type="button" variant="outline" className="mt-3" onClick={retryIncidents}>
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-3"
+                onClick={() => void refreshIncidents()}
+              >
                 {t(($) => $.home.retry)}
               </Button>
             </div>
@@ -202,7 +211,7 @@ export function ServiceDashboard({
                   <IncidentCard
                     key={incident.id}
                     incident={incident}
-                    onClick={() => setSelectedIncident(incident)}
+                    onClick={() => setSelectedIncidentId(incident.id)}
                   />
                 ))}
               </div>
@@ -217,12 +226,14 @@ export function ServiceDashboard({
           )}
         </div>
       </main>
-      <ServiceIncidentDialog
-        incident={selectedIncident}
-        onOpenChange={(open) => {
-          if (!open) setSelectedIncident(null);
-        }}
-      />
+      {selectedIncident !== undefined && (
+        <ServiceIncidentDialog
+          key={selectedIncident.id}
+          incident={selectedIncident}
+          onClose={closeIncident}
+          refreshIncidents={refreshIncidents}
+        />
+      )}
     </AppShell>
   );
 }

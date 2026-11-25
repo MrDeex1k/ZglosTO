@@ -87,7 +87,8 @@ export function ServiceDashboardRouteView({
       userDisplayName={getUserDisplayName(viewer)}
       serviceKey={viewer.serviceKey}
       incidents={state.serviceIncidents}
-      retryIncidents={state.retryServiceIncidents}
+      incidentsError={state.serviceIncidentsError}
+      refreshIncidents={state.refreshServiceIncidents}
       statusFilter={state.serviceStatusFilter}
       visibleCount={state.visibleServiceIncidents}
       onStatusFilterChange={state.setServiceStatusFilter}

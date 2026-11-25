@@ -34,7 +34,8 @@ interface AppRouteState {
   residentIncidents: Incident[];
   allIncidents: Incident[];
   serviceIncidents: ServiceIncident[];
-  retryServiceIncidents: (() => void) | null;
+  serviceIncidentsError: boolean;
+  refreshServiceIncidents: () => Promise<ServiceIncident[] | null>;
   isLoadingIncidents: boolean;
   incidentsError: boolean;
   retryIncidents: () => void;
@@ -98,7 +99,8 @@ function ScopedAppRouteStateProvider({ children }: Readonly<{ children: ReactNod
     residentIncidents,
     allIncidents,
     serviceIncidents,
-    retryServiceIncidents,
+    serviceIncidentsError,
+    refreshServiceIncidents,
     isLoadingIncidents,
     incidentsError,
     retryIncidents,
@@ -170,7 +172,8 @@ function ScopedAppRouteStateProvider({ children }: Readonly<{ children: ReactNod
     residentIncidents,
     allIncidents,
     serviceIncidents,
-    retryServiceIncidents,
+    serviceIncidentsError,
+    refreshServiceIncidents,
     isLoadingIncidents,
     incidentsError,
     retryIncidents,

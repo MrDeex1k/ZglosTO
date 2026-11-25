@@ -342,6 +342,7 @@ function PermissionsView({ onBack }: { onBack: () => void }) {
                         <Label htmlFor="permissions-service">Wybierz rodzaj służby</Label>
                         <select
                           id="permissions-service"
+                          required
                           name={field.name}
                           value={field.state.value}
                           onBlur={field.handleBlur}

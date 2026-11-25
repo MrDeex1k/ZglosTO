@@ -1,7 +1,7 @@
 import { useForm } from '@tanstack/react-form';
 import { isIncidentStatus } from '@zglosto/contracts';
 import { Calendar, CheckCircle2, Image as ImageIcon } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { getServiceBadgeStyle, getServiceLabel, getServiceShortLabel } from '../config/services';
@@ -26,8 +26,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 interface ServiceIncidentDialogProps {
-  incident: ServiceIncident | null;
-  onOpenChange: (open: boolean) => void;
+  incident: ServiceIncident;
+  onClose: () => void;
+  refreshIncidents: () => Promise<ServiceIncident[] | null>;
 }
 
 function SelectedResolutionImagePreview({ file }: Readonly<{ file: File }>) {
@@ -117,25 +118,120 @@ function ServiceIncidentInformation({ incident }: Readonly<{ incident: ServiceIn
   );
 }
 
-export function ServiceIncidentDialog({ incident, onOpenChange }: ServiceIncidentDialogProps) {
-  if (!incident) return null;
-
+function ServiceIncidentImages({
+  incident,
+  file,
+}: Readonly<{ incident: ServiceIncident; file: File | null }>) {
   return (
-    <ServiceIncidentDialogContent
-      key={incident.id}
-      incident={incident}
-      onOpenChange={onOpenChange}
-    />
+    <section
+      className={INCIDENT_DIALOG_DIVIDED_SECTION_CLASS_NAME + ' xl:pr-6'}
+      aria-labelledby="service-incident-images"
+    >
+      <h3 id="service-incident-images" className="font-semibold text-gray-900">
+        Zdjęcia
+      </h3>
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+        {incident.imageUrl !== null && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-gray-500">
+              <ImageIcon className="h-4 w-4" />
+              Zdjęcie zgłoszenia
+            </div>
+            <img
+              src={incident.imageUrl}
+              alt="Zdjęcie incydentu"
+              className="h-72 w-full rounded-lg border bg-gray-50 object-contain"
+            />
+          </div>
+        )}
+        {incident.resolvedImageUrl !== null && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-gray-500">
+              <CheckCircle2 className="h-4 w-4 text-success" />
+              Zdjęcie po naprawie
+            </div>
+            <img
+              src={incident.resolvedImageUrl}
+              alt="Zdjęcie po rozwiązaniu"
+              className="h-72 w-full rounded-lg border bg-gray-50 object-contain"
+            />
+          </div>
+        )}
+        {file !== null && <SelectedResolutionImagePreview file={file} />}
+        {file === null && incident.imageUrl === null && incident.resolvedImageUrl === null && (
+          <p className="text-muted-foreground">Brak zdjęć dla tego zgłoszenia.</p>
+        )}
+      </div>
+    </section>
   );
 }
 
-function ServiceIncidentDialogContent({
+type SubmitError = 'conflict' | 'unconfirmed' | null;
+type RefreshState = 'idle' | 'loading' | 'failed' | 'review';
+
+function ServiceIncidentSaveFeedback({
   incident,
-  onOpenChange,
-}: Omit<ServiceIncidentDialogProps, 'incident'> & { incident: ServiceIncident }) {
+  submitError,
+  refreshState,
+  onRefresh,
+}: Readonly<{
+  incident: ServiceIncident;
+  submitError: SubmitError;
+  refreshState: RefreshState;
+  onRefresh: () => void;
+}>) {
+  const { t } = useTranslation();
+  if (submitError !== null) {
+    return (
+      <div className="space-y-2">
+        <p role="alert" className="text-sm text-destructive">
+          {submitError === 'conflict'
+            ? t(($) => $.incidents.management.conflict)
+            : t(($) => $.incidents.management.serviceSaveUnconfirmed)}
+        </p>
+        {refreshState === 'failed' && (
+          <p role="alert" className="text-sm text-destructive">
+            {t(($) => $.incidents.management.loadFailed)}
+          </p>
+        )}
+        <Button
+          type="button"
+          variant="outline"
+          disabled={refreshState === 'loading'}
+          onClick={onRefresh}
+        >
+          {t(($) => $.incidents.management.reloadReport)}
+        </Button>
+      </div>
+    );
+  }
+
+  if (refreshState !== 'review') return null;
+
+  return (
+    <output className="block text-sm text-muted-foreground">
+      {t(($) => $.incidents.management.reviewDraft, {
+        status: getIncidentStatusLabel(incident.adminStatus),
+        verified: incident.checked
+          ? t(($) => $.incidents.management.verified)
+          : t(($) => $.incidents.management.unverified),
+      })}
+    </output>
+  );
+}
+
+export function ServiceIncidentDialog({
+  incident: initialIncident,
+  onClose,
+  refreshIncidents,
+}: Readonly<ServiceIncidentDialogProps>) {
   const { t } = useTranslation();
   const mutation = useServiceIncidentMutation();
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const uploadInput = useRef<HTMLInputElement>(null);
+  // Keep the revision paired with the values on which the operator based the draft.
+  const [incident, setIncident] = useState(initialIncident);
+  const [submitError, setSubmitError] = useState<SubmitError>(null);
+  const [refreshState, setRefreshState] = useState<RefreshState>('idle');
   const isFixed = incident.adminStatus === 'resolved';
   const statusItems = (['reported', 'in_progress', 'resolved'] as const).map((status) => ({
     value: status,
@@ -156,22 +252,47 @@ function ServiceIncidentDialogContent({
       if (submitError !== null) return;
       try {
         await mutation.mutateAsync({ incident, values: update });
-        onOpenChange(false);
+        onClose();
       } catch (error) {
+        setRefreshState('idle');
         setSubmitError(
-          error instanceof ApiResponseError && error.status === 409
-            ? t(($) => $.incidents.management.conflict)
-            : t(($) => $.incidents.management.saveUnconfirmed),
+          error instanceof ApiResponseError && error.status === 409 ? 'conflict' : 'unconfirmed',
         );
       }
     },
   });
 
+  const refreshDraft = async () => {
+    setRefreshState('loading');
+    const refreshedIncidents = await refreshIncidents();
+    if (refreshedIncidents === null) {
+      setRefreshState('failed');
+      return;
+    }
+    const latest = refreshedIncidents.find(({ id }) => id === incident.id);
+    if (latest === undefined) {
+      onClose();
+      return;
+    }
+    const draft = form.state.values;
+    const locked = latest.adminStatus === 'resolved';
+    // Adopt server values for fields the operator left unchanged or can no longer edit.
+    if (locked || draft.checked === incident.checked) {
+      form.setFieldValue('checked', latest.checked);
+    }
+    if (locked || draft.adminStatus === incident.adminStatus) {
+      form.setFieldValue('adminStatus', latest.adminStatus);
+    }
+    setIncident(latest);
+    setSubmitError(null);
+    setRefreshState('review');
+  };
+
   return (
     <Dialog
       open
       onOpenChange={(open) => {
-        if (!form.state.isSubmitting) onOpenChange(open);
+        if (!open && !form.state.isSubmitting && refreshState !== 'loading') onClose();
       }}
     >
       <DialogContent className={INCIDENT_MANAGEMENT_DIALOG_CONTENT_CLASS_NAME}>
@@ -185,55 +306,9 @@ function ServiceIncidentDialogContent({
         <div className={INCIDENT_DIALOG_THREE_SECTION_CLASS_NAME}>
           <ServiceIncidentInformation incident={incident} />
 
-          <section
-            className={`${INCIDENT_DIALOG_DIVIDED_SECTION_CLASS_NAME} xl:pr-6`}
-            aria-labelledby="service-incident-images"
-          >
-            <h3 id="service-incident-images" className="font-semibold text-gray-900">
-              Zdjęcia
-            </h3>
-
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-              {incident.imageUrl !== null && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-gray-500">
-                    <ImageIcon className="h-4 w-4" />
-                    Zdjęcie zgłoszenia
-                  </div>
-                  <img
-                    src={incident.imageUrl}
-                    alt="Zdjęcie incydentu"
-                    className="h-72 w-full rounded-lg border bg-gray-50 object-contain"
-                  />
-                </div>
-              )}
-
-              <form.Subscribe selector={(state) => state.values.resolvedImageFile}>
-                {(resolvedImageFile) =>
-                  resolvedImageFile !== null ? (
-                    <SelectedResolutionImagePreview
-                      key={`${resolvedImageFile.name}:${resolvedImageFile.size}:${resolvedImageFile.lastModified}`}
-                      file={resolvedImageFile}
-                    />
-                  ) : incident.resolvedImageUrl !== null ? (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-gray-500">
-                        <CheckCircle2 className="h-4 w-4 text-success" />
-                        Zdjęcie po naprawie
-                      </div>
-                      <img
-                        src={incident.resolvedImageUrl}
-                        alt="Zdjęcie po rozwiązaniu"
-                        className="h-72 w-full rounded-lg border bg-gray-50 object-contain"
-                      />
-                    </div>
-                  ) : incident.imageUrl === null ? (
-                    <p className="text-muted-foreground">Brak zdjęć dla tego zgłoszenia.</p>
-                  ) : null
-                }
-              </form.Subscribe>
-            </div>
-          </section>
+          <form.Subscribe selector={(state) => state.values.resolvedImageFile}>
+            {(file) => <ServiceIncidentImages incident={incident} file={file} />}
+          </form.Subscribe>
 
           <form
             className={INCIDENT_DIALOG_DIVIDED_SECTION_CLASS_NAME}
@@ -323,8 +398,13 @@ function ServiceIncidentDialogContent({
                       accept="image/png,image/jpeg"
                       className="peer sr-only"
                       id="resolved-image-upload"
+                      ref={uploadInput}
                       aria-invalid={field.state.meta.errors.length > 0}
-                      aria-describedby="resolved-image-upload-errors"
+                      aria-describedby={
+                        field.state.value === null
+                          ? 'resolved-image-upload-errors'
+                          : 'resolved-image-selection resolved-image-upload-errors'
+                      }
                       onChange={(event) => {
                         const file = event.target.files?.[0];
                         if (!file) return;
@@ -339,10 +419,21 @@ function ServiceIncidentDialogContent({
                     </label>
                   </div>
                   {field.state.value !== null && (
-                    <div className="mt-3">
-                      <span className="text-sm text-muted-foreground">
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <span id="resolved-image-selection" className="text-sm text-muted-foreground">
                         Wybrano: {field.state.value.name}
                       </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          field.handleChange(null);
+                          if (uploadInput.current !== null) uploadInput.current.value = '';
+                        }}
+                      >
+                        {t(($) => $.incidents.management.removeDraftPhoto)}
+                      </Button>
                     </div>
                   )}
                   <FieldErrors id="resolved-image-upload-errors" errors={field.state.meta.errors} />
@@ -350,11 +441,12 @@ function ServiceIncidentDialogContent({
               )}
             </form.Field>
 
-            {submitError !== null && (
-              <p role="alert" className="text-sm text-destructive">
-                {submitError}
-              </p>
-            )}
+            <ServiceIncidentSaveFeedback
+              incident={incident}
+              submitError={submitError}
+              refreshState={refreshState}
+              onRefresh={() => void refreshDraft()}
+            />
 
             <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting] as const}>
               {([canSubmit, isSubmitting]) => (
