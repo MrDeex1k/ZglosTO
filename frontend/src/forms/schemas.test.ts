@@ -1,3 +1,4 @@
+import { enTranslation, plPLTranslation } from '@zglosto/i18n';
 import { INCIDENT_IMAGE_MAX_BYTES } from '@zglosto/contracts';
 import { describe, expect, it } from 'vitest';
 
@@ -6,9 +7,8 @@ import {
   createIncidentFormSchema,
   createLoginFormSchema,
   createRegisterFormSchema,
-  createServicePermissionFormSchema,
+  createRolePermissionFormSchema,
   incidentStatusFormSchema,
-  rolePermissionFormSchema,
   serviceIncidentFormSchema,
 } from './schemas';
 
@@ -73,7 +73,10 @@ describe('authentication form schemas', () => {
 });
 
 describe('incident form schemas', () => {
-  const incidentSchema = createIncidentFormSchema(['roads']);
+  const incidentSchema = createIncidentFormSchema(
+    ['roads'],
+    plPLTranslation.incidents.reportForm.validation,
+  );
 
   it('accepts a report assigned to an enabled service', () => {
     expect(
@@ -135,6 +138,25 @@ describe('incident form schemas', () => {
     expect(result.success).toBe(false);
   });
 
+  it('reports field errors in English', () => {
+    const messages = enTranslation.incidents.reportForm.validation;
+    const schema = createIncidentFormSchema(['roads'], messages);
+    const result = schema.safeParse({
+      service: 'unavailable',
+      address: ' ',
+      description: '',
+      email: 'bad-email',
+      imageFile: new File(['text'], 'text.txt', { type: 'text/plain' }),
+    });
+    expect(result.error?.issues.map(({ message }) => message)).toEqual([
+      messages.unavailableService,
+      messages.requiredAddress,
+      messages.requiredDescription,
+      messages.invalidEmail,
+      messages.unsupportedImage,
+    ]);
+  });
+
   it('accepts an image exactly at the shared 5 MiB limit', () => {
     const result = incidentSchema.safeParse({
       service: 'roads',
@@ -177,31 +199,19 @@ describe('incident form schemas', () => {
 });
 
 describe('administration form schemas', () => {
-  it('accepts only assignable user roles', () => {
-    expect(
-      rolePermissionFormSchema.safeParse({
-        email: 'user@example.com',
-        role: 'sluzby',
-      }).success,
-    ).toBe(true);
-    expect(
-      rolePermissionFormSchema.safeParse({
-        email: 'user@example.com',
-        role: 'admin',
-      }).success,
-    ).toBe(false);
+  it('requires an available service key for the service role', () => {
+    const schema = createRolePermissionFormSchema(['roads']);
+    const email = 'user@example.com';
+
+    expect(schema.safeParse({ email, role: 'mieszkaniec', serviceKey: '' }).success).toBe(true);
+    expect(schema.safeParse({ email, role: 'sluzby', serviceKey: 'roads' }).success).toBe(true);
+    expect(schema.safeParse({ email, role: 'sluzby', serviceKey: '' }).success).toBe(false);
+    expect(schema.safeParse({ email, role: 'sluzby', serviceKey: 'water' }).success).toBe(false);
+    expect(schema.safeParse({ email, role: 'admin', serviceKey: '' }).success).toBe(false);
   });
 
-  it('rejects services outside the active assignment list', () => {
-    const permissionSchema = createServicePermissionFormSchema(['roads']);
+  it('rejects incident assignments outside the active assignment list', () => {
     const assignmentSchema = createAdminServiceFormSchema(['roads']);
-
-    expect(
-      permissionSchema.safeParse({
-        email: 'user@example.com',
-        service: 'water',
-      }).success,
-    ).toBe(false);
     expect(assignmentSchema.safeParse({ service: 'water' }).success).toBe(false);
   });
 

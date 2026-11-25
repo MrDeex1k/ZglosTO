@@ -1,4 +1,5 @@
 import { AlertCircle, CheckCircle, Phone } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import {
   AlertDialog,
@@ -27,6 +28,7 @@ export function SubmissionAlert({
   message,
   onContinue,
 }: Readonly<SubmissionAlertProps>) {
+  const { t } = useTranslation();
   const borderClass =
     type === 'success'
       ? 'border-success border-2'
@@ -74,7 +76,7 @@ export function SubmissionAlert({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogAction className={actionClass} onClick={onContinue}>
-            Przejdź dalej
+            {t(($) => $.incidents.reportForm.continue)}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

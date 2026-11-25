@@ -36,50 +36,62 @@ export function createRegisterFormSchema(messages: RegisterValidationMessages) {
   });
 }
 
-function imageFileSchema() {
+interface ImageValidationMessages {
+  invalidImage: string;
+  unsupportedImage: string;
+  imageTooLarge: string;
+}
+
+interface IncidentValidationMessages extends ImageValidationMessages {
+  requiredService: string;
+  unavailableService: string;
+  requiredAddress: string;
+  requiredDescription: string;
+  invalidEmail: string;
+}
+
+function imageFileSchema(messages: ImageValidationMessages) {
   return z
     .custom<File>((value) => typeof File !== 'undefined' && value instanceof File, {
-      error: 'Wybierz prawidłowy plik obrazu.',
+      error: messages.invalidImage,
     })
     .refine(
       (file) => file.type === 'image/png' || file.type === 'image/jpeg',
-      'Dozwolone są wyłącznie obrazy PNG, JPG i JPEG.',
+      messages.unsupportedImage,
     )
-    .refine((file) => file.size <= INCIDENT_IMAGE_MAX_BYTES, 'Obraz może mieć maksymalnie 5 MB.');
+    .refine((file) => file.size <= INCIDENT_IMAGE_MAX_BYTES, messages.imageTooLarge);
 }
 
-export function createIncidentFormSchema(enabledServiceKeys: readonly string[]) {
+export function createIncidentFormSchema(
+  enabledServiceKeys: readonly string[],
+  messages: IncidentValidationMessages,
+) {
   return z.strictObject({
     service: z
       .string()
-      .min(1, 'Wybierz właściwą służbę.')
+      .min(1, messages.requiredService)
       .refine(
         (service) => service.length === 0 || enabledServiceKeys.includes(service),
-        'Wybrana służba jest niedostępna.',
+        messages.unavailableService,
       ),
-    address: z.string().trim().min(1, 'Podaj adres zgłoszenia.'),
-    description: z.string().trim().min(1, 'Opisz zgłaszany problem.'),
-    email: emailSchema('Podaj prawidłowy adres e-mail.'),
-    imageFile: imageFileSchema().nullable(),
+    address: z.string().trim().min(1, messages.requiredAddress),
+    description: z.string().trim().min(1, messages.requiredDescription),
+    email: emailSchema(messages.invalidEmail),
+    imageFile: imageFileSchema(messages).nullable(),
   });
 }
 
-export const rolePermissionFormSchema = z.object({
-  email: emailSchema('Podaj prawidłowy adres e-mail.'),
-  role: z.enum(['mieszkaniec', 'sluzby']),
-});
-
-export function createServicePermissionFormSchema(assignableServiceKeys: readonly string[]) {
-  return z.object({
-    email: emailSchema('Podaj prawidłowy adres e-mail.'),
-    service: z
-      .string()
-      .min(1, 'Wybierz służbę.')
-      .refine(
-        (service) => service.length === 0 || assignableServiceKeys.includes(service),
-        'Wybrana służba jest niedostępna.',
-      ),
-  });
+export function createRolePermissionFormSchema(assignableServiceKeys: readonly string[]) {
+  return z
+    .object({
+      email: emailSchema('Podaj prawidłowy adres e-mail.'),
+      role: z.enum(['mieszkaniec', 'sluzby']),
+      serviceKey: z.string(),
+    })
+    .refine(
+      ({ role, serviceKey }) => role !== 'sluzby' || assignableServiceKeys.includes(serviceKey),
+      { path: ['serviceKey'], message: 'Wybierz dostępną służbę.' },
+    );
 }
 
 export function createAdminServiceFormSchema(assignableServiceKeys: readonly string[]) {
@@ -100,16 +112,17 @@ export const incidentStatusFormSchema = z.object({
 });
 
 export const serviceIncidentFormSchema = incidentStatusFormSchema.extend({
-  resolvedImageFile: imageFileSchema().nullable(),
+  resolvedImageFile: imageFileSchema({
+    invalidImage: 'Wybierz prawidłowy plik obrazu.',
+    unsupportedImage: 'Dozwolone są wyłącznie obrazy PNG, JPG i JPEG.',
+    imageTooLarge: 'Obraz może mieć maksymalnie 5 MB.',
+  }).nullable(),
 });
 
 export type LoginFormValues = z.input<ReturnType<typeof createLoginFormSchema>>;
 export type RegisterFormValues = z.input<ReturnType<typeof createRegisterFormSchema>>;
 export type IncidentFormValues = z.input<ReturnType<typeof createIncidentFormSchema>>;
-export type RolePermissionFormValues = z.input<typeof rolePermissionFormSchema>;
-export type ServicePermissionFormValues = z.input<
-  ReturnType<typeof createServicePermissionFormSchema>
->;
+export type RolePermissionFormValues = z.input<ReturnType<typeof createRolePermissionFormSchema>>;
 export type AdminServiceFormValues = z.input<ReturnType<typeof createAdminServiceFormSchema>>;
 export type IncidentStatusFormValues = z.input<typeof incidentStatusFormSchema>;
 export type ServiceIncidentFormValues = z.input<typeof serviceIncidentFormSchema>;

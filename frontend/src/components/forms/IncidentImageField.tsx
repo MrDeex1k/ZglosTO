@@ -12,7 +12,7 @@ interface IncidentImageFieldProps {
   onChange: (value: File | null) => void;
 }
 
-function SelectedImagePreview({ file }: Readonly<{ file: File }>) {
+function SelectedImagePreview({ file, alt }: Readonly<{ file: File; alt: string }>) {
   return (
     <img
       ref={(element) => {
@@ -21,7 +21,7 @@ function SelectedImagePreview({ file }: Readonly<{ file: File }>) {
         element.src = previewUrl;
         return () => URL.revokeObjectURL(previewUrl);
       }}
-      alt="Podgląd"
+      alt={alt}
       className="w-full h-48 object-cover rounded-lg"
     />
   );
@@ -33,14 +33,18 @@ export function IncidentImageField({ value, errors, onChange }: Readonly<Inciden
 
   return (
     <div className="space-y-2">
-      <Label htmlFor="image">Zdjęcie (opcjonalne)</Label>
+      {value === null ? (
+        <Label htmlFor="image">{t(($) => $.incidents.reportForm.image.label)}</Label>
+      ) : (
+        <p>{t(($) => $.incidents.reportForm.image.label)}</p>
+      )}
       {value === null ? (
         <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
           <input
             id="image"
             type="file"
             accept="image/png,image/jpeg"
-            className="hidden"
+            className="peer sr-only"
             aria-describedby="image-size-hint image-file-error imageFile-errors"
             aria-invalid={fileError !== null || errors.length > 0}
             onChange={(event) => {
@@ -55,11 +59,14 @@ export function IncidentImageField({ value, errors, onChange }: Readonly<Inciden
               onChange(file);
             }}
           />
-          <label htmlFor="image" className="cursor-pointer flex flex-col items-center gap-2">
+          <label
+            htmlFor="image"
+            className="cursor-pointer flex flex-col items-center gap-2 rounded-md peer-focus-visible:ring-2 peer-focus-visible:ring-ring"
+          >
             <Upload className="w-8 h-8 text-gray-400" />
-            <span className="text-gray-600">Kliknij, aby dodać zdjęcie</span>
+            <span className="text-gray-600">{t(($) => $.incidents.reportForm.image.choose)}</span>
             <span id="image-size-hint" className="text-gray-400">
-              PNG, JPG lub JPEG (maks. 5 MB)
+              {t(($) => $.incidents.reportForm.image.hint)}
             </span>
           </label>
         </div>
@@ -68,10 +75,11 @@ export function IncidentImageField({ value, errors, onChange }: Readonly<Inciden
           <SelectedImagePreview
             key={`${value.name}:${value.size}:${value.lastModified}`}
             file={value}
+            alt={t(($) => $.incidents.reportForm.image.preview)}
           />
           <button
             type="button"
-            aria-label="Usuń wybrane zdjęcie"
+            aria-label={t(($) => $.incidents.reportForm.image.remove)}
             onClick={() => {
               setFileError(null);
               onChange(null);

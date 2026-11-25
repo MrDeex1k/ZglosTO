@@ -16,11 +16,10 @@ import {
 import type { NavigationProps } from '../components/AppViews';
 import { Toaster } from '../components/ui/sonner';
 import { useIncidentData } from '../hooks/use-incident-data';
-import { useServiceIncidentMutation } from '../hooks/use-incident-mutations';
 import { signOut, useSession } from '../lib/auth-client';
 import { isMobileOrTablet } from '../lib/device';
 import { incidentQueryKeys } from '../queries/incidents';
-import type { Incident } from '../types/incident';
+import type { Incident, ServiceIncident } from '../types/incident';
 import { getDashboardPath } from './app-route-paths';
 import { homePathForUser, parseLocalRedirect } from './route-access';
 
@@ -34,9 +33,12 @@ interface AppRouteState {
   incidents: Incident[];
   residentIncidents: Incident[];
   allIncidents: Incident[];
-  serviceIncidents: Incident[];
+  serviceIncidents: ServiceIncident[];
+  serviceIncidentsError: boolean;
+  refreshServiceIncidents: () => Promise<ServiceIncident[] | null>;
   isLoadingIncidents: boolean;
-  incidentsError: string | null;
+  incidentsError: boolean;
+  retryIncidents: () => void;
   isReportDialogOpen: boolean;
   setIsReportDialogOpen: Dispatch<SetStateAction<boolean>>;
   visibleIncidents: number;
@@ -50,12 +52,6 @@ interface AppRouteState {
   setIsDetailsDialogOpen: Dispatch<SetStateAction<boolean>>;
   openIncident: (incident: Incident) => void;
   submitIncident: () => Promise<void>;
-  updateServiceIncident: (
-    incidentId: string,
-    checked: boolean,
-    adminStatus: IncidentStatusCode,
-    resolvedImageFile: File | null,
-  ) => Promise<void>;
   navigateToLogin: () => void;
   navigateToRegister: () => void;
   navigateToDashboard: (role: UserRole) => void;
@@ -103,8 +99,11 @@ function ScopedAppRouteStateProvider({ children }: Readonly<{ children: ReactNod
     residentIncidents,
     allIncidents,
     serviceIncidents,
+    serviceIncidentsError,
+    refreshServiceIncidents,
     isLoadingIncidents,
     incidentsError,
+    retryIncidents,
   } = useIncidentData({
     pathname,
     isLoggedIn,
@@ -113,11 +112,6 @@ function ScopedAppRouteStateProvider({ children }: Readonly<{ children: ReactNod
     canLoadAdminData,
     serviceKey: sessionUser?.serviceKey ?? null,
   });
-  const serviceIncidentMutation = useServiceIncidentMutation(
-    userEmail,
-    sessionUser?.serviceKey ?? null,
-  );
-
   const navigateToLogin = () => {
     void navigate({ to: '/login' });
   };
@@ -165,19 +159,6 @@ function ScopedAppRouteStateProvider({ children }: Readonly<{ children: ReactNod
   const submitIncident = async () => {
     setIsReportDialogOpen(false);
   };
-  const updateServiceIncident = async (
-    incidentId: string,
-    checked: boolean,
-    adminStatus: IncidentStatusCode,
-    resolvedImageFile: File | null,
-  ) => {
-    await serviceIncidentMutation.mutateAsync({
-      incidentId,
-      checked,
-      adminStatus,
-      resolvedImageFile,
-    });
-  };
   const showAllVisibleIncidents = () => setVisibleIncidents(15);
   const showMoreServiceIncidents = () => setVisibleServiceIncidents((count) => count + 10);
   const value: AppRouteState = {
@@ -191,8 +172,11 @@ function ScopedAppRouteStateProvider({ children }: Readonly<{ children: ReactNod
     residentIncidents,
     allIncidents,
     serviceIncidents,
+    serviceIncidentsError,
+    refreshServiceIncidents,
     isLoadingIncidents,
     incidentsError,
+    retryIncidents,
     isReportDialogOpen,
     setIsReportDialogOpen,
     visibleIncidents,
@@ -206,7 +190,6 @@ function ScopedAppRouteStateProvider({ children }: Readonly<{ children: ReactNod
     setIsDetailsDialogOpen,
     openIncident,
     submitIncident,
-    updateServiceIncident,
     navigateToLogin,
     navigateToRegister,
     navigateToDashboard,

@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 
-import { dashboardIncidentQueryOptions } from '../app/dashboard-query-options';
+import { ensureDashboardIncidentData } from '../app/dashboard-query-options';
 import { requireUserRole } from '../app/router-auth';
 import { AdminDashboardRouteView, AdminDeviceBlockedRouteView } from '../app/route-views';
 import { IncidentRouteError } from '../components/IncidentRouteError';
@@ -13,9 +13,7 @@ export const Route = createFileRoute('/_app/dashboard/admin')({
   loader: async ({ context }) => {
     const isAdminDeviceBlocked = isMobileOrTablet();
     if (!isAdminDeviceBlocked) {
-      await context.queryClient.ensureQueryData(
-        dashboardIncidentQueryOptions(context.authenticatedUser, 'admin'),
-      );
+      await ensureDashboardIncidentData(context.queryClient, context.authenticatedUser, 'admin');
     }
     return { viewer: context.authenticatedUser, isAdminDeviceBlocked };
   },

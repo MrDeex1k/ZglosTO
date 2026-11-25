@@ -35,6 +35,8 @@ export const plPLTranslation = {
     recentlyResolved: 'Ostatnio rozwiązane zgłoszenia',
     loading: 'Ładowanie zgłoszeń...',
     empty: 'Brak rozwiązanych zgłoszeń',
+    loadError: 'Nie udało się załadować rozwiązanych zgłoszeń.',
+    retry: 'Spróbuj ponownie',
   },
   auth: {
     email: 'Adres e-mail',
@@ -67,12 +69,57 @@ export const plPLTranslation = {
     errorTitle: 'Ups...',
   },
   incidents: {
+    management: {
+      conflict:
+        'Zgłoszenie zmieniło się w trakcie edycji. Pobierz aktualne dane, aby sprawdzić swoje zmiany przed ponownym zapisem.',
+      serviceSaveUnconfirmed:
+        'Zapis nie został potwierdzony. Pobierz aktualne dane, aby sprawdzić, które zmiany zapisano.',
+      reloadReport: 'Pobierz aktualne dane',
+      removeDraftPhoto: 'Usuń wybrane zdjęcie',
+      reviewDraft:
+        'Stan w systemie: {{status}}, {{verified}}. Sprawdź formularz i zapisz pozostałe zmiany.',
+      verified: 'sprawdzone',
+      unverified: 'niesprawdzone',
+      saveUnconfirmed:
+        'Zapis nie został potwierdzony. Zamknij okno i otwórz zgłoszenie ponownie, aby sprawdzić, które zmiany zapisano.',
+      loadFailed: 'Nie udało się pobrać aktualnej listy zgłoszeń.',
+      openDetails: 'Otwórz szczegóły zgłoszenia {{description}}',
+    },
     submission: {
       acceptedTitle: 'Zgłoszenie przyjęte',
       acceptedMessage: 'Zgłoszenie zostało przyjęte w systemie. Służba obsługująca: {{service}}.',
       emergencyTitle: 'Zgłoszenie przyjęte — zadzwoń na 112',
       emergencyMessage:
         'Zgłoszenie zostało przyjęte w systemie. Służba obsługująca: {{service}}. Opis wskazuje na możliwe zagrożenie. Zadzwoń pod numer 112 po pomoc. Zapis zgłoszenia w aplikacji nie oznacza wezwania służb ratunkowych.',
+    },
+    reportForm: {
+      service: 'Wybierz służbę',
+      servicePlaceholder: 'Wybierz właściwą służbę',
+      address: 'Adres',
+      description: 'Opis zgłoszenia',
+      descriptionPlaceholder: 'Opisz szczegółowo problem...',
+      submit: 'Wyślij zgłoszenie',
+      submitting: 'Wysyłanie...',
+      errorTitle: 'Błąd wysyłania',
+      errorMessage: 'Nie udało się wysłać zgłoszenia. Spróbuj ponownie później.',
+      continue: 'Przejdź dalej',
+      image: {
+        label: 'Zdjęcie (opcjonalne)',
+        choose: 'Wybierz zdjęcie',
+        hint: 'PNG, JPG lub JPEG (maks. 5 MB)',
+        preview: 'Podgląd wybranego zdjęcia',
+        remove: 'Usuń wybrane zdjęcie',
+      },
+      validation: {
+        requiredService: 'Wybierz właściwą służbę.',
+        unavailableService: 'Wybrana służba jest niedostępna.',
+        requiredAddress: 'Podaj adres zgłoszenia.',
+        requiredDescription: 'Opisz zgłaszany problem.',
+        invalidEmail: 'Podaj prawidłowy adres e-mail.',
+        invalidImage: 'Wybierz prawidłowy plik obrazu.',
+        unsupportedImage: 'Dozwolone są wyłącznie obrazy PNG, JPG i JPEG.',
+        imageTooLarge: 'Obraz może mieć maksymalnie 5 MB.',
+      },
     },
     resolved: 'Rozwiązane',
     reportedAt: 'Data zgłoszenia: {{date}}',
@@ -487,6 +534,8 @@ export const enTranslation = {
     recentlyResolved: 'Recently resolved reports',
     loading: 'Loading reports...',
     empty: 'No resolved reports',
+    loadError: 'Could not load resolved reports.',
+    retry: 'Try again',
   },
   auth: {
     email: 'Email address',
@@ -519,6 +568,22 @@ export const enTranslation = {
     errorTitle: 'Oops...',
   },
   incidents: {
+    management: {
+      conflict:
+        'The report changed while you were editing it. Reload the current data to review your changes before trying again.',
+      serviceSaveUnconfirmed:
+        'The save could not be confirmed. Reload the current data to see which changes were saved.',
+      reloadReport: 'Reload current data',
+      removeDraftPhoto: 'Remove selected photo',
+      reviewDraft:
+        'Current report: {{status}}, {{verified}}. Review the form and save any remaining changes.',
+      verified: 'verified',
+      unverified: 'unverified',
+      saveUnconfirmed:
+        'The save could not be confirmed. Close this window and reopen the report to see which changes were saved.',
+      loadFailed: 'Could not load the latest reports.',
+      openDetails: 'Open report details for {{description}}',
+    },
     submission: {
       acceptedTitle: 'Report received',
       acceptedMessage:
@@ -526,6 +591,35 @@ export const enTranslation = {
       emergencyTitle: 'Report received — call 112',
       emergencyMessage:
         'Your report has been received by the system. Responsible service: {{service}}. The description indicates a possible emergency. Call 112 for help. Submitting a report in the app does not dispatch emergency services.',
+    },
+    reportForm: {
+      service: 'Service',
+      servicePlaceholder: 'Select the appropriate service',
+      address: 'Address',
+      description: 'Report description',
+      descriptionPlaceholder: 'Describe the problem in detail...',
+      submit: 'Submit report',
+      submitting: 'Submitting...',
+      errorTitle: 'Could not submit report',
+      errorMessage: 'Your report could not be submitted. Please try again later.',
+      continue: 'Continue',
+      image: {
+        label: 'Photo (optional)',
+        choose: 'Choose photo',
+        hint: 'PNG, JPG or JPEG (max. 5 MB)',
+        preview: 'Preview of the selected photo',
+        remove: 'Remove selected photo',
+      },
+      validation: {
+        requiredService: 'Select the appropriate service.',
+        unavailableService: 'The selected service is unavailable.',
+        requiredAddress: 'Enter the address of the incident.',
+        requiredDescription: 'Describe the problem you are reporting.',
+        invalidEmail: 'Enter a valid email address.',
+        invalidImage: 'Choose a valid image file.',
+        unsupportedImage: 'Only PNG, JPG and JPEG images are allowed.',
+        imageTooLarge: 'The image must be 5 MB or smaller.',
+      },
     },
     resolved: 'Resolved',
     reportedAt: 'Reported: {{date}}',

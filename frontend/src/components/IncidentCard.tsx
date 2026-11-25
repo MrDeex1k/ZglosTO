@@ -34,11 +34,20 @@ export function IncidentCard({ incident, onClick }: IncidentCardProps) {
 
   return (
     <Card
-      className={`cursor-pointer transition-shadow hover:shadow-md ${
+      className={`relative transition-shadow ${onClick ? 'hover:shadow-md' : ''} ${
         INCIDENT_STATUS_CARD_CLASS_NAMES[incident.adminStatus]
       }`}
-      onClick={() => onClick && onClick(incident)}
     >
+      {onClick !== undefined && (
+        <button
+          type="button"
+          aria-label={t(($) => $.incidents.management.openDetails, {
+            description: incident.description,
+          })}
+          className="absolute inset-0 cursor-pointer rounded-xl focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+          onClick={() => onClick(incident)}
+        />
+      )}
       <CardContent className="p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 space-y-3">

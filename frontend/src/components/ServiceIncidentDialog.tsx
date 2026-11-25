@@ -1,14 +1,17 @@
 import { useForm } from '@tanstack/react-form';
-import { isIncidentStatus, type IncidentStatusCode } from '@zglosto/contracts';
+import { isIncidentStatus } from '@zglosto/contracts';
 import { Calendar, CheckCircle2, Image as ImageIcon } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { getServiceBadgeStyle, getServiceLabel, getServiceShortLabel } from '../config/services';
 import { serviceIncidentFormSchema, type ServiceIncidentFormValues } from '../forms/schemas';
 import { submitClientForm } from '../forms/submit';
+import { useServiceIncidentMutation } from '../hooks/use-incident-mutations';
 import { getCurrentLocale } from '../i18n';
 import { getIncidentStatusLabel } from '../lib/incident-status';
-import type { Incident } from '../types/incident';
+import { ApiResponseError } from '../services/api';
+import type { ServiceIncident } from '../types/incident';
 import { formatPolishDate } from '../utils/dateUtils';
 import { FieldErrors } from './forms/field-errors';
 import { IncidentAddressDirectionsLink } from './IncidentAddressDirectionsLink';
@@ -23,15 +26,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 interface ServiceIncidentDialogProps {
-  incident: Incident | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onUpdate: (
-    incidentId: string,
-    checked: boolean,
-    adminStatus: IncidentStatusCode,
-    resolvedImageFile: File | null,
-  ) => Promise<void>;
+  incident: ServiceIncident;
+  onClose: () => void;
+  refreshIncidents: () => Promise<ServiceIncident[] | null>;
 }
 
 function SelectedResolutionImagePreview({ file }: Readonly<{ file: File }>) {
@@ -55,32 +52,186 @@ function SelectedResolutionImagePreview({ file }: Readonly<{ file: File }>) {
   );
 }
 
-export function ServiceIncidentDialog({
-  incident,
-  open,
-  onOpenChange,
-  onUpdate,
-}: ServiceIncidentDialogProps) {
-  if (!incident) return null;
-
+function ServiceIncidentInformation({ incident }: Readonly<{ incident: ServiceIncident }>) {
   return (
-    <ServiceIncidentDialogContent
-      key={incident.id}
-      incident={incident}
-      open={open}
-      onOpenChange={onOpenChange}
-      onUpdate={onUpdate}
-    />
+    <section className="min-w-0 space-y-6 xl:pr-6" aria-labelledby="service-incident-info">
+      <h3 id="service-incident-info" className="font-semibold text-gray-900">
+        Informacje
+      </h3>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge style={getServiceBadgeStyle(incident.service)}>
+          {getServiceShortLabel(incident.service, getCurrentLocale())}
+        </Badge>
+        <Badge
+          variant="outline"
+          className={
+            incident.adminStatus === 'resolved'
+              ? 'border-success bg-success/10 text-success'
+              : incident.adminStatus === 'in_progress'
+                ? 'border-orange-500 bg-orange-100 text-orange-700'
+                : 'border-gray-500 bg-gray-100 text-gray-700'
+          }
+        >
+          {getIncidentStatusLabel(incident.adminStatus)}
+        </Badge>
+      </div>
+
+      <div>
+        <div className="mb-1 text-gray-500">Służba odpowiedzialna</div>
+        <div className="text-gray-900">{getServiceLabel(incident.service, getCurrentLocale())}</div>
+      </div>
+
+      <div className="flex items-start gap-2">
+        <Calendar className="mt-0.5 h-4 w-4 text-gray-500" />
+        <div>
+          <div className="text-gray-500">Data zgłoszenia</div>
+          <div className="text-gray-900">{formatPolishDate(incident.createdAt)}</div>
+        </div>
+      </div>
+
+      {incident.resolvedAt !== null && (
+        <div className="flex items-start gap-2">
+          <CheckCircle2 className="mt-0.5 h-4 w-4 text-success" />
+          <div>
+            <div className="text-gray-500">Data rozwiązania</div>
+            <div className="text-gray-900">{formatPolishDate(incident.resolvedAt)}</div>
+          </div>
+        </div>
+      )}
+
+      <div>
+        <div className="mb-1 text-gray-500">Opis zgłoszenia</div>
+        <p className="text-gray-900">{incident.description}</p>
+      </div>
+
+      <div>
+        <div className="mb-1 text-gray-500">Adres</div>
+        <IncidentAddressDirectionsLink address={incident.address} />
+      </div>
+
+      <div>
+        <div className="mb-1 text-gray-500">Email zgłaszającego</div>
+        <div className="break-all text-gray-900">{incident.email}</div>
+      </div>
+    </section>
   );
 }
 
-function ServiceIncidentDialogContent({
+function ServiceIncidentImages({
   incident,
-  open,
-  onOpenChange,
-  onUpdate,
-}: Omit<ServiceIncidentDialogProps, 'incident'> & { incident: Incident }) {
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  file,
+}: Readonly<{ incident: ServiceIncident; file: File | null }>) {
+  return (
+    <section
+      className={INCIDENT_DIALOG_DIVIDED_SECTION_CLASS_NAME + ' xl:pr-6'}
+      aria-labelledby="service-incident-images"
+    >
+      <h3 id="service-incident-images" className="font-semibold text-gray-900">
+        Zdjęcia
+      </h3>
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+        {incident.imageUrl !== null && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-gray-500">
+              <ImageIcon className="h-4 w-4" />
+              Zdjęcie zgłoszenia
+            </div>
+            <img
+              src={incident.imageUrl}
+              alt="Zdjęcie incydentu"
+              className="h-72 w-full rounded-lg border bg-gray-50 object-contain"
+            />
+          </div>
+        )}
+        {incident.resolvedImageUrl !== null && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-gray-500">
+              <CheckCircle2 className="h-4 w-4 text-success" />
+              Zdjęcie po naprawie
+            </div>
+            <img
+              src={incident.resolvedImageUrl}
+              alt="Zdjęcie po rozwiązaniu"
+              className="h-72 w-full rounded-lg border bg-gray-50 object-contain"
+            />
+          </div>
+        )}
+        {file !== null && <SelectedResolutionImagePreview file={file} />}
+        {file === null && incident.imageUrl === null && incident.resolvedImageUrl === null && (
+          <p className="text-muted-foreground">Brak zdjęć dla tego zgłoszenia.</p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+type SubmitError = 'conflict' | 'unconfirmed' | null;
+type RefreshState = 'idle' | 'loading' | 'failed' | 'review';
+
+function ServiceIncidentSaveFeedback({
+  incident,
+  submitError,
+  refreshState,
+  onRefresh,
+}: Readonly<{
+  incident: ServiceIncident;
+  submitError: SubmitError;
+  refreshState: RefreshState;
+  onRefresh: () => void;
+}>) {
+  const { t } = useTranslation();
+  if (submitError !== null) {
+    return (
+      <div className="space-y-2">
+        <p role="alert" className="text-sm text-destructive">
+          {submitError === 'conflict'
+            ? t(($) => $.incidents.management.conflict)
+            : t(($) => $.incidents.management.serviceSaveUnconfirmed)}
+        </p>
+        {refreshState === 'failed' && (
+          <p role="alert" className="text-sm text-destructive">
+            {t(($) => $.incidents.management.loadFailed)}
+          </p>
+        )}
+        <Button
+          type="button"
+          variant="outline"
+          disabled={refreshState === 'loading'}
+          onClick={onRefresh}
+        >
+          {t(($) => $.incidents.management.reloadReport)}
+        </Button>
+      </div>
+    );
+  }
+
+  if (refreshState !== 'review') return null;
+
+  return (
+    <output className="block text-sm text-muted-foreground">
+      {t(($) => $.incidents.management.reviewDraft, {
+        status: getIncidentStatusLabel(incident.adminStatus),
+        verified: incident.checked
+          ? t(($) => $.incidents.management.verified)
+          : t(($) => $.incidents.management.unverified),
+      })}
+    </output>
+  );
+}
+
+export function ServiceIncidentDialog({
+  incident: initialIncident,
+  onClose,
+  refreshIncidents,
+}: Readonly<ServiceIncidentDialogProps>) {
+  const { t } = useTranslation();
+  const mutation = useServiceIncidentMutation();
+  const uploadInput = useRef<HTMLInputElement>(null);
+  // Keep the revision paired with the values on which the operator based the draft.
+  const [incident, setIncident] = useState(initialIncident);
+  const [submitError, setSubmitError] = useState<SubmitError>(null);
+  const [refreshState, setRefreshState] = useState<RefreshState>('idle');
   const isFixed = incident.adminStatus === 'resolved';
   const statusItems = (['reported', 'in_progress', 'resolved'] as const).map((status) => ({
     value: status,
@@ -98,18 +249,52 @@ function ServiceIncidentDialogContent({
     },
     onSubmit: async ({ value }) => {
       const update = serviceIncidentFormSchema.parse(value);
-      setSubmitError(null);
+      if (submitError !== null) return;
       try {
-        await onUpdate(incident.id, update.checked, update.adminStatus, update.resolvedImageFile);
-        onOpenChange(false);
-      } catch {
-        setSubmitError('Nie udało się zapisać zmian. Spróbuj ponownie.');
+        await mutation.mutateAsync({ incident, values: update });
+        onClose();
+      } catch (error) {
+        setRefreshState('idle');
+        setSubmitError(
+          error instanceof ApiResponseError && error.status === 409 ? 'conflict' : 'unconfirmed',
+        );
       }
     },
   });
 
+  const refreshDraft = async () => {
+    setRefreshState('loading');
+    const refreshedIncidents = await refreshIncidents();
+    if (refreshedIncidents === null) {
+      setRefreshState('failed');
+      return;
+    }
+    const latest = refreshedIncidents.find(({ id }) => id === incident.id);
+    if (latest === undefined) {
+      onClose();
+      return;
+    }
+    const draft = form.state.values;
+    const locked = latest.adminStatus === 'resolved';
+    // Adopt server values for fields the operator left unchanged or can no longer edit.
+    if (locked || draft.checked === incident.checked) {
+      form.setFieldValue('checked', latest.checked);
+    }
+    if (locked || draft.adminStatus === incident.adminStatus) {
+      form.setFieldValue('adminStatus', latest.adminStatus);
+    }
+    setIncident(latest);
+    setSubmitError(null);
+    setRefreshState('review');
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open && !form.state.isSubmitting && refreshState !== 'loading') onClose();
+      }}
+    >
       <DialogContent className={INCIDENT_MANAGEMENT_DIALOG_CONTENT_CLASS_NAME}>
         <DialogHeader className="pr-10">
           <DialogTitle>Szczegóły zgłoszenia - Panel Służby</DialogTitle>
@@ -119,119 +304,11 @@ function ServiceIncidentDialogContent({
         </DialogHeader>
 
         <div className={INCIDENT_DIALOG_THREE_SECTION_CLASS_NAME}>
-          <section className="min-w-0 space-y-6 xl:pr-6" aria-labelledby="service-incident-info">
-            <h3 id="service-incident-info" className="font-semibold text-gray-900">
-              Informacje
-            </h3>
+          <ServiceIncidentInformation incident={incident} />
 
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge style={getServiceBadgeStyle(incident.service)}>
-                {getServiceShortLabel(incident.service, getCurrentLocale())}
-              </Badge>
-              <Badge
-                variant="outline"
-                className={
-                  incident.adminStatus === 'resolved'
-                    ? 'border-success bg-success/10 text-success'
-                    : incident.adminStatus === 'in_progress'
-                      ? 'border-orange-500 bg-orange-100 text-orange-700'
-                      : 'border-gray-500 bg-gray-100 text-gray-700'
-                }
-              >
-                {getIncidentStatusLabel(incident.adminStatus)}
-              </Badge>
-            </div>
-
-            <div>
-              <div className="mb-1 text-gray-500">Służba odpowiedzialna</div>
-              <div className="text-gray-900">
-                {getServiceLabel(incident.service, getCurrentLocale())}
-              </div>
-            </div>
-
-            <div className="flex items-start gap-2">
-              <Calendar className="mt-0.5 h-4 w-4 text-gray-500" />
-              <div>
-                <div className="text-gray-500">Data zgłoszenia</div>
-                <div className="text-gray-900">{formatPolishDate(incident.createdAt)}</div>
-              </div>
-            </div>
-
-            {incident.resolvedAt !== null && (
-              <div className="flex items-start gap-2">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 text-success" />
-                <div>
-                  <div className="text-gray-500">Data rozwiązania</div>
-                  <div className="text-gray-900">{formatPolishDate(incident.resolvedAt)}</div>
-                </div>
-              </div>
-            )}
-
-            <div>
-              <div className="mb-1 text-gray-500">Opis zgłoszenia</div>
-              <p className="text-gray-900">{incident.description}</p>
-            </div>
-
-            <div>
-              <div className="mb-1 text-gray-500">Adres</div>
-              <IncidentAddressDirectionsLink address={incident.address} />
-            </div>
-
-            <div>
-              <div className="mb-1 text-gray-500">Email zgłaszającego</div>
-              <div className="break-all text-gray-900">{incident.email}</div>
-            </div>
-          </section>
-
-          <section
-            className={`${INCIDENT_DIALOG_DIVIDED_SECTION_CLASS_NAME} xl:pr-6`}
-            aria-labelledby="service-incident-images"
-          >
-            <h3 id="service-incident-images" className="font-semibold text-gray-900">
-              Zdjęcia
-            </h3>
-
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-              {incident.imageUrl !== null && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-gray-500">
-                    <ImageIcon className="h-4 w-4" />
-                    Zdjęcie zgłoszenia
-                  </div>
-                  <img
-                    src={incident.imageUrl}
-                    alt="Zdjęcie incydentu"
-                    className="h-72 w-full rounded-lg border bg-gray-50 object-contain"
-                  />
-                </div>
-              )}
-
-              <form.Subscribe selector={(state) => state.values.resolvedImageFile}>
-                {(resolvedImageFile) =>
-                  resolvedImageFile !== null ? (
-                    <SelectedResolutionImagePreview
-                      key={`${resolvedImageFile.name}:${resolvedImageFile.size}:${resolvedImageFile.lastModified}`}
-                      file={resolvedImageFile}
-                    />
-                  ) : incident.resolvedImageUrl !== null ? (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-gray-500">
-                        <CheckCircle2 className="h-4 w-4 text-success" />
-                        Zdjęcie po naprawie
-                      </div>
-                      <img
-                        src={incident.resolvedImageUrl}
-                        alt="Zdjęcie po rozwiązaniu"
-                        className="h-72 w-full rounded-lg border bg-gray-50 object-contain"
-                      />
-                    </div>
-                  ) : incident.imageUrl === null ? (
-                    <p className="text-muted-foreground">Brak zdjęć dla tego zgłoszenia.</p>
-                  ) : null
-                }
-              </form.Subscribe>
-            </div>
-          </section>
+          <form.Subscribe selector={(state) => state.values.resolvedImageFile}>
+            {(file) => <ServiceIncidentImages incident={incident} file={file} />}
+          </form.Subscribe>
 
           <form
             className={INCIDENT_DIALOG_DIVIDED_SECTION_CLASS_NAME}
@@ -319,8 +396,15 @@ function ServiceIncidentDialogContent({
                     <input
                       type="file"
                       accept="image/png,image/jpeg"
-                      className="hidden"
+                      className="peer sr-only"
                       id="resolved-image-upload"
+                      ref={uploadInput}
+                      aria-invalid={field.state.meta.errors.length > 0}
+                      aria-describedby={
+                        field.state.value === null
+                          ? 'resolved-image-upload-errors'
+                          : 'resolved-image-selection resolved-image-upload-errors'
+                      }
                       onChange={(event) => {
                         const file = event.target.files?.[0];
                         if (!file) return;
@@ -329,16 +413,27 @@ function ServiceIncidentDialogContent({
                     />
                     <label
                       htmlFor="resolved-image-upload"
-                      className="cursor-pointer rounded-lg bg-gray-100 px-3 py-2 text-gray-800 hover:bg-gray-200"
+                      className="cursor-pointer rounded-lg bg-gray-100 px-3 py-2 text-gray-800 hover:bg-gray-200 peer-focus-visible:ring-2 peer-focus-visible:ring-ring"
                     >
                       Wybierz zdjęcie
                     </label>
                   </div>
                   {field.state.value !== null && (
-                    <div className="mt-3">
-                      <span className="text-sm text-muted-foreground">
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <span id="resolved-image-selection" className="text-sm text-muted-foreground">
                         Wybrano: {field.state.value.name}
                       </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          field.handleChange(null);
+                          if (uploadInput.current !== null) uploadInput.current.value = '';
+                        }}
+                      >
+                        {t(($) => $.incidents.management.removeDraftPhoto)}
+                      </Button>
                     </div>
                   )}
                   <FieldErrors id="resolved-image-upload-errors" errors={field.state.meta.errors} />
@@ -346,18 +441,19 @@ function ServiceIncidentDialogContent({
               )}
             </form.Field>
 
-            {submitError !== null && (
-              <p role="alert" className="text-sm text-destructive">
-                {submitError}
-              </p>
-            )}
+            <ServiceIncidentSaveFeedback
+              incident={incident}
+              submitError={submitError}
+              refreshState={refreshState}
+              onRefresh={() => void refreshDraft()}
+            />
 
             <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting] as const}>
               {([canSubmit, isSubmitting]) => (
                 <Button
                   type="submit"
                   className="w-full bg-brand-primary hover:bg-brand-primary/90"
-                  disabled={!canSubmit || isSubmitting}
+                  disabled={!canSubmit || isSubmitting || submitError !== null}
                 >
                   Zapisz zmiany
                 </Button>

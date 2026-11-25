@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 
-import { dashboardIncidentQueryOptions } from '../app/dashboard-query-options';
+import { ensureDashboardIncidentData } from '../app/dashboard-query-options';
 import { requireUserRole } from '../app/router-auth';
 import { ServiceDashboardRouteView } from '../app/route-views';
 import { IncidentRouteError } from '../components/IncidentRouteError';
@@ -10,9 +10,7 @@ export const Route = createFileRoute('/_app/dashboard/sluzby')({
     requireUserRole(context.authenticatedUser, 'sluzby');
   },
   loader: async ({ context }) => {
-    await context.queryClient.ensureQueryData(
-      dashboardIncidentQueryOptions(context.authenticatedUser, 'sluzby'),
-    );
+    await ensureDashboardIncidentData(context.queryClient, context.authenticatedUser, 'sluzby');
     return { viewer: context.authenticatedUser };
   },
   errorComponent: IncidentRouteError,

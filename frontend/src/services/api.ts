@@ -1,7 +1,11 @@
 import {
+  formatIncidentRevisionEtag,
   parseCurrentCreateIncidentResponse,
   parseCurrentIncidentList,
   parseCurrentResolvedIncidents,
+  parseServiceIncidentList,
+  ServiceIncidentMutationResponseSchema,
+  UpdateUserPermissionsRequestSchema,
   InitiateImageUploadResponseSchema,
   type CurrentCreateIncidentRequest,
   type CurrentCreateIncidentResponse,
@@ -12,16 +16,25 @@ import {
   type UpdateIncidentServiceRequest,
   type UpdateIncidentStatusRequest,
   type UpdateIncidentVerificationRequest,
-  type UpdateUserPermissionsRequest,
+  type ServiceIncidentListItemDto,
   type UploadResolvedImageRequest,
   type UserRole,
 } from '@zglosto/contracts';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
+export class ApiResponseError extends Error {
+  readonly status: number;
+
+  constructor(status: number) {
+    super(`HTTP error! status: ${status}`);
+    this.status = status;
+  }
+}
+
 async function ensureSuccessfulResponse(response: Response): Promise<void> {
   if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+    throw new ApiResponseError(response.status);
   }
 }
 
@@ -31,16 +44,25 @@ async function readJson(response: Response): Promise<unknown> {
   return payload;
 }
 
-async function sendMutation(url: string, method: 'PATCH' | 'POST', body: object): Promise<void> {
-  const response = await fetch(url, {
+function requestMutation(
+  url: string,
+  method: 'PATCH' | 'POST',
+  body: object,
+  revision?: number,
+): Promise<Response> {
+  return fetch(url, {
     method,
     headers: {
       'Content-Type': 'application/json',
+      ...(revision === undefined ? {} : { 'If-Match': formatIncidentRevisionEtag(revision) }),
     },
     credentials: 'include',
     body: JSON.stringify(body),
   });
-  await ensureSuccessfulResponse(response);
+}
+
+async function sendMutation(url: string, method: 'PATCH' | 'POST', body: object): Promise<void> {
+  await ensureSuccessfulResponse(await requestMutation(url, method, body));
 }
 
 async function imageUploadContract(file: File): Promise<InitiateImageUploadRequest> {
@@ -121,45 +143,63 @@ export async function updateUserPermissions(
   permissions: UserRole,
   serviceKey: string | null,
 ): Promise<void> {
-  const body: UpdateUserPermissionsRequest = {
+  const body = UpdateUserPermissionsRequestSchema.parse({
     email,
     uprawnienia: permissions,
-    serviceKey: permissions === 'sluzby' ? serviceKey : null,
-  };
+    serviceKey,
+  });
   await sendMutation(`${API_BASE_URL}/admin/uzytkownicy/service-key`, 'PATCH', body);
 }
 
 export async function fetchServiceIncidents(
   signal?: AbortSignal,
-): Promise<CurrentIncidentListItemDto[]> {
+): Promise<ServiceIncidentListItemDto[]> {
   const response = await fetch(`${API_BASE_URL}/sluzby/incydenty`, {
     signal: signal ?? null,
     credentials: 'include',
   });
-  return parseCurrentIncidentList(await readJson(response));
+  return parseServiceIncidentList(await readJson(response));
 }
 
-export async function updateIncidentStatusService(
+async function patchServiceIncident(path: string, body: object, revision: number): Promise<number> {
+  const response = await requestMutation(
+    `${API_BASE_URL}/sluzby/incydenty/${path}`,
+    'PATCH',
+    body,
+    revision,
+  );
+  return ServiceIncidentMutationResponseSchema.parse(await readJson(response)).revision;
+}
+
+export function updateIncidentStatusService(
   incidentId: string,
   status: IncidentStatusCode,
-): Promise<void> {
+  revision: number,
+): Promise<number> {
   const body: UpdateIncidentStatusRequest = { status_incydentu: status };
-  await sendMutation(`${API_BASE_URL}/sluzby/incydenty/${incidentId}/status`, 'PATCH', body);
+  return patchServiceIncident(`${incidentId}/status`, body, revision);
 }
 
-export async function updateIncidentVerificationService(
+export function updateIncidentVerificationService(
   incidentId: string,
   checked: boolean,
-): Promise<void> {
+  revision: number,
+): Promise<number> {
   const body: UpdateIncidentVerificationRequest = { sprawdzenie_incydentu: checked };
-  await sendMutation(`${API_BASE_URL}/sluzby/incydenty/${incidentId}/sprawdzenie`, 'PATCH', body);
+  return patchServiceIncident(`${incidentId}/sprawdzenie`, body, revision);
 }
 
-export async function uploadResolvedImageService(incidentId: string, file: File): Promise<void> {
-  const uploadId = await uploadWithPresignedUrl(
+export function stageResolvedImageService(incidentId: string, file: File): Promise<string> {
+  return uploadWithPresignedUrl(
     `${API_BASE_URL}/sluzby/incydenty/${incidentId}/obrazy/uploads`,
     file,
   );
+}
+
+export async function attachResolvedImageService(
+  incidentId: string,
+  uploadId: string,
+): Promise<void> {
   const body: UploadResolvedImageRequest = { uploadId };
   await sendMutation(
     `${API_BASE_URL}/sluzby/incydenty/${incidentId}/zdjecie_rozwiazane`,

@@ -1,28 +1,22 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { IncidentStatusCode } from '@zglosto/contracts';
 
-import { toIncidentDisplayStatus } from '../lib/incident-status';
 import {
   incidentQueryKeys,
   invalidateIncidentQueries,
   updateIncidentCache,
 } from '../queries/incidents';
 import {
+  attachResolvedImageService,
   createIncident,
   updateIncidentService,
   updateIncidentStatus,
   updateIncidentStatusService,
   updateIncidentVerification,
   updateIncidentVerificationService,
-  uploadResolvedImageService,
+  stageResolvedImageService,
 } from '../services/api';
-
-interface IncidentStatusMutation {
-  incidentId: string;
-  checked: boolean;
-  adminStatus: IncidentStatusCode;
-  resolvedImageFile: File | null;
-}
+import type { IncidentStatusFormValues, ServiceIncidentFormValues } from '../forms/schemas';
+import type { Incident, ServiceIncident } from '../types/incident';
 
 interface IncidentServiceMutation {
   incidentId: string;
@@ -38,58 +32,59 @@ export function useCreateIncidentMutation() {
   });
 }
 
-export function useServiceIncidentMutation(owner: string, serviceKey: string | null = null) {
+export async function saveServiceIncident(
+  incident: ServiceIncident,
+  { checked, adminStatus, resolvedImageFile }: ServiceIncidentFormValues,
+): Promise<void> {
+  const uploadId =
+    resolvedImageFile === null
+      ? null
+      : await stageResolvedImageService(incident.id, resolvedImageFile);
+  const revision =
+    checked === incident.checked
+      ? incident.revision
+      : await updateIncidentVerificationService(incident.id, checked, incident.revision);
+  if (adminStatus !== incident.adminStatus) {
+    await updateIncidentStatusService(incident.id, adminStatus, revision);
+  }
+  if (uploadId !== null) {
+    await attachResolvedImageService(incident.id, uploadId);
+  }
+}
+
+export async function saveAdminIncidentStatus(
+  incident: Incident,
+  { checked, adminStatus }: IncidentStatusFormValues,
+): Promise<void> {
+  if (adminStatus !== incident.adminStatus) {
+    await updateIncidentStatus(incident.id, adminStatus);
+  }
+  if (checked !== incident.checked) {
+    await updateIncidentVerification(incident.id, checked);
+  }
+}
+
+export function useServiceIncidentMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      incidentId,
-      checked,
-      adminStatus,
-      resolvedImageFile,
-    }: IncidentStatusMutation) => {
-      await updateIncidentStatusService(incidentId, adminStatus);
-      await updateIncidentVerificationService(incidentId, checked);
-      if (resolvedImageFile !== null) {
-        await uploadResolvedImageService(incidentId, resolvedImageFile);
-      }
-      return { incidentId, checked, adminStatus, resolvedImageFile };
-    },
-    onSuccess: ({ incidentId, checked, adminStatus }) => {
-      updateIncidentCache(
-        queryClient,
-        incidentQueryKeys.service(owner, serviceKey),
-        incidentId,
-        (incident) => ({
-          ...incident,
-          checked,
-          adminStatus,
-          status: toIncidentDisplayStatus(adminStatus),
-          resolvedImageUrl: incident.resolvedImageUrl,
-        }),
-      );
-    },
+    mutationFn: ({
+      incident,
+      values,
+    }: {
+      incident: ServiceIncident;
+      values: ServiceIncidentFormValues;
+    }) => saveServiceIncident(incident, values),
     onSettled: () => invalidateIncidentQueries(queryClient),
   });
 }
 
-export function useAdminIncidentStatusMutation(owner: string) {
+export function useAdminIncidentStatusMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ incidentId, checked, adminStatus }: IncidentStatusMutation) => {
-      await updateIncidentStatus(incidentId, adminStatus);
-      await updateIncidentVerification(incidentId, checked);
-      return { incidentId, checked, adminStatus };
-    },
-    onSuccess: ({ incidentId, checked, adminStatus }) => {
-      updateIncidentCache(queryClient, incidentQueryKeys.admin(owner), incidentId, (incident) => ({
-        ...incident,
-        checked,
-        adminStatus,
-        status: toIncidentDisplayStatus(adminStatus),
-      }));
-    },
+    mutationFn: ({ incident, values }: { incident: Incident; values: IncidentStatusFormValues }) =>
+      saveAdminIncidentStatus(incident, values),
     onSettled: () => invalidateIncidentQueries(queryClient),
   });
 }

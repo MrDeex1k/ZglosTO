@@ -9,7 +9,7 @@ import {
   fetchServiceIncidents,
   fetchUserIncidents,
 } from '../services/api';
-import type { Incident } from '../types/incident';
+import type { Incident, ServiceIncident } from '../types/incident';
 
 export const incidentQueryKeys = {
   all: ['incidents'] as const,
@@ -63,34 +63,32 @@ export function mapIncident(apiIncident: CurrentIncidentListItemDto): Incident {
 export const resolvedIncidentsQueryOptions = () =>
   queryOptions({
     queryKey: incidentQueryKeys.resolved(),
-    queryFn: async ({ signal }) =>
-      (await fetchResolvedIncidents(signal))
-        .map(mapResolvedIncident)
-        .sort(
-          (first, second) =>
-            new Date(second.resolvedAt ?? second.createdAt).getTime() -
-            new Date(first.resolvedAt ?? first.createdAt).getTime(),
-        ),
+    queryFn: async ({ signal }) => (await fetchResolvedIncidents(signal)).map(mapResolvedIncident),
   });
 
-function privateIncidentQueryOptions(
+function privateIncidentQueryOptions<TDto, TIncident extends Incident>(
   queryKey: QueryKey,
-  queryFn: (signal?: AbortSignal) => Promise<CurrentIncidentListItemDto[]>,
+  queryFn: (signal?: AbortSignal) => Promise<TDto[]>,
+  map: (item: TDto) => TIncident,
 ) {
   return queryOptions({
     queryKey,
-    queryFn: async ({ signal }) => (await queryFn(signal)).map(mapIncident),
+    queryFn: async ({ signal }) => (await queryFn(signal)).map(map),
   });
 }
 
 export const residentIncidentsQueryOptions = (owner: string) =>
-  privateIncidentQueryOptions(incidentQueryKeys.resident(owner), fetchUserIncidents);
+  privateIncidentQueryOptions(incidentQueryKeys.resident(owner), fetchUserIncidents, mapIncident);
 
 export const adminIncidentsQueryOptions = (owner: string) =>
-  privateIncidentQueryOptions(incidentQueryKeys.admin(owner), fetchAllIncidents);
+  privateIncidentQueryOptions(incidentQueryKeys.admin(owner), fetchAllIncidents, mapIncident);
 
 export const serviceIncidentsQueryOptions = (owner: string, serviceKey: string | null = null) =>
-  privateIncidentQueryOptions(incidentQueryKeys.service(owner, serviceKey), fetchServiceIncidents);
+  privateIncidentQueryOptions(
+    incidentQueryKeys.service(owner, serviceKey),
+    fetchServiceIncidents,
+    (incident): ServiceIncident => ({ ...mapIncident(incident), revision: incident.revision }),
+  );
 
 export function updateIncidentCache(
   queryClient: QueryClient,

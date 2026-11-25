@@ -1,7 +1,8 @@
 import { useForm } from '@tanstack/react-form';
-import { isIncidentStatus, type IncidentStatusCode } from '@zglosto/contracts';
+import { isIncidentStatus } from '@zglosto/contracts';
 import { Calendar, CheckCircle2, Image as ImageIcon, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import {
   assignableServices,
@@ -37,12 +38,7 @@ interface AdminIncidentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUpdateService: (incidentId: string, newService: string) => Promise<void>;
-  onUpdate: (
-    incidentId: string,
-    checked: boolean,
-    adminStatus: IncidentStatusCode,
-    resolvedImageFile: File | null,
-  ) => Promise<void>;
+  onUpdate: (incident: Incident, values: IncidentStatusFormValues) => Promise<void>;
 }
 
 function AdminIncidentInformation({ incident }: Readonly<{ incident: Incident }>) {
@@ -213,6 +209,9 @@ function AdminIncidentDialogContent({
   onUpdateService,
   onUpdate,
 }: Omit<AdminIncidentDialogProps, 'incident'> & { incident: Incident }) {
+  const { t } = useTranslation();
+  const saving = useRef(false);
+  const [isSaving, setIsSaving] = useState(false);
   const assignableServiceKeys = assignableServices.map((service) => service.key);
   const adminServiceSchema = createAdminServiceFormSchema(assignableServiceKeys);
   const serviceItems = assignableServices.map((service) => ({
@@ -241,7 +240,10 @@ function AdminIncidentDialogContent({
       onSubmit: adminServiceSchema,
     },
     onSubmit: async ({ value }) => {
+      if (saving.current) return;
       const assignment = adminServiceSchema.parse(value);
+      saving.current = true;
+      setIsSaving(true);
       try {
         await onUpdateService(incident.id, assignment.service);
         onOpenChange(false);
@@ -252,8 +254,11 @@ function AdminIncidentDialogContent({
           visible: true,
         });
       }
+      saving.current = false;
+      setIsSaving(false);
     },
   });
+  const [statusSaveFailed, setStatusSaveFailed] = useState(false);
   const statusDefaultValues: IncidentStatusFormValues = {
     checked: incident.checked,
     adminStatus: incident.adminStatus,
@@ -264,17 +269,18 @@ function AdminIncidentDialogContent({
       onSubmit: incidentStatusFormSchema,
     },
     onSubmit: async ({ value }) => {
+      if (saving.current || statusSaveFailed) return;
       const status = incidentStatusFormSchema.parse(value);
+      saving.current = true;
+      setIsSaving(true);
       try {
-        await onUpdate(incident.id, status.checked, status.adminStatus, null);
+        await onUpdate(incident, status);
         onOpenChange(false);
       } catch {
-        setAlert({
-          type: 'error',
-          message: 'Nie udało się zaktualizować statusu zgłoszenia.',
-          visible: true,
-        });
+        setStatusSaveFailed(true);
       }
+      saving.current = false;
+      setIsSaving(false);
     },
   });
 
@@ -290,7 +296,14 @@ function AdminIncidentDialogContent({
   }, [alert.visible]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!statusForm.state.isSubmitting && !serviceForm.state.isSubmitting) {
+          onOpenChange(nextOpen);
+        }
+      }}
+    >
       <DialogContent className={INCIDENT_MANAGEMENT_DIALOG_CONTENT_CLASS_NAME}>
         <DialogHeader className="pr-10">
           <DialogTitle>Szczegóły zgłoszenia (Admin)</DialogTitle>
@@ -378,7 +391,7 @@ function AdminIncidentDialogContent({
                     <Button
                       type="submit"
                       className="w-full bg-brand-primary hover:bg-brand-primary/90"
-                      disabled={!canSubmit || isSubmitting}
+                      disabled={!canSubmit || isSubmitting || isSaving}
                     >
                       Zapisz przypisanie
                     </Button>
@@ -454,6 +467,11 @@ function AdminIncidentDialogContent({
                 )}
               </statusForm.Field>
 
+              {statusSaveFailed && (
+                <p role="alert" className="text-sm text-destructive">
+                  {t(($) => $.incidents.management.saveUnconfirmed)}
+                </p>
+              )}
               <statusForm.Subscribe
                 selector={(state) => [state.canSubmit, state.isSubmitting] as const}
               >
@@ -461,7 +479,7 @@ function AdminIncidentDialogContent({
                   <Button
                     type="submit"
                     className="w-full bg-brand-primary hover:bg-brand-primary/90"
-                    disabled={!canSubmit || isSubmitting}
+                    disabled={!canSubmit || isSubmitting || isSaving || statusSaveFailed}
                   >
                     Zapisz status
                   </Button>
