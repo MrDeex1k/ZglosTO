@@ -1,6 +1,6 @@
 # Audyt stanu obecnego ZglosTO
 
-Runtime i menedżer pakietów zostały zaktualizowane po [domknięciu migracji Bun](bun-phase6-results.md). Node `>=26.8.1` pozostaje wyłącznie narzędziem Expo/Metro; urządzenia Mobile używają Hermes.
+Runtime i menedżer pakietów zostały zaktualizowane po [domknięciu migracji Bun](bun-phase6-results.md). Node `>=26.8.1` obsługuje Expo/Metro i e2e Mobile oraz może uruchamiać narzędzia pakowania Desktop. Mobile działa na Hermes, Desktop na Electronie.
 
 ## Cel dokumentu
 
@@ -106,16 +106,17 @@ runbook Compose, handoff do K3s i maszynowy kontrakt zamknięcia. Faza 11 jest z
 
 | Usługa              | Katalog           | Runtime / obraz                            | Port                | Rola                                                  |
 | ------------------- | ----------------- | ------------------------------------------ | ------------------- | ----------------------------------------------------- |
-| `frontend`          | `frontend/`       | Bun 1.4.2 build + Nginx 1.31.4             | `8080` w kontenerze | SPA React dla mieszkańca, służb i admina              |
-| `backend`           | `backend/`        | Bun 1.4.2 + NestJS 12 stable + Express 5   | `3000`              | API incydentów, statystyk i administracji             |
-| `authorization`     | `authorization/`  | Bun 1.4.2 + Hono 4 + Better Auth           | `9956` mTLS         | logowanie, rejestracja, sesja, role z `uzytkownicy`   |
-| `llm_gateway`       | `llm_gateway/`    | Bun 1.4.2 + Hono 4 + TypeScript            | `8130`              | stabilna granica backendu do wymiennego runtime'u LLM |
+| `frontend`          | `frontend/`       | Bun 1.4.5 build + Nginx 1.31.10            | `8080` w kontenerze | SPA React dla mieszkańca, służb i admina              |
+| `desktop`           | `desktop/`        | Electron 45 + Electron Packager            | instancja HTTPS     | Panel operacyjny dla służb i admina                   |
+| `backend`           | `backend/`        | Bun 1.4.5 + NestJS 12 stable + Express 5   | `3000`              | API incydentów, statystyk i administracji             |
+| `authorization`     | `authorization/`  | Bun 1.4.5 + Hono 4 + Better Auth           | `9956` mTLS         | logowanie, rejestracja, sesja, role z `uzytkownicy`   |
+| `llm_gateway`       | `llm_gateway/`    | Bun 1.4.5 + Hono 4 + TypeScript            | `8130`              | stabilna granica backendu do wymiennego runtime'u LLM |
 | Docker Model Runner | poza repozytorium | llama.cpp + Gemma 3 1B QAT                 | API hosta DMR       | opcjonalna inferencja za gatewayem                    |
 | `database`          | `database/`       | PostgreSQL 18.6 + `pg_cron` + `pgbackrest` | `${POSTGRES_PORT}`  | dane domenowe i tabele Better Auth                    |
 | `pgbouncer`         | obraz zewnętrzny  | PgBouncer 1.25.2                           | `6432`              | transaction pooling dla backendu i authorization      |
 | `rustfs`            | obraz zewnętrzny  | RustFS 1.0.0-rc.5                          | `9000` wewnętrznie  | domyślny lokalny provider Object Storage zgodny z S3  |
 | `redis`             | obraz zewnętrzny  | Redis 8.10.1                               | `6379` wewnętrznie  | opcjonalny cache i współdzielony rate limiting        |
-| `nginx`             | `nginx/`          | Nginx 1.31.4                               | `1235`              | reverse proxy dla frontendu, auth, backendu i LLM     |
+| `nginx`             | `nginx/`          | Nginx 1.31.10                              | `1235`              | reverse proxy dla frontendu, auth, backendu i LLM     |
 
 ### Sieci i uruchomienie lokalne
 
@@ -196,7 +197,7 @@ modernizacji. W development Vite udostępnia te same prefiksy i proxy do lokalny
 - shadcn/ui `base-nova` na Base UI
 - Better Auth client
 
-Jedynym package managerem JavaScript/TypeScript jest Bun `1.4.2`, z jednym `bun.lock` w katalogu głównym i workspace obejmującym `frontend`, `backend`, `authorization`, `llm_gateway`, `Mobile` oraz `packages/*`. Wspólny toolchain używa Oxlint `1.80.0`, Oxfmt `0.65.0` oraz skryptów root `bun run lint`, `bun run format`, `bun run format:check`, `bun run typecheck`, `bun run build` i `bun run test`. Oxlint działa obecnie bez trybu type-aware; pełny typecheck wykonuje osobno TypeScript 7. `oxlint-tsgolint` nie jest zainstalowany. Bezpośrednie zależności są przypięte dokładnie, wrapper Bun/SFW odrzuca publikacje młodsze niż 24 godziny, a operacje na zależnościach JavaScript są chronione przez lokalny Socket Firewall (`sfw`) i skrypty `bun run deps:*`.
+Jedynym package managerem JavaScript/TypeScript jest Bun `1.4.5`, z jednym `bun.lock` w katalogu głównym i workspace obejmującym `frontend`, `backend`, `authorization`, `llm_gateway`, `Mobile`, `desktop`, `docs-site` i `packages/*`. Wspólny toolchain używa Oxlint `1.95.0`, Oxfmt `0.80.0` oraz skryptów root `bun run lint`, `bun run format`, `bun run format:check`, `bun run typecheck`, `bun run build` i `bun run test`. Oxlint działa obecnie bez trybu type-aware; pełny typecheck wykonuje osobno TypeScript 7. `oxlint-tsgolint` nie jest zainstalowany. Bezpośrednie zależności są przypięte dokładnie, wrapper Bun/SFW odrzuca publikacje młodsze niż 3 godziny, a operacje na zależnościach JavaScript są chronione przez lokalny Socket Firewall (`sfw`) i skrypty `bun run deps:*`.
 
 Workspace `docs-site` jest również częścią monorepo: Nimbus i Astro generują statyczne
 `/docs`, dołączane do obrazu frontendu i obsługiwane przez Nginx. Dokumentacja nie wymaga
@@ -278,7 +279,7 @@ Mapowanie statusu biznesowego oraz polskich etykiet UI znajduje się w
 
 - Better Auth `1.6.27`
 - Hono `4.13.2` z `@hono/node-server` `2.1.0`
-- Bun 1.4.2; TypeScript jest kompilowany przez `bun run build` do JavaScript w `dist`
+- Bun 1.4.5; TypeScript jest kompilowany przez `bun run build` do JavaScript w `dist`
 - PostgreSQL przez `pg`
 
 Authorization nie ma już zależności od Express, `cors`, `@types/express` ani `@types/cors`.
@@ -326,7 +327,7 @@ Serwis działa na `PORT` z `.env`.
 ### Stack
 
 - NestJS 12.0.1 z `@nestjs/platform-express` i Express 5 jako adapterem HTTP
-- Bun 1.4.2 jako runtime startowy
+- Bun 1.4.5 jako runtime startowy
 - TypeScript 7/TSGO, Zod/Standard Schema i OpenAPI
 - `pg` przez PgBouncer/TLS, provider-neutralny S3 i RabbitMQ/AMQPS
 
@@ -414,7 +415,7 @@ podłączyć AWS S3, Cloudflare R2 lub innego providera zgodnego z S3 wyłączni
 
 ### Stack
 
-- `llm_gateway`: Hono + Bun 1.4.2 + TypeScript;
+- `llm_gateway`: Hono + Bun 1.4.5 + TypeScript;
 - runtime: Docker Model Runner 1.2.6 z llama.cpp;
 - model: `ai/gemma3-qat:1B-Q4_K_M`, digest
   `sha256:9f84c113e1f1085bddaffad1acb07c90e59487f0c7e25028f1811e71efba9599`;

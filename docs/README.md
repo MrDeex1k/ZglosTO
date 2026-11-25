@@ -31,6 +31,7 @@ stronami; archiwum faz pozostaje w repozytorium.
 
 - [mieszkaniec WEB](using-web-resident.md), [służby WEB](using-web-service.md) i
   [administrator WEB](using-web-admin.md) — codzienne użycie paneli i granice ról;
+- [Desktop dla służb i administratorów](desktop.md) — dostęp, pakowanie i testy klienta Electron;
 - [mieszkaniec Mobile](using-mobile-resident.md) oraz
   [służby Mobile](using-mobile-service.md) — odpowiednie przepływy na telefonie;
 - [uruchomienie lokalne](local-development.md) — pełny start Docker Compose, demo Mobile,
@@ -66,7 +67,7 @@ opcjonalnym procesem klienta, nie częścią źródłowego wydania.
 
 - [Plan migracji na Bun](bun-migration-plan.md) — historia etapów i decyzji;
   migracja jest wdrożona. Bieżące zasady opisuje [polityka zależności](dependency-policy.md),
-  a wyniki [raport fazy 6](bun-phase6-results.md). Node pozostaje w toolchainie Expo/Metro.
+  a wyniki [raport fazy 6](bun-phase6-results.md). Node pozostaje w toolchainie Expo/Metro, e2e Mobile i Electron.
 
 ## E. Archiwum zakończonych faz
 

@@ -17,7 +17,7 @@ Sekcje „Dla programisty”, „Dla operatora” i „Dla klienta Mobile” obe
 toolchain, diagnostykę, monitoring, transport, Redis oraz konfigurację, build i odbiór
 Mobile. Instrukcje Mobile są publikowane bez kopiowania ich źródeł do `docs/`.
 Sekcja „Korzystanie z aplikacji” prowadzi przez osobne przepływy mieszkańca, służby i
-administratora w WEB oraz mieszkańca i służby w Mobile. Macierz źródeł, opublikowanych
+administratora w WEB, panel służb i administratora w Desktop oraz mieszkańca i służb w Mobile. Macierz źródeł, opublikowanych
 przewodników i świadomych wyłączeń znajduje się w
 [audycie pokrycia](../docs/documentation-coverage-audit.md).
 Przy zmianie listy źródeł spoza `docs/` uaktualnij także allowlistę walidatora,
@@ -75,7 +75,7 @@ DOCS_TEST_ORIGIN=https://domena-aplikacji bun run --filter docs-site check:build
 Sprawdza to przekierowania, trasy stron, Markdown, plik wyszukiwarki oraz prawdziwe 404.
 Nie używaj tego wariantu jako testu serwera Astro preview, którego routing różni się od Nginx.
 
-Build, kontrolę typów i testy dokumentacji uruchamia Bun 1.4.4. Domyślnym kompilatorem
+Build, kontrolę typów i testy dokumentacji uruchamia Bun 1.4.5. Domyślnym kompilatorem
 dokumentacji jest TypeScript 7.0.2 (`typecheck:ts`). Wyjątkiem jest `typecheck:astro`:
 osobny proces używa API `AstroCheck` z `@astrojs/language-server` i aliasu
 `typescript-astro` przypiętego do TS6.0.3. Volar także importuje kompilator bezpośrednio,

@@ -1,6 +1,6 @@
 # Polityka zależności
 
-Projekt używa Bun 1.4.4 jako menedżera pakietów. Bezpośrednie zależności mają dokładne wersje. Nowe wersje bezpośrednie i tranzytywne obowiązuje kwarantanna 3 godzin, bez wyjątków.
+Projekt używa Bun 1.4.5 jako menedżera pakietów. Bezpośrednie zależności mają dokładne wersje. Nowe wersje bezpośrednie i tranzytywne obowiązuje kwarantanna 3 godzin, bez wyjątków.
 
 ## Instalacja i aktualizacja
 
@@ -42,11 +42,11 @@ Szczegóły izolacji Astro oraz warunki usunięcia wyjątku opisuje
 [README dokumentacji](../docs-site/README.md). Zmiana kompilatora wymaga przejścia
 testów odpowiedniego workspace, nie tylko zmiany numeru zależności.
 
-### Bun i Expo/Metro
+### Bun, Expo/Metro i Electron
 
-Od fazy 4 Bun 1.4.4 wykonuje usługi, skrypty repo, kompilatory, Vite, Vitest, Knip, Oxlint/Oxfmt oraz wrapper SFW i hooki Git. CLI uruchamiamy przez `bun run --bun <narzędzie>`, a Turbo bez globalnego `--bun`, przez jego plik wejściowy. Dzięki temu wymuszenie Bun nie przechodzi do procesów Expo.
+Bun 1.4.5 wykonuje usługi, skrypty repo, kompilatory, Vite, Vitest, Knip, Oxlint/Oxfmt oraz wrapper SFW i hooki Git. CLI uruchamiamy przez `bun run --bun <narzędzie>`, a Turbo bez globalnego `--bun`, przez jego plik wejściowy. Dzięki temu wymuszenie Bun nie przechodzi do procesów Expo.
 
-Node >=26.8.1 pozostaje wymagany dla Expo/Metro, Expo Doctor i natywnego toolchainu Mobile. Testy Vitest i typecheck Mobile wykonuje Bun; aplikacja na urządzeniu nadal działa na Hermes. `node:*`, `@types/node` i `NODE_ENV` są kontraktami kompatybilnych API i nie oznaczają uruchomienia Node.
+Node >=26.8.1 pozostaje wymagany dla Expo/Metro, Expo Doctor i natywnego toolchainu Mobile. Node wykonuje też e2e Mobile i narzędzia pakowania Electron. Klient Desktop działa na runtime Electron. Testy Vitest i typecheck Mobile wykonuje Bun; aplikacja na urządzeniu nadal działa na Hermes. `node:*`, `@types/node` i `NODE_ENV` są kontraktami kompatybilnych API i nie oznaczają uruchomienia Node.
 
 `env = false` w głównym `bunfig.toml` wyłącza automatyczne wczytywanie `.env` przez runtime i runner Bun. Narzędzia nie dziedziczą przypadkowo ustawień kontenerów. Przekazuj konfigurację jawnie przez środowisko lub `--env-file`; Compose oraz Expo zachowują własne mechanizmy konfiguracji. [Bun: env](https://bun.sh/docs/runtime/bunfig#env).
 
@@ -57,6 +57,13 @@ Operacje `deps:install`, `deps:add` i `deps:update` używają wspólnej wyłącz
 Druga operacja kończy się błędem bez zmian. Po przerwaniu procesu blokada może pozostać:
 usuń ten katalog dopiero po potwierdzeniu, że wrapper i procesy instalatora już nie działają.
 Kontrola ręcznych zmian manifestów przed zapisem nadal obowiązuje.
+
+## Aktualizacja 2026-11-25
+
+Bun 1.4.5 i obrazy zaktualizowano razem z przypiętymi digestami.
+Expo SDK 58.0.26 zachowuje macierz natywną Expo. Expo Router ładuje moduł Expo Symbols do ikon natywnych zakładek Androida. Nimbus Docs pozostaje przy 0.20.0, ponieważ 0.20.1 odwołuje się przy prerenderze do API kompilatora niedostępnego w TypeScript 7. Wersje przypina `bun.lock`. Electron Packager i narzędzia e2e podlegają tej samej polityce SFW i kwarantanny.
+
+`expo install --check` weryfikuje macierz wersji Expo. W Expo Doctor 1.21.8 trzy kontrole drzewa zależności wywołują `npm explain`. npm zgłasza `EINVALIDPACKAGENAME` dla zagnieżdżonego override Bun `@expo/plist>@xmldom/xmldom`.
 
 ## Aktualizacja bezpieczeństwa 2026-11-13
 

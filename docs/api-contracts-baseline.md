@@ -31,9 +31,9 @@ Dokument obejmuje:
 | Usluga              | Obecny katalog       | Obecny runtime                     | Odpowiedzialnosc               |
 | ------------------- | -------------------- | ---------------------------------- | ------------------------------ |
 | `frontend`          | `frontend/`          | TanStack Start SPA + React         | UI i wywolania API             |
-| `backend`           | `backend/`           | Bun 1.4.2 + NestJS                 | API incydentow, admina i sluzb |
-| `authorization`     | `authorization/`     | Bun 1.4.2 + Hono + Better Auth     | auth, sesje i role             |
-| `llm_gateway`       | `llm_gateway/`       | Bun 1.4.2 + Hono + TypeScript      | granica klasyfikacji LLM       |
+| `backend`           | `backend/`           | Bun 1.4.5 + NestJS                 | API incydentow, admina i sluzb |
+| `authorization`     | `authorization/`     | Bun 1.4.5 + Hono + Better Auth     | auth, sesje i role             |
+| `llm_gateway`       | `llm_gateway/`       | Bun 1.4.5 + Hono + TypeScript      | granica klasyfikacji LLM       |
 | Docker Model Runner | poza kodem aplikacji | llama.cpp + Basal 2.0 Mini 1,5B Q5 | opcjonalny runtime modelu      |
 | `database`          | `database/`          | PostgreSQL                         | dane domenowe i auth           |
 

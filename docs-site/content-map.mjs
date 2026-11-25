@@ -37,6 +37,13 @@ export const pages = [
     group: 'Korzystanie z aplikacji',
   },
   {
+    slug: 'desktop',
+    source: 'docs/desktop.md',
+    title: 'Służby i administrator w Desktop',
+    description: 'Dostęp, uruchomienie, paczki macOS i Windows oraz weryfikacja.',
+    group: 'Korzystanie z aplikacji',
+  },
+  {
     slug: 'mieszkaniec-mobile',
     source: 'docs/using-mobile-resident.md',
     title: 'Mieszkaniec w Mobile',

@@ -1,6 +1,6 @@
 # Aktualny stan ZgłosTO Mobile
 
-Snapshot: **2026-08-25, po zamknięciu Fazy 7**.
+Stan toolchainu z 25 listopada 2026. Poniżej zachowano też wyniki odbioru Fazy 7.
 
 Ten dokument jest punktem startowym przy wznowieniu prac. Szczegółową historię i
 uzasadnienia zachowują dokumenty fazowe oraz [ROADMAP.md](ROADMAP.md).
@@ -41,12 +41,12 @@ mieszkańca. Polityka obejmuje root, deep linki, cold start i odtworzenie sesji.
 
 ## Aktualny stack i wersje
 
-- Expo SDK `57.0.16`;
-- React Native `0.86.2` i React `19.2.3`;
-- Expo Router `57.0.16`;
-- NativeWind `4.2.6` i Tailwind CSS `3.4.19`;
-- TanStack Query `5.101.4`;
-- Better Auth oraz `@better-auth/expo` `1.6.29`;
+- Expo SDK `58.0.26`;
+- React Native `0.88.1` i React `19.3.0`;
+- Expo Router `58.0.32`, Expo UI `58.0.29` i Expo Symbols `58.0.5`;
+- NativeWind `5.0.0-rc.0` i Tailwind CSS `4.3.5`;
+- TanStack Query `5.108.4`;
+- Better Auth oraz `@better-auth/expo` `1.7.28`;
 - współdzielone `@zglosto/contracts` i `@zglosto/i18n`;
 - lokalne development buildy, bez EAS i bez analityki.
 
@@ -80,7 +80,11 @@ własne wdrożenie i nie otrzymuje prawa do redystrybucji, sublicencjonowania, s
 - brak centralnych buildów i wspólnej instancji SaaS jest decyzją produktową, a nie brakiem
   implementacji Mobile.
 
-## Ostatnia weryfikacja
+## Weryfikacja
+
+Bieżąca regresja używa e2e i przeszła 3/3 na iOS oraz 3/3 na Androidzie. Polecenia opisuje [regresja E2E Mobile](README.md#regresja-e2e-mobile).
+
+### Odbiór Fazy 7
 
 Kroki 7.0–7.3 przeszły lokalnie na OrbStack:
 

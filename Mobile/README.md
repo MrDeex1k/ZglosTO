@@ -29,6 +29,19 @@ opisuje wersje, reguły anti-slop, wdrożone elementy i wyniki weryfikacji.
 Wszystkie widoczne konta, incydenty, adresy i współrzędne są syntetyczne. Materiały nie
 oznaczają gotowości do sklepów ani wdrożenia produkcyjnego.
 
+## Regresja E2E Mobile
+
+[e2e](https://github.com/e2e-inc/e2e) uruchamia development build na wybranym symulatorze lub emulatorze przez agent-device. Scenariusze sprawdzają publiczne zgłoszenie i jego deep link, historię mieszkańca, kolejkę służby oraz odmowę wejścia administratorowi. Test korzysta z lokalnych kont syntetycznych, jawnych selektorów i śladów e2e. Do uruchomienia nie jest potrzebny klucz usługi AI.
+
+Uruchom izolowane demo i development build zgodnie z [Quick Start](QUICK_START.md). Ustaw `IOS_SIMULATOR_UDID` na identyfikator wybranego symulatora iOS lub użyj identyfikatora emulatora Androida. Uruchom polecenie z katalogu głównego repozytorium.
+
+```bash
+AGENT_DEVICE_PLATFORM=ios AGENT_DEVICE_DEVICE="$IOS_SIMULATOR_UDID" bun run mobile:regression
+AGENT_DEVICE_PLATFORM=android AGENT_DEVICE_DEVICE=emulator-5554 bun run mobile:regression
+```
+
+Skrypt czyta konta syntetyczne z `.state/mobile-demo/credentials.env`. Plik można wskazać przez `PHASE7_CREDENTIALS_FILE`, a URL development clienta przez `EXPO_DEV_CLIENT_URL`. Ślady i zrzuty trafiają do `Mobile/.e2e/ios/` i `Mobile/.e2e/android/`. Runner ma jedną automatyczną ponowną próbę na scenariusz. Na świeżych buildach zestaw przeszedł 3/3 na Androidzie i 3/3 na iOS. Scenariusze YAML Maestro pozostają w katalogu `e2e/` jako archiwum faz.
+
 ## Architektura rozwiązania
 
 Klient Mobile został zbudowany greenfield w obecnym monorepo, z Expo Router i lokalnymi
@@ -148,7 +161,7 @@ bun run --cwd Mobile dev --localhost
 
 Android Emulator używa `http://10.0.2.2:1235` zamiast `127.0.0.1`. Dla Metro
 pozostającego na loopback należy wykonać `adb reverse tcp:8081 tcp:8081`. Flaga
-`NODE_OPTIONS` jest potrzebna na tym Macu, ponieważ Expo Dev Launcher 57 nie
+`NODE_OPTIONS` jest potrzebna na tym Macu, ponieważ Expo Dev Launcher nie
 akceptuje poprawnie adresu inspectora z literalnym IPv6 `::1`.
 
 Po dodaniu lub aktualizacji modułu natywnego trzeba ponownie wykonać `ios` i
@@ -163,14 +176,7 @@ npx -y react-doctor@latest Mobile --no-telemetry --verbose
 bun run check
 ```
 
-Opcjonalna, lokalna regresja po uruchomieniu demo i Metro:
-
-```bash
-AGENT_DEVICE_PLATFORM=android AGENT_DEVICE_DEVICE='Pixel 9' bun run mobile:regression
-AGENT_DEVICE_PLATFORM=ios AGENT_DEVICE_DEVICE='iPhone 17 Pro' bun run mobile:regression
-```
-
-Wymaga `agent-device`; podstawowy Quick Start nie wymaga tego narzędzia.
+Po uruchomieniu demo i Metro można wykonać [regresję E2E Mobile](#regresja-e2e-mobile).
 
 Wyniki wdrożenia i smoke testów Fazy 2 znajdują się w
 [PHASE_2_VERIFICATION.md](PHASE_2_VERIFICATION.md).

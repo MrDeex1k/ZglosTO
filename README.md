@@ -13,6 +13,7 @@
   <a href="#szybki-start">Szybki start</a> ·
   <a href="#produkt-w-praktyce">Produkt</a> ·
   <a href="#szkic-architektury">Architektura</a> ·
+  <a href="docs/desktop.md">Desktop</a> ·
   <a href="docs/local-development.md">Pełna instrukcja</a>
 </p>
 
@@ -21,11 +22,11 @@
   <img src="https://img.shields.io/badge/license-PolyForm%20Internal%20Use-f59e0b?style=flat-square" alt="PolyForm Internal Use License">
 </p>
 
-## TechStack
+## Tech Stack
 
 ### Badge’e
 
-**WEB + Mobile**
+**WEB, Desktop i Mobile**
 
 <p align="center">
   <img src="https://img.shields.io/badge/TanStack%20Start-%23000000.svg?style=for-the-badge&amp;logo=tanstack&amp;logoColor=%23ECE8D1" alt="TanStack Start" height="28">
@@ -63,7 +64,6 @@
   <img src="https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&amp;logo=docker&amp;logoColor=white" alt="Docker" height="28">
   <img src="https://img.shields.io/badge/kubernetes-%23326ce5.svg?style=for-the-badge&amp;logo=kubernetes&amp;logoColor=white" alt="Kubernetes" height="28">
   <img src="https://img.shields.io/badge/K3s-%23FFC61C.svg?style=for-the-badge&amp;logo=k3s&amp;logoColor=black" alt="K3s" height="28">
-  <img src="https://img.shields.io/badge/bun-%234a4a4a.svg?style=for-the-badge&amp;logo=bun&amp;logoColor=f69220" alt="Bun" height="28">
   <img src="https://img.shields.io/badge/turborepo-%23EF4444.svg?style=for-the-badge&amp;logo=turborepo&amp;logoColor=white" alt="Turborepo" height="28">
   <img src="https://img.shields.io/badge/Vitest-%23252529.svg?style=for-the-badge&amp;logo=vitest&amp;logoColor=FCC72B" alt="Vitest" height="28">
   <img src="https://img.shields.io/badge/oxc-%233451b2.svg?style=for-the-badge&amp;logo=oxc&amp;logoColor=white&amp;logoSize=auto" alt="Oxc" height="28">
@@ -74,18 +74,22 @@
 
 ### Technologie i odpowiedzialność
 
-| Warstwa          | Technologie                                                                                                            | Odpowiedzialność                                                       |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| **WEB**          | React, TanStack Start/Router/Query, Vite, Base UI, shadcn/ui, Tailwind CSS                                             | Publiczny feed, formularze, panele mieszkańca, służby i administratora |
-| **Mobile**       | React Native, Expo, Expo Router, NativeWind, TanStack Query, SecureStore, NetInfo                                      | iOS/Android z bezpieczną sesją                                         |
-| **Kontrakty**    | TypeScript, Zod, <code>@zglosto/contracts</code>, <code>@zglosto/i18n</code>, <code>@zglosto/white-label-config</code> | Wspólne typy i walidacja konfiguracji                                  |
-| **API i auth**   | Bun, NestJS, Hono, Better Auth                                                                                         | API domenowe, sesje, role, rate limiting i integracje                  |
-| **Dane i media** | PostgreSQL, PgBouncer, RabbitMQ, Sharp, S3-compatible storage                                                          | Dane domenowe, kolejki, backup, zdjęcia i przetwarzanie obrazów        |
-| **Uruchomienie** | Docker Compose, Nginx, Kubernetes/K3s, Docker Model Runner                                                             | Lokalne demo, profile wdrożeniowe i opcjonalne AI                      |
-| **Jakość**       | Bun, Turborepo, Vitest, Oxc, React Doctor, Expo Doctor                                                                 | Monorepo, testy, format, linting i kontrola jakości                    |
+| Warstwa            | Technologie                                                                                                            | Odpowiedzialność                                                                              |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| **WEB**            | React, TanStack Start/Router/Query, Vite, Base UI, shadcn/ui, Tailwind CSS                                             | Publiczny feed, formularze, panele mieszkańca, służby i administratora                        |
+| **Desktop**        | Electron, Electron Packager, współdzielony panel React z WEB                                                           | Klient dla służb i administratorów na macOS i Windows                                         |
+| **Mobile**         | React Native, Expo, Expo Router, NativeWind, Expo UI i Expo Symbols, TanStack Query, SecureStore, NetInfo              | iOS/Android z bezpieczną sesją                                                                |
+| **Kontrakty**      | TypeScript, Zod, <code>@zglosto/contracts</code>, <code>@zglosto/i18n</code>, <code>@zglosto/white-label-config</code> | Wspólne typy i walidacja konfiguracji                                                         |
+| **API i auth**     | Bun, NestJS, Hono, Better Auth                                                                                         | API domenowe, sesje, role, rate limiting i integracje                                         |
+| **Dane i media**   | PostgreSQL, PgBouncer, RabbitMQ, Sharp, S3-compatible storage                                                          | Dane domenowe, kolejki, backup, zdjęcia i przetwarzanie obrazów                               |
+| **Uruchomienie**   | Docker Compose, Nginx, Kubernetes/K3s, opcjonalne Redis i Docker Model Runner                                          | Lokalne demo, profile wdrożeniowe i opcjonalne AI                                             |
+| **Obserwowalność** | OpenTelemetry, Prometheus, Grafana, Loki, Tempo, Alertmanager                                                          | Opcjonalne metryki, logi, ślady i alerty                                                      |
+| **Dokumentacja**   | Astro, Nimbus Docs                                                                                                     | Publikacja bieżących instrukcji pod `/docs`                                                   |
+| **Toolchain**      | Bun, Turborepo, Oxlint, Oxfmt, Knip, Node.js                                                                           | Workspaces, build, lint i formatowanie. Node.js obsługuje natywne narzędzia Mobile i Electron |
+| **Testy**          | Vitest, Flashwright dla WEB i Desktop, e2e dla Mobile, React Doctor, Expo Doctor                                       | Testy jednostkowe, scenariusze WEB, Desktop i Mobile oraz diagnostyka interfejsów             |
 
 > **Status projektu:** **Source Ready / Client-Built / Not Store-Published**. Repozytorium
-> dostarcza działający kod WEB, Mobile i usług backendowych. Każda instancja klienta
+> dostarcza kod WEB, Desktop, Mobile i usług backendowych. Każda instancja klienta
 > uruchamia własną konfigurację miasta i buduje własne binarki; wspólna aplikacja
 > nie jest publikowana w App Store ani Google Play.
 
@@ -106,12 +110,12 @@ jedno miasto i ma własny branding, katalog służb, bazę danych, storage, sekr
 | --------------------- | ------------------------------------------------------------------------------------- |
 | **Mieszkaniec**       | Publiczny feed rozwiązanych spraw, formularz zgłoszenia, zdjęcia, historię i statusy. |
 | **Służba miejska**    | Własną kolejkę spraw, filtry, szczegóły, weryfikację oraz zdjęcie rozwiązania.        |
-| **Administrator**     | Pełny panel WEB do obsługi danych i zarządzania użytkownikami.                        |
+| **Administrator**     | Panel w WEB i Desktop do obsługi danych i zarządzania użytkownikami.                  |
 | **Operator / miasto** | Branding, języki, kontakt, teksty prawne i katalog usług z jednego kontraktu YAML.    |
 
 Role są rozdzielone po stronie routingu klienta i backendu. Konto służby widzi wyłącznie
 zakres przypisanej służby, a administrator w Mobile 1.0 otrzymuje jasny komunikat
-o konieczności skorzystania z komputera — bez bocznej furtki do panelu WEB.
+o konieczności skorzystania z WEB lub Desktop na komputerze.
 
 ## Produkt w praktyce
 
@@ -124,6 +128,10 @@ o konieczności skorzystania z komputera — bez bocznej furtki do panelu WEB.
 <p align="center">
   <sub>Publiczny widok WEB z lokalnego demo. Dane, adresy i zgłoszenia są syntetyczne.</sub>
 </p>
+
+### Desktop
+
+Aplikacja Electron udostępnia istniejące panele WEB administratorom i pracownikom aktywnych służb. Konto mieszkańca nie uzyskuje dostępu. [Przewodnik Desktop](docs/desktop.md) opisuje dostęp i budowanie paczki dla własnej instancji.
 
 ### Mobile
 
@@ -191,6 +199,7 @@ Zod przy starcie. Obejmuje między innymi:
 flowchart LR
     web["WEB<br/>React + Vite"]
     mobile["Mobile<br/>Expo + React Native"]
+    desktop["Desktop<br/>Electron"]
     edge["Nginx<br/>publiczne wejście"]
     auth["Authorization<br/>Hono + Better Auth"]
     api["Backend<br/>NestJS API"]
@@ -204,6 +213,7 @@ flowchart LR
 
     web --> edge
     mobile --> edge
+    desktop --> edge
     edge --> auth
     edge --> api
     api --> db
@@ -231,7 +241,7 @@ Cloudflare R2 i innymi providerami S3-compatible.
 ## Szybki start
 
 Trzy kroki uruchamiają pełny lokalny stack przez Docker Compose. Wymagany jest Bun
-<code>1.4.2</code> oraz Docker Desktop albo OrbStack. Toolchain Mobile dodatkowo wymaga Node.js <code>>=26.8.1</code>.
+<code>1.4.5</code> oraz Docker Desktop albo OrbStack. Narzędzia Mobile i pakowania Desktop używają Node.js, dla Mobile w wersji <code>>=26.8.1</code>.
 
 ```bash
 # 1. Utwórz lokalną konfigurację
@@ -253,6 +263,7 @@ nie wymaga zewnętrznych usług ani kluczy API.
 | Dokument                                                                     | Kiedy go otworzyć                                                                         |
 | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | [Pełne uruchomienie lokalne](docs/local-development.md)                      | Środowisko, healthchecki, demo, profile Compose, testy, cleanup i troubleshooting         |
+| [Desktop dla służb i administratorów](docs/desktop.md)                       | Dostęp do panelu, lokalny start, budowanie paczek i test Flashwright                      |
 | [Quick Start Mobile](Mobile/QUICK_START.md)                                  | Izolowane demo iOS/Android z syntetycznymi kontami                                        |
 | [Indeks dokumentacji](docs/README.md)                                        | Źródła prawdy, runbooki, handoffy i archiwum faz                                          |
 | [Audyt architektury obecnej](docs/current-architecture-audit.md)             | To, co faktycznie działa w aktualnym runtime                                              |
@@ -264,6 +275,7 @@ nie wymaga zewnętrznych usług ani kluczy API.
 
 ```text
 frontend/                 WEB — React, TanStack Router/Start, formularze i panele
+desktop/                  Electron — klient panelu operacyjnego dla macOS i Windows
 Mobile/                   natywny klient Expo dla iOS i Androida
 backend/                  główne API domenowe NestJS
 authorization/            Better Auth, sesje i role
