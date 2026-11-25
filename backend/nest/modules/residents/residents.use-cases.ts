@@ -7,7 +7,7 @@ import type {
   CurrentResolvedIncidentDto,
 } from '@zglosto/contracts';
 import { isValidReporterEmail, normalizeReporterEmail } from '../../../lib/reporter-identity.ts';
-import { badRequest, forbidden } from '../../application-error.ts';
+import { badRequest, forbidden, notFound } from '../../application-error.ts';
 import { IncidentDomainPort } from '../incidents/incident-domain.port.ts';
 import type { IncidentPageRequest } from '../incidents/incident-pagination.ts';
 import { IncidentPolicyService } from '../incidents/incident-policy.service.ts';
@@ -34,9 +34,16 @@ export class ResidentsUseCases {
     return this.publicResolvedIncidentCache.list(() => this.incidents.listResolvedIncidents());
   }
 
+  async getResolved(incidentId: string): Promise<CurrentResolvedIncidentDto> {
+    const incident = await this.incidents.getResolvedIncident(incidentId);
+    if (incident === null) throw notFound('Incident not found');
+    return incident;
+  }
+
   create(
     request: CurrentCreateIncidentRequest,
     user: AuthSessionUser | null,
+    idempotencyKey?: string,
   ): Promise<CurrentCreateIncidentResponse> {
     const reporterEmail = normalizeReporterEmail(request.mail_zglaszajacego);
     if (!isValidReporterEmail(reporterEmail)) {
@@ -54,6 +61,7 @@ export class ResidentsUseCases {
     return this.incidents.createIncident({
       address: request.adres_zgloszenia,
       description: request.opis_zgloszenia,
+      ...(idempotencyKey === undefined ? {} : { idempotencyKey }),
       imageUploadId: request.zdjecie_incydentu_zglaszanego_upload_id,
       latitude: request.latitude,
       longitude: request.longitude,

@@ -128,6 +128,7 @@ function configurePort(): PendingIncidentInfrastructureAdapter {
     items: [serviceIncident('roads-only', 'roads', 3)],
     nextCursor: null,
   });
+  vi.spyOn(port, 'getResolvedIncident').mockResolvedValue(null);
   vi.spyOn(port, 'listResolvedIncidents').mockResolvedValue([]);
   vi.spyOn(port, 'listServiceIncidents').mockResolvedValue([]);
   vi.spyOn(port, 'listServiceStatistics').mockResolvedValue([]);
@@ -247,6 +248,60 @@ describe('NestJS domain controllers', () => {
       reporterUserId: null,
       requestedServiceKey: 'roads',
     });
+  });
+
+  it('gets a public incident outside the homepage array and hides other IDs', async () => {
+    const id = '338ec4fa-8733-485c-a87b-aefb39e9c415';
+    const item = {
+      id_zgloszenia: id,
+      opis_zgloszenia: incident.opis_zgloszenia,
+      adres_zgloszenia: incident.adres_zgloszenia,
+      latitude: null,
+      longitude: null,
+      typ_sluzby: 'roads',
+      status_incydentu: 'resolved',
+      zdjecie_incydentu_rozwiazanego: null,
+      data_godzina_zgloszenia: '21.08.2026 12:00',
+      data_godzina_rozwiazania: '22.08.2026 12:00',
+    } as const;
+    vi.mocked(port.getResolvedIncident).mockResolvedValueOnce(item);
+    const options = { body: null, cookie: null, method: 'GET' } as const;
+    const detail = await apiRequest(baseUrl, `/mieszkaniec/incydenty/glowna/${id}`, options);
+    expect(detail.status).toBe(200);
+    expect(await detail.json()).toEqual(item);
+    const missing = await apiRequest(baseUrl, `/mieszkaniec/incydenty/glowna/${id}`, options);
+    expect(missing.status).toBe(404);
+    const invalid = await apiRequest(baseUrl, '/mieszkaniec/incydenty/glowna/invalid', options);
+    expect(invalid.status).toBe(404);
+    expect(port.getResolvedIncident).toHaveBeenCalledTimes(2);
+    expect(port.listResolvedIncidents).not.toHaveBeenCalled();
+  });
+
+  it('forwards a valid Idempotency-Key and rejects a malformed header', async () => {
+    const key = '0de77abb-751d-4e6f-9c4a-79b24ca84d30';
+    const options = {
+      body: {
+        opis_zgloszenia: 'Dziura w drodze',
+        mail_zglaszajacego: 'resident@example.com',
+        adres_zgloszenia: 'ul. Testowa 1',
+        typ_sluzby: 'roads',
+      },
+      cookie: null,
+      method: 'POST',
+    } as const;
+    const created = await apiRequest(baseUrl, '/mieszkaniec/incydenty', {
+      ...options,
+      headers: { 'Idempotency-Key': key },
+    });
+    expect(created.status).toBe(201);
+    const invalid = await apiRequest(baseUrl, '/mieszkaniec/incydenty', {
+      ...options,
+      headers: { 'Idempotency-Key': 'invalid' },
+    });
+    expect(invalid.status).toBe(400);
+    expect(port.createIncident).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ idempotencyKey: key }),
+    );
   });
 
   it('implements all six service routes with an isolated serviceKey', async () => {

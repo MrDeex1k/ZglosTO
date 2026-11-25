@@ -28,6 +28,7 @@ vi.mock('./env.ts', () => ({
     databasePool: {},
     nodeEnv: 'production',
     frontendOrigin: 'https://city.example',
+    mobileAppLinkOrigin: null,
     betterAuthUrl: 'https://city.example/api/auth',
     betterAuthSecret: 'x'.repeat(32),
     emailDeliveryMode: 'disabled',

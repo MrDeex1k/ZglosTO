@@ -9,6 +9,7 @@ import { type ListRenderItemInfo } from 'react-native';
 
 import { createAuthenticatedFetch } from '@/api/authenticated-fetch';
 import { createApiClient } from '@/api/client';
+import { MobileAuthOperationError } from '@/auth/errors';
 import type { MobileSessionState } from '@/auth/route-access';
 import { useSession } from '@/auth/session-provider';
 import { ResidentIncidentCard } from '@/components/incidents/resident-incident-card';
@@ -96,9 +97,34 @@ function ReadyResidentHomeScreen({
       userId: session.userId,
     }),
   );
+  const deliveryCapability = useQuery({
+    enabled: session.emailVerified === false,
+    queryKey: ['public', 'auth-capabilities', runtime.environment.apiOrigin],
+    queryFn: ({ signal }) =>
+      createApiClient({ origin: runtime.environment.apiOrigin }).requestJson(
+        '/api/auth/capabilities',
+        {
+          method: 'GET',
+          parser: (value) =>
+            typeof value === 'object' &&
+            value !== null &&
+            'emailVerificationDelivery' in value &&
+            value.emailVerificationDelivery === true,
+          signal,
+        },
+      ),
+  });
+  const canResendVerification = deliveryCapability.data === true && !deliveryCapability.isError;
   const incidents = (query.data ?? []).map((incident) => ({ config: runtime.config, incident }));
   const isOffline = networkAvailability === 'offline';
   const hasCachedData = query.data !== undefined;
+
+  const refresh = () => {
+    void query.refetch();
+    if (session.emailVerified === false) {
+      void deliveryCapability.refetch({ cancelRefetch: false });
+    }
+  };
 
   const logout = async () => {
     onSigningOutChange(true);
@@ -112,11 +138,15 @@ function ReadyResidentHomeScreen({
   };
 
   const resendVerification = async () => {
+    if (!canResendVerification) return;
     setVerificationState('sending');
     try {
       await sendVerificationEmail(session.email);
       setVerificationState('sent');
-    } catch {
+    } catch (error) {
+      if (error instanceof MobileAuthOperationError && error.status === 503) {
+        void deliveryCapability.refetch();
+      }
       setVerificationState('error');
     }
   };
@@ -149,15 +179,17 @@ function ReadyResidentHomeScreen({
               {t(($) => $.mobile.emailVerificationNotice.error)}
             </Text>
           ) : null}
-          <Button
-            disabled={verificationState === 'sending'}
-            onPress={() => void resendVerification()}
-            variant="secondary"
-          >
-            {verificationState === 'sending'
-              ? t(($) => $.mobile.emailVerificationNotice.sending)
-              : t(($) => $.mobile.emailVerificationNotice.resend)}
-          </Button>
+          {canResendVerification ? (
+            <Button
+              disabled={verificationState === 'sending'}
+              onPress={() => void resendVerification()}
+              variant="secondary"
+            >
+              {verificationState === 'sending'
+                ? t(($) => $.mobile.emailVerificationNotice.sending)
+                : t(($) => $.mobile.emailVerificationNotice.resend)}
+            </Button>
+          ) : null}
         </Card>
       ) : null}
       <Button onPress={() => router.push('/report/new')}>
@@ -247,8 +279,8 @@ function ReadyResidentHomeScreen({
         }
         ListFooterComponent={footer}
         ListHeaderComponent={header}
-        onRefresh={() => void query.refetch()}
-        refreshing={query.isRefetching}
+        onRefresh={refresh}
+        refreshing={query.isRefetching || deliveryCapability.isRefetching}
         renderItem={renderIncidentItem}
       />
     </SafeAreaView>

@@ -10,6 +10,8 @@ import {
   type RedisMode,
 } from '@zglosto/contracts';
 
+import { mobileAppLinkOrigin } from './origins.ts';
+
 type EmailDeliveryMode = 'disabled' | 'test';
 
 export interface MtlsEnvironment {
@@ -227,6 +229,7 @@ export const env = Object.freeze({
   betterAuthUrl: validUrl('BETTER_AUTH_URL', required('BETTER_AUTH_URL')),
   clientAddress: clientAddressEnvironment(),
   frontendOrigin: validUrl('FRONTEND_ORIGIN', required('FRONTEND_ORIGIN')),
+  mobileAppLinkOrigin: mobileAppLinkOrigin(optional('MOBILE_APP_LINK_HOST')),
   emailDeliveryMode: emailDeliveryMode(),
   localRateLimit: localRateLimitEnvironment(),
   mtls: mtlsEnvironment(),

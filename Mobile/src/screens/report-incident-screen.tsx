@@ -1,3 +1,4 @@
+import { randomUUID } from 'expo-crypto';
 import * as Haptics from 'expo-haptics';
 import { NativeChoice } from '@/components/ui/native-choice';
 import {
@@ -48,7 +49,10 @@ import {
   type IncidentImageErrorCode,
   type SelectedIncidentImage,
 } from '@/features/report-incident/selected-image';
-import { submitIncidentWithOptionalImage } from '@/features/report-incident/submit-incident';
+import {
+  submitIncidentWithOptionalImage,
+  type IncidentSubmissionAttempt,
+} from '@/features/report-incident/submit-incident';
 import { useIncidentImagePicker } from '@/features/report-incident/use-incident-image-picker';
 import { useLocale } from '@/i18n/i18n-provider';
 import { useNetworkAvailability } from '@/queries/network-state';
@@ -176,6 +180,7 @@ function ReadyReportIncidentScreen({
     typeof submissionErrorKey
   > | null>(null);
   const abortController = useRef<AbortController | null>(null);
+  const submission = useRef<{ signature: string; attempt: IncidentSubmissionAttempt } | null>(null);
 
   const fetcher =
     residentSession === null
@@ -189,15 +194,18 @@ function ReadyReportIncidentScreen({
   const client = createApiClient({ fetcher, origin: runtime.environment.apiOrigin });
   const mutation = useMutation({
     mutationFn: ({
+      attempt,
       image: selectedImage,
       request,
       signal,
     }: {
+      attempt: IncidentSubmissionAttempt;
       image: SelectedIncidentImage | null;
       request: CurrentCreateIncidentRequest;
       signal: AbortSignal;
     }) =>
       submitIncidentWithOptionalImage({
+        attempt,
         client,
         dependencies: {
           checksumImage: async (candidate) => {
@@ -267,6 +275,7 @@ function ReadyReportIncidentScreen({
   };
 
   const submit = () => {
+    if (abortController.current !== null) return;
     const validation = validateReportIncidentForm(fields);
     if (!validation.success) {
       setFieldErrors(validation.errors);
@@ -279,11 +288,24 @@ function ReadyReportIncidentScreen({
       setSubmissionError('networkError');
       return;
     }
+    const signature = JSON.stringify([
+      runtime.environment.apiOrigin,
+      residentSession?.userId,
+      validation.request,
+      image?.uri,
+    ]);
+    if (submission.current?.signature !== signature) {
+      submission.current = { signature, attempt: { idempotencyKey: randomUUID() } };
+    }
+    const { attempt } = submission.current;
     const controller = new AbortController();
     abortController.current = controller;
-    setSubmissionProgress({ stage: image === null ? 'creating' : 'preparing', value: null });
+    setSubmissionProgress({
+      stage: image === null || attempt.preparedRequest !== undefined ? 'creating' : 'preparing',
+      value: null,
+    });
     mutation.mutate(
-      { image, request: validation.request, signal: controller.signal },
+      { attempt, image, request: validation.request, signal: controller.signal },
       {
         onError: (error) => {
           if (error instanceof ApiError && error.kind === 'aborted') return;
@@ -296,6 +318,7 @@ function ReadyReportIncidentScreen({
   };
 
   const resetForm = () => {
+    submission.current = null;
     setFields({
       address: '',
       description: '',

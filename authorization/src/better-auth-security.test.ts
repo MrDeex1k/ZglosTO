@@ -2,11 +2,16 @@ import { betterAuth } from 'better-auth';
 import { expo } from '@better-auth/expo';
 import { expect, test } from 'vitest';
 
+import { betterAuthTrustedOrigins, mobileAppLinkOrigin } from './origins.ts';
+
+const appLinkOrigin = mobileAppLinkOrigin('app.city.example');
+
 // Exercise the installed library without a database connection or an HTTP listener.
 const auth = betterAuth({
   baseURL: 'https://city.example',
   secret: 'audit-fixture-only-not-a-deployment-secret-12345678',
-  trustedOrigins: ['https://city.example', 'zglosto://'],
+  trustedOrigins: betterAuthTrustedOrigins('https://city.example', 'production', appLinkOrigin),
+  emailVerification: { sendVerificationEmail: async () => {} },
   emailAndPassword: { enabled: true },
   // Better Auth otherwise disables these checks automatically under NODE_ENV=test.
   advanced: { disableCSRFCheck: false, disableOriginCheck: false },
@@ -39,4 +44,27 @@ test('the installed Better Auth rejects hostile origins even with a trusted expo
     }),
   );
   expect(response.status).toBe(403);
+});
+
+test('the installed Better Auth accepts the configured HTTPS app-link callback on signup and resend', async () => {
+  const email = 'mobile-signup@example.com';
+  const callbackURL = 'https://app.city.example/auth/email-verified';
+  const post = (path: string, body: object) =>
+    auth.handler(
+      new Request('https://city.example/api/auth/' + path, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', origin: 'zglosto://' },
+        body: JSON.stringify({ ...body, email }),
+      }),
+    );
+
+  const signup = await post('sign-up/email', {
+    name: 'Mobile fixture',
+    password: 'fixture-password',
+    callbackURL,
+  });
+  expect(signup.status).toBe(200);
+
+  const resend = await post('send-verification-email', { callbackURL });
+  expect(resend.status).toBe(200);
 });

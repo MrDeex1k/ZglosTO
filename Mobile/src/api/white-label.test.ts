@@ -99,6 +99,28 @@ describe('public White-Label loading', () => {
     expect(write).not.toHaveBeenCalled();
   });
 
+  test('returns the remote config even when reading and writing the cache fails', async () => {
+    const cache = createPublicConfigCache({
+      ...memoryStorage(),
+      getItem: async () => {
+        throw new Error('read failed');
+      },
+      setItem: async () => {
+        throw new Error('write failed');
+      },
+    });
+    const client = createApiClient({
+      origin: 'https://city.example',
+      fetcher: async () => Response.json(publicConfigFixture, { headers: { etag: '"remote"' } }),
+    });
+
+    await expect(loadPublicConfig({ cache, client })).resolves.toEqual({
+      isStale: false,
+      response: publicConfigFixture,
+      source: 'remote',
+    });
+  });
+
   test('stores a validated 200 response and reuses it after 304', async () => {
     const cache = createPublicConfigCache(memoryStorage());
     const responses = [

@@ -1,8 +1,16 @@
 import { expect, test, vi } from 'vitest';
+import { parseDatabaseIncidentRow } from '../../../lib/database-records.ts';
+import { badRequest } from '../../application-error.ts';
 import type { DatabaseClient, DatabaseParameter, DatabaseQueryResult } from '../../../types.ts';
 import type { DatabaseService } from '../database/database.service.ts';
 import type { IncidentMediaService } from '../media/incident-media.service.ts';
 import type { ServiceCatalogSynchronizer } from './service-catalog-synchronizer.ts';
+import {
+  createWithIncidentReceipt,
+  incidentCreationReceiptIdentity,
+  readIncidentCreationReceipt,
+} from './incident-creation-receipt.ts';
+import type { CreateIncidentCommand } from './incident-domain.port.ts';
 import { PostgresIncidentAdapter } from './postgres-incident.adapter.ts';
 import {
   classifyIncident,
@@ -211,4 +219,91 @@ test('links the verified report upload and reads the response inside the creatio
   expect(steps).toEqual(['verify', 'begin', 'insert', 'attach', 'read', 'commit']);
   expect(media.attach).toHaveBeenCalledExactlyOnceWith(client, row.id_zgloszenia, upload);
   expect(database.query).not.toHaveBeenCalled();
+});
+
+test('replays the committed response when reservation loses a concurrent insert', async () => {
+  const command: CreateIncidentCommand = {
+    address: row.adres_zgloszenia,
+    description: row.opis_zgloszenia,
+    idempotencyKey: '0de77abb-751d-4e6f-9c4a-79b24ca84d30',
+    imageUploadId: null,
+    latitude: null,
+    longitude: null,
+    reporterEmail: row.mail_zglaszajacego,
+    reporterUserId: null,
+    requestedServiceKey: row.service_key,
+  };
+  const identity = incidentCreationReceiptIdentity(command)!;
+  const classification = {
+    classification: 'unknown',
+    serviceKey: row.service_key,
+    modelAvailable: false,
+    source: 'fallback',
+    reason: 'disabled',
+  } as const;
+  const response = {
+    success: true,
+    incydent: parseDatabaseIncidentRow(row, 'fixture'),
+    classification,
+  } as const;
+  const query = vi
+    .fn<(sql: string, values?: readonly DatabaseParameter[]) => Promise<DatabaseQueryResult>>()
+    .mockResolvedValueOnce({ rows: [], rowCount: 0 })
+    .mockResolvedValue({ rows: [{ fingerprint: identity[2], response }], rowCount: 1 });
+  const create = vi.fn(async () => response);
+
+  await expect(createWithIncidentReceipt({ query }, identity, create)).resolves.toEqual(response);
+  expect(create).not.toHaveBeenCalled();
+  expect(query.mock.calls[0]?.[0]).toContain('ON CONFLICT (scope, key) DO NOTHING');
+  expect(query.mock.calls[1]?.[1]).toEqual(identity.slice(0, 2));
+  const changedRequest = incidentCreationReceiptIdentity({ ...command, description: 'Changed' })!;
+  await expect(readIncidentCreationReceipt({ query }, changedRequest)).rejects.toMatchObject({
+    statusCode: 409,
+    errorCode: 'CONFLICT',
+  });
+  const authenticated = incidentCreationReceiptIdentity({
+    ...command,
+    reporterUserId: 'resident-1',
+  })!;
+  expect(authenticated[0]).not.toBe(identity[0]);
+});
+
+test('rechecks the receipt when another request consumed the upload after the first lookup', async () => {
+  const command = {
+    address: row.adres_zgloszenia,
+    description: row.opis_zgloszenia,
+    idempotencyKey: '0de77abb-751d-4e6f-9c4a-79b24ca84d30',
+    imageUploadId: '00000000-0000-4000-8000-000000000001',
+    latitude: null,
+    longitude: null,
+    reporterEmail: row.mail_zglaszajacego,
+    reporterUserId: null,
+    requestedServiceKey: row.service_key,
+  } satisfies CreateIncidentCommand;
+  const fingerprint = incidentCreationReceiptIdentity(command)![2];
+  const classification = fallbackClassification('disabled', row.service_key);
+  const response = {
+    success: true,
+    incydent: parseDatabaseIncidentRow(row, 'fixture'),
+    classification: classification.result,
+  };
+  const query = vi
+    .fn<(sql: string, values?: readonly DatabaseParameter[]) => Promise<DatabaseQueryResult>>()
+    .mockResolvedValueOnce({ rows: [], rowCount: 0 })
+    .mockResolvedValueOnce({ rows: [{ fingerprint, response }], rowCount: 1 });
+  const transaction = vi.fn();
+  const verifyUpload = vi.fn().mockRejectedValue(badRequest('Image upload was consumed'));
+  const classify = vi.fn();
+  const adapter = new PostgresIncidentAdapter(
+    { query, transaction } as unknown as DatabaseService,
+    { verifyUpload } as unknown as IncidentMediaService,
+    { classify },
+    { ensureSynchronized: async () => {} } as unknown as ServiceCatalogSynchronizer,
+  );
+
+  await expect(adapter.createIncident(command)).resolves.toEqual(response);
+  expect(verifyUpload).toHaveBeenCalledOnce();
+  expect(query).toHaveBeenCalledTimes(2);
+  expect(classify).not.toHaveBeenCalled();
+  expect(transaction).not.toHaveBeenCalled();
 });

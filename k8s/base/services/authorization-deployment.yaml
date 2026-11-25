@@ -129,6 +129,11 @@ spec:
                 configMapKeyRef:
                   name: zglosto-config
                   key: FRONTEND_ORIGIN
+            - name: MOBILE_APP_LINK_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: zglosto-config
+                  key: MOBILE_APP_LINK_HOST
             - name: EMAIL_DELIVERY_MODE
               valueFrom:
                 configMapKeyRef:

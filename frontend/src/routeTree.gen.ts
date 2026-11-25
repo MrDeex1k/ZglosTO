@@ -14,10 +14,12 @@ import { Route as AppIndexRouteImport } from './routes/_app.index'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppLoginRouteImport } from './routes/_app.login'
 import { Route as AppRegisterRouteImport } from './routes/_app.register'
+import { Route as AuthEmailVerifiedRouteImport } from './routes/auth.email-verified'
 import { Route as AppDashboardIndexRouteImport } from './routes/_app.dashboard.index'
 import { Route as AppDashboardAdminRouteImport } from './routes/_app.dashboard.admin'
 import { Route as AppDashboardMieszkaniecRouteImport } from './routes/_app.dashboard.mieszkaniec'
 import { Route as AppDashboardSluzbyRouteImport } from './routes/_app.dashboard.sluzby'
+import { Route as OpenIncidentsIdRouteImport } from './routes/open.incidents.$id'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -43,6 +45,11 @@ const AppRegisterRoute = AppRegisterRouteImport.update({
   path: '/register',
   getParentRoute: () => AppRoute,
 } as any)
+const AuthEmailVerifiedRoute = AuthEmailVerifiedRouteImport.update({
+  id: '/auth/email-verified',
+  path: '/auth/email-verified',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppDashboardIndexRoute = AppDashboardIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -63,24 +70,33 @@ const AppDashboardSluzbyRoute = AppDashboardSluzbyRouteImport.update({
   path: '/sluzby',
   getParentRoute: () => AppDashboardRoute,
 } as any)
+const OpenIncidentsIdRoute = OpenIncidentsIdRouteImport.update({
+  id: '/open/incidents/$id',
+  path: '/open/incidents/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/dashboard': typeof AppDashboardRouteWithChildren
   '/login': typeof AppLoginRoute
   '/register': typeof AppRegisterRoute
+  '/auth/email-verified': typeof AuthEmailVerifiedRoute
   '/dashboard/admin': typeof AppDashboardAdminRoute
   '/dashboard/mieszkaniec': typeof AppDashboardMieszkaniecRoute
   '/dashboard/sluzby': typeof AppDashboardSluzbyRoute
+  '/open/incidents/$id': typeof OpenIncidentsIdRoute
   '/dashboard/': typeof AppDashboardIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof AppLoginRoute
   '/register': typeof AppRegisterRoute
+  '/auth/email-verified': typeof AuthEmailVerifiedRoute
   '/': typeof AppIndexRoute
   '/dashboard/admin': typeof AppDashboardAdminRoute
   '/dashboard/mieszkaniec': typeof AppDashboardMieszkaniecRoute
   '/dashboard/sluzby': typeof AppDashboardSluzbyRoute
+  '/open/incidents/$id': typeof OpenIncidentsIdRoute
   '/dashboard': typeof AppDashboardIndexRoute
 }
 export interface FileRoutesById {
@@ -89,10 +105,12 @@ export interface FileRoutesById {
   '/_app/dashboard': typeof AppDashboardRouteWithChildren
   '/_app/login': typeof AppLoginRoute
   '/_app/register': typeof AppRegisterRoute
+  '/auth/email-verified': typeof AuthEmailVerifiedRoute
   '/_app/': typeof AppIndexRoute
   '/_app/dashboard/admin': typeof AppDashboardAdminRoute
   '/_app/dashboard/mieszkaniec': typeof AppDashboardMieszkaniecRoute
   '/_app/dashboard/sluzby': typeof AppDashboardSluzbyRoute
+  '/open/incidents/$id': typeof OpenIncidentsIdRoute
   '/_app/dashboard/': typeof AppDashboardIndexRoute
 }
 export interface FileRouteTypes {
@@ -102,18 +120,22 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/register'
+    | '/auth/email-verified'
     | '/dashboard/admin'
     | '/dashboard/mieszkaniec'
     | '/dashboard/sluzby'
+    | '/open/incidents/$id'
     | '/dashboard/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
     | '/register'
+    | '/auth/email-verified'
     | '/'
     | '/dashboard/admin'
     | '/dashboard/mieszkaniec'
     | '/dashboard/sluzby'
+    | '/open/incidents/$id'
     | '/dashboard'
   id:
     | '__root__'
@@ -121,15 +143,19 @@ export interface FileRouteTypes {
     | '/_app/dashboard'
     | '/_app/login'
     | '/_app/register'
+    | '/auth/email-verified'
     | '/_app/'
     | '/_app/dashboard/admin'
     | '/_app/dashboard/mieszkaniec'
     | '/_app/dashboard/sluzby'
+    | '/open/incidents/$id'
     | '/_app/dashboard/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
+  AuthEmailVerifiedRoute: typeof AuthEmailVerifiedRoute
+  OpenIncidentsIdRoute: typeof OpenIncidentsIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -169,6 +195,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRegisterRouteImport
       parentRoute: typeof AppRoute
     }
+    '/auth/email-verified': {
+      id: '/auth/email-verified'
+      path: '/auth/email-verified'
+      fullPath: '/auth/email-verified'
+      preLoaderRoute: typeof AuthEmailVerifiedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app/dashboard/': {
       id: '/_app/dashboard/'
       path: '/'
@@ -196,6 +229,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard/sluzby'
       preLoaderRoute: typeof AppDashboardSluzbyRouteImport
       parentRoute: typeof AppDashboardRoute
+    }
+    '/open/incidents/$id': {
+      id: '/open/incidents/$id'
+      path: '/open/incidents/$id'
+      fullPath: '/open/incidents/$id'
+      preLoaderRoute: typeof OpenIncidentsIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -236,6 +276,8 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
+  AuthEmailVerifiedRoute: AuthEmailVerifiedRoute,
+  OpenIncidentsIdRoute: OpenIncidentsIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

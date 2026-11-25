@@ -30,6 +30,7 @@ export interface VersionedIncidentMutationResult extends IncidentMutationResult 
   revision: number;
 }
 
+// The legacy array endpoint returns the complete service queue. Pagination is opt-in.
 export function loadServiceIncidents({
   client,
   signal,

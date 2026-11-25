@@ -28,7 +28,7 @@ export async function loadPublicConfig({
   now = () => new Date(),
   signal,
 }: LoadPublicConfigOptions): Promise<PublicConfigLoadResult> {
-  const cached = await cache.read();
+  const cached = await cache.read().catch(() => null);
   const headers = new Headers();
   if (cached !== null) headers.set('If-None-Match', cached.etag);
 
@@ -89,7 +89,8 @@ export async function loadPublicConfig({
     );
     if (signal) assertRequestActive(signal);
     if ('cached' in result) return result.cached;
-    await cache.write(result.entry);
+    await cache.write(result.entry).catch(() => undefined);
+    if (signal) assertRequestActive(signal);
     return { isStale: false, response: result.entry.response, source: 'remote' };
   } catch (error) {
     if (

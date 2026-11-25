@@ -1,7 +1,8 @@
-import { queryOptions } from '@tanstack/react-query';
+import type { CurrentResolvedIncidentDto } from '@zglosto/contracts';
+import { queryOptions, type QueryClient } from '@tanstack/react-query';
 
 import { createApiClient } from '@/api/client';
-import { loadPublicIncidents } from '@/api/public-incidents';
+import { loadPublicIncident, loadPublicIncidents } from '@/api/public-incidents';
 import { logger } from '@/observability/logger';
 
 import { queryKeys } from './query-keys';
@@ -22,6 +23,26 @@ export function publicIncidentsQueryOptions(origin: string) {
       }
     },
     queryKey: queryKeys.publicIncidents(origin),
+    staleTime: 60 * 1000,
+  });
+}
+
+export function publicIncidentQueryOptions(
+  origin: string,
+  incidentId: string,
+  queryClient: QueryClient,
+) {
+  const listKey = queryKeys.publicIncidents(origin);
+  return queryOptions({
+    initialData: () =>
+      queryClient
+        .getQueryData<CurrentResolvedIncidentDto[]>(listKey)
+        ?.find((incident) => incident.id_zgloszenia === incidentId),
+    initialDataUpdatedAt: () => queryClient.getQueryState(listKey)?.dataUpdatedAt,
+    queryFn: ({ signal }) =>
+      loadPublicIncident({ client: createApiClient({ origin }), incidentId, signal }),
+    queryKey: [...listKey, incidentId],
+    refetchOnMount: 'always',
     staleTime: 60 * 1000,
   });
 }
