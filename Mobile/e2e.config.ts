@@ -37,6 +37,7 @@ export default {
     admin: credential('ADMIN'),
   },
   workers: 1,
+  retries: 1,
   timeout: 180_000,
   assertionTimeout: 15_000,
   cache: 'off',

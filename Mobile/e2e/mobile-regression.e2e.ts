@@ -49,7 +49,13 @@ async function logIn(screen: Screen, device: Device, role: 'resident' | 'service
   await expect(screen.getByTestId('login-email')).toBeVisible();
   await fillLoginField(() => screen.getByTestId('login-email').fill(account.username));
   await fillLoginField(() => screen.getByTestId('login-password').fill(account.password));
-  await screen.getByTestId('login-submit').tap();
+  const submit = screen.getByTestId('login-submit');
+  if (process.env.AGENT_DEVICE_PLATFORM === 'ios') {
+    const dismissStrongPassword = screen.getByTestId('xmark');
+    await expect(dismissStrongPassword.or(submit).first()).toBeVisible();
+    if (await dismissStrongPassword.isVisible()) await dismissStrongPassword.tap();
+  }
+  await submit.tap();
   if (process.env.AGENT_DEVICE_PLATFORM === 'android') await device.dismissKeyboard();
   if (process.env.AGENT_DEVICE_PLATFORM === 'ios') {
     const savePassword = screen.getByText(declineSavedPassword).first();
