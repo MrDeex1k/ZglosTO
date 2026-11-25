@@ -14,6 +14,7 @@
     ".": {
       "entry": [
         "scripts/production-build.ts",
+        "scripts/benchmark-basal.ts",
         "scripts/phase12-*.ts",
         "tests/integration/**/*.ts",
         "scripts/bun-phase1*.ts",
@@ -25,16 +26,7 @@
         "database/tests/**/*.test.ts",
         "scripts/**/*.test.ts"
       ],
-      "ignoreDependencies": [
-        "sfw",
-        "react",
-        "@babel/core",
-        "@commitlint/cli",
-        "husky",
-        "oxfmt",
-        "oxlint",
-        "turbo"
-      ]
+      "ignoreDependencies": ["sfw", "react", "@babel/core"]
     },
     "authorization": {
       "entry": ["src/auth.ts", "src/healthcheck.ts"]

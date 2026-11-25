@@ -265,7 +265,7 @@ log "Checking anonymous incident persistence with structured LLM fallback"
 anonymous_incident="$(curl --fail --silent --show-error \
   --request POST \
   --header 'Content-Type: application/json' \
-  --data '{"opis_zgloszenia":"Uszkodzona latarnia","mail_zglaszajacego":"  SMOKE.Resident@Example.COM ","adres_zgloszenia":"ul. Testowa 1","typ_sluzby":"roads"}' \
+  --data '{"opis_zgloszenia":"Uszkodzona latarnia","mail_zglaszajacego":"  SMOKE.Resident@Example.COM ","adres_zgloszenia":"ul. Testowa 1"}' \
   "$BASE_URL/api/mieszkaniec/incydenty")"
 assert_contains "Anonymous incident" "$anonymous_incident" '"mail_zglaszajacego":"smoke.resident@example.com"'
 assert_contains "Anonymous incident" "$anonymous_incident" '"reporter_user_id":null'
