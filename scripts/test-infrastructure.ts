@@ -142,7 +142,10 @@ if (command === 'config') {
   stopped.add(tail.at(-1));
 } else if (command === 'start') {
   if (args[0] === 'start') {
-    for (const id of tail) stopped.delete(id.replace(/^id-/, '').replace(/-[12]$/, ''));
+    for (const id of tail) {
+      stopped.delete(id);
+      stopped.delete(id.replace(/^id-/, '').replace(/-[12]$/, ''));
+    }
   } else {
     stopped.delete(tail.at(-1));
     if (tail.at(-1) === 'media_worker') stopped.delete('id-media_worker-2');
