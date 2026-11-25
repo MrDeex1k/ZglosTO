@@ -360,29 +360,30 @@ produkcyjny menedżer sekretów/Kubernetes Secret. Nie należy umieszczać w YAM
 
 ## Authorization i sesja
 
-| Zmienna                                   | Wymagana | Sekret | Opis                                                                                                          |
-| ----------------------------------------- | -------- | ------ | ------------------------------------------------------------------------------------------------------------- |
-| `AUTHORIZATION_MTLS_PORT`                 | tak      | nie    | Jedyny port Authorization, domyślnie `9956`; wymaga mTLS.                                                     |
-| `AUTHORIZATION_MTLS_CA_PATH`              | tak      | nie    | Ścieżka zaufanego Service CA.                                                                                 |
-| `AUTHORIZATION_MTLS_CERT_PATH`            | tak      | nie    | Ścieżka certyfikatu serwera Authorization.                                                                    |
-| `AUTHORIZATION_MTLS_KEY_PATH`             | tak      | tak    | Ścieżka prywatnego klucza serwera; zawartość klucza nie trafia do ENV.                                        |
-| `AUTHORIZATION_MTLS_BACKEND_IDENTITY`     | tak      | nie    | Oczekiwane URI SAN workloadu backendu.                                                                        |
-| `AUTHORIZATION_MTLS_HEALTHCHECK_IDENTITY` | tak      | nie    | Oczekiwane URI SAN dedykowanego klienta readiness.                                                            |
-| `AUTHORIZATION_MTLS_NGINX_IDENTITY`       | tak      | nie    | Oczekiwane URI SAN workloadu Nginx; wszystkie trzy tożsamości muszą być różne.                                |
-| `AUTHORIZATION_HEALTHCHECK_CA_PATH`       | tak      | nie    | Service CA używane przez probe do weryfikacji serwera.                                                        |
-| `AUTHORIZATION_HEALTHCHECK_CERT_PATH`     | tak      | nie    | Certyfikat klienta ograniczonego do endpointów health.                                                        |
-| `AUTHORIZATION_HEALTHCHECK_KEY_PATH`      | tak      | tak    | Ścieżka prywatnego klucza klienta healthcheck.                                                                |
-| `AUTHORIZATION_HEALTHCHECK_SERVER_NAME`   | tak      | nie    | Nazwa DNS weryfikowana przez probe; w Compose `authorization`.                                                |
-| `BETTER_AUTH_SECRET`                      | tak      | tak    | Losowy sekret o długości co najmniej 32 znaków. Zmiana unieważnia istniejące sesje/tokeny.                    |
-| `BETTER_AUTH_URL`                         | tak      | nie    | Publiczny origin Better Auth, np. `http://localhost:1235`; służy również do linków potwierdzających e-mail.   |
-| `AUTH_SERVICE_URL`                        | tak      | nie    | Wewnętrzny URL backendu do Authorization; wymagane HTTPS, w Compose `https://authorization:9956`.             |
-| `AUTH_SERVICE_CA_PATH`                    | tak      | nie    | Ścieżka Service CA używanego przez backend do weryfikacji serwera Authorization.                              |
-| `AUTH_SERVICE_CERT_PATH`                  | tak      | nie    | Ścieżka certyfikatu klienta `backend-client`.                                                                 |
-| `AUTH_SERVICE_KEY_PATH`                   | tak      | tak    | Ścieżka prywatnego klucza `backend-client`; zawartość klucza nie trafia do ENV.                               |
-| `AUTH_SERVICE_SERVER_NAME`                | tak      | nie    | Nazwa DNS sprawdzana w SAN certyfikatu serwera; w Compose `authorization`.                                    |
-| `AUTH_SERVICE_TIMEOUT_MS`                 | nie      | nie    | Dodatni timeout weryfikacji sesji; domyślnie `5000`.                                                          |
-| `FRONTEND_ORIGIN`                         | tak      | nie    | Jedyny publiczny origin dopuszczony przez CORS/trusted origins (obok lokalnego Vite `http://localhost:5173`). |
-| `EMAIL_DELIVERY_MODE`                     | nie      | nie    | `disabled` albo `test`. Tryb `test` działa wyłącznie przy `NODE_ENV=test` i nie jest adapterem produkcyjnym.  |
+| Zmienna                                   | Wymagana | Sekret | Opis                                                                                                                                              |
+| ----------------------------------------- | -------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AUTHORIZATION_MTLS_PORT`                 | tak      | nie    | Jedyny port Authorization, domyślnie `9956`; wymaga mTLS.                                                                                         |
+| `AUTHORIZATION_MTLS_CA_PATH`              | tak      | nie    | Ścieżka zaufanego Service CA.                                                                                                                     |
+| `AUTHORIZATION_MTLS_CERT_PATH`            | tak      | nie    | Ścieżka certyfikatu serwera Authorization.                                                                                                        |
+| `AUTHORIZATION_MTLS_KEY_PATH`             | tak      | tak    | Ścieżka prywatnego klucza serwera; zawartość klucza nie trafia do ENV.                                                                            |
+| `AUTHORIZATION_MTLS_BACKEND_IDENTITY`     | tak      | nie    | Oczekiwane URI SAN workloadu backendu.                                                                                                            |
+| `AUTHORIZATION_MTLS_HEALTHCHECK_IDENTITY` | tak      | nie    | Oczekiwane URI SAN dedykowanego klienta readiness.                                                                                                |
+| `AUTHORIZATION_MTLS_NGINX_IDENTITY`       | tak      | nie    | Oczekiwane URI SAN workloadu Nginx; wszystkie trzy tożsamości muszą być różne.                                                                    |
+| `AUTHORIZATION_HEALTHCHECK_CA_PATH`       | tak      | nie    | Service CA używane przez probe do weryfikacji serwera.                                                                                            |
+| `AUTHORIZATION_HEALTHCHECK_CERT_PATH`     | tak      | nie    | Certyfikat klienta ograniczonego do endpointów health.                                                                                            |
+| `AUTHORIZATION_HEALTHCHECK_KEY_PATH`      | tak      | tak    | Ścieżka prywatnego klucza klienta healthcheck.                                                                                                    |
+| `AUTHORIZATION_HEALTHCHECK_SERVER_NAME`   | tak      | nie    | Nazwa DNS weryfikowana przez probe; w Compose `authorization`.                                                                                    |
+| `BETTER_AUTH_SECRET`                      | tak      | tak    | Losowy sekret o długości co najmniej 32 znaków. Zmiana unieważnia istniejące sesje/tokeny.                                                        |
+| `BETTER_AUTH_URL`                         | tak      | nie    | Publiczny origin Better Auth, np. `http://localhost:1235`; służy również do linków potwierdzających e-mail.                                       |
+| `AUTH_SERVICE_URL`                        | tak      | nie    | Wewnętrzny URL backendu do Authorization; wymagane HTTPS, w Compose `https://authorization:9956`.                                                 |
+| `AUTH_SERVICE_CA_PATH`                    | tak      | nie    | Ścieżka Service CA używanego przez backend do weryfikacji serwera Authorization.                                                                  |
+| `AUTH_SERVICE_CERT_PATH`                  | tak      | nie    | Ścieżka certyfikatu klienta `backend-client`.                                                                                                     |
+| `AUTH_SERVICE_KEY_PATH`                   | tak      | tak    | Ścieżka prywatnego klucza `backend-client`; zawartość klucza nie trafia do ENV.                                                                   |
+| `AUTH_SERVICE_SERVER_NAME`                | tak      | nie    | Nazwa DNS sprawdzana w SAN certyfikatu serwera; w Compose `authorization`.                                                                        |
+| `AUTH_SERVICE_TIMEOUT_MS`                 | nie      | nie    | Dodatni timeout weryfikacji sesji; domyślnie `5000`.                                                                                              |
+| `FRONTEND_ORIGIN`                         | tak      | nie    | Publiczny origin frontendu dla CORS i Better Auth (obok lokalnego Vite `http://localhost:5173` poza produkcją).                                   |
+| `MOBILE_APP_LINK_HOST`                    | nie      | nie    | Nazwa DNS zgodna z buildem Mobile. Authorization dodaje dokładny origin HTTPS do zaufanych originów Better Auth dla callbacku weryfikacji e-mail. |
+| `EMAIL_DELIVERY_MODE`                     | nie      | nie    | `disabled` albo `test`. Tryb `test` działa wyłącznie przy `NODE_ENV=test` i nie jest adapterem produkcyjnym.                                      |
 
 Faza 0 dostarcza testowy outbox pozwalający zweryfikować cały kontrakt potwierdzenia e-maila. Wybór i konfiguracja produkcyjnego providera poczty pozostają osobnym zadaniem wdrożeniowym; nie należy uruchamiać `EMAIL_DELIVERY_MODE=test` poza izolowanymi testami.
 

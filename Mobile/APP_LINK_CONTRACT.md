@@ -60,7 +60,10 @@ wyłączone, dopóki nie istnieje rzeczywisty host HTTPS. Po jego uzyskaniu:
    `linking/assetlinks.example.json`;
 5. ograniczyć ścieżki po stronie AASA do `/open/*` i
    `/auth/email-verified`;
-6. ustawić ten sam origin HTTPS jako `FRONTEND_ORIGIN` w Authorization;
+6. ustawić ten sam `MOBILE_APP_LINK_HOST` w konfiguracji Authorization
+   (główny `.env` dla Compose lub `zglosto-config` dla Kubernetes).
+   Better Auth ufa wtedy dokładnemu originowi HTTPS tego hosta. CORS
+   Authorization nadal korzysta z `FRONTEND_ORIGIN`;
 7. przebudować binaria — zmiana associated domains/intent filters nie jest zmianą
    wyłącznie JS/OTA.
 

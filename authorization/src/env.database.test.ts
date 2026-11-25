@@ -6,6 +6,7 @@ beforeEach(() => {
   vi.stubEnv('DATABASE_TLS_CA_PATH', '/fixture/ca.crt');
   vi.stubEnv('BETTER_AUTH_URL', 'https://city.example/api/auth');
   vi.stubEnv('FRONTEND_ORIGIN', 'https://city.example');
+  vi.stubEnv('MOBILE_APP_LINK_HOST', '');
   vi.stubEnv('AUTHORIZATION_MTLS_PORT', '9956');
   for (const name of ['CA', 'CERT', 'KEY'])
     vi.stubEnv(`AUTHORIZATION_MTLS_${name}_PATH`, '/fixture/tls');
@@ -33,4 +34,10 @@ test('a missing selected URL file fails closed rather than using an inline admin
   vi.stubEnv('DATABASE_URL_FILE', '/nonexistent-fixture/database-url');
   vi.stubEnv('DATABASE_URL', 'postgresql://administrator:fixture@database/db');
   await expect(import('./env.ts')).rejects.toThrow();
+});
+
+test('auth reads the optional app-link hostname from the deployment environment', async () => {
+  vi.stubEnv('MOBILE_APP_LINK_HOST', ' App.City.example ');
+  const { env } = await import('./env.ts');
+  expect(env.mobileAppLinkOrigin).toBe('https://app.city.example');
 });

@@ -119,6 +119,13 @@ function ReadyResidentHomeScreen({
   const isOffline = networkAvailability === 'offline';
   const hasCachedData = query.data !== undefined;
 
+  const refresh = () => {
+    void query.refetch();
+    if (session.emailVerified === false) {
+      void deliveryCapability.refetch({ cancelRefetch: false });
+    }
+  };
+
   const logout = async () => {
     onSigningOutChange(true);
     try {
@@ -272,8 +279,8 @@ function ReadyResidentHomeScreen({
         }
         ListFooterComponent={footer}
         ListHeaderComponent={header}
-        onRefresh={() => void query.refetch()}
-        refreshing={query.isRefetching}
+        onRefresh={refresh}
+        refreshing={query.isRefetching || deliveryCapability.isRefetching}
         renderItem={renderIncidentItem}
       />
     </SafeAreaView>

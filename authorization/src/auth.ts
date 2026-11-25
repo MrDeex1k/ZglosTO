@@ -7,7 +7,7 @@ import { APIError, createAuthMiddleware } from 'better-auth/api';
 import { isRecord, type AuthorizationUserFields, type UserRole } from '@zglosto/contracts';
 import { logAuthOperation } from './logger.ts';
 import { env } from './env.ts';
-import { authorizationOrigins } from './origins.ts';
+import { betterAuthTrustedOrigins } from './origins.ts';
 import { storeVerificationMessage } from './test-email-outbox.ts';
 import { betterAuthRateLimitOptions } from './distributed-rate-limit.ts';
 
@@ -91,8 +91,11 @@ export const auth = betterAuth({
     },
   },
 
-  // Dozwolone origin (CORS + walidacja Better-Auth)
-  trustedOrigins: [...authorizationOrigins(env.frontendOrigin, env.nodeEnv), 'zglosto://'],
+  trustedOrigins: betterAuthTrustedOrigins(
+    env.frontendOrigin,
+    env.nodeEnv,
+    env.mobileAppLinkOrigin,
+  ),
 
   // Włącz autoryzację email + hasło
   emailAndPassword: {
