@@ -228,7 +228,7 @@ export class RabbitMqConsumerService {
       // Leave the delivery unacked during the delay. Prefetch bounds the number
       // of waiting deliveries and closing the channel returns them to RabbitMQ.
       try {
-        await waitForRetry(retryDelayMs, undefined, {
+        await waitForRetry(retryDelayMs, null, {
           signal: this.shutdownSignal.signal,
           ref: false,
         });

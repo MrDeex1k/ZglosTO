@@ -578,7 +578,7 @@ export const enTranslation = {
       reloadReport: 'Reload current data',
       removeDraftPhoto: 'Remove selected photo',
       reviewDraft:
-        'Current report: {{status}}, {{verified}}. Review the form and save any remaining changes.',
+        'Current report: {{status}}, {{verified}}. Review the form and save your remaining changes.',
       verified: 'verified',
       unverified: 'unverified',
       saveUnconfirmed:

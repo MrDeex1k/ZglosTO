@@ -121,7 +121,7 @@ test('keeps service edits open and retries against the refreshed incident revisi
 
   let currentIncident = incident;
   let canRefresh = true;
-  const writes: Array<{ revision: string | undefined; body: unknown }> = [];
+  const writes: Array<{ revision: string | null; body: unknown }> = [];
   await page.route('**/api/sluzby/incydenty', (route) =>
     canRefresh
       ? route.fulfill({ json: [currentIncident] })
@@ -129,7 +129,7 @@ test('keeps service edits open and retries against the refreshed incident revisi
   );
   await page.route('**/api/sluzby/incydenty/*/sprawdzenie', async (route) => {
     writes.push({
-      revision: route.request().headers()['if-match'],
+      revision: route.request().headers()['if-match'] ?? null,
       body: route.request().postDataJSON(),
     });
     if (writes.length === 1) {

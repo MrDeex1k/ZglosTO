@@ -242,7 +242,7 @@ assert_contains "Authorization readiness" "$authorization_health" '"config":{'
 assert_contains "Authorization config" "$authorization_health" '"status":"valid"'
 
 log "Checking internal frontend readiness artifact"
-frontend_health="$(compose exec -T frontend wget -q -O - http://127.0.0.1/health/ready)"
+frontend_health="$(compose exec -T frontend wget -q -O - http://127.0.0.1:8080/health/ready)"
 assert_contains "Frontend readiness" "$frontend_health" '"service":"frontend"'
 assert_contains "Frontend readiness" "$frontend_health" '"config":{'
 assert_contains "Frontend config" "$frontend_health" '"status":"valid"'

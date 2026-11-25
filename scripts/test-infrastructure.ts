@@ -537,7 +537,7 @@ test('storage IAM bootstrap and runtime secrets remain separate in rendered prof
     assert.doesNotMatch(runtime, /secretName: zglosto-rustfs-root/u);
     assert.doesNotMatch(runtime, /secretName: zglosto-object-storage-operations-credentials/u);
   }
-  assert.match(bootstrap, /rustfs\/rc:v0\.1\.37@sha256:/u);
+  assert.match(bootstrap, /rustfs\/rc:v0\.1\.38@sha256:/u);
   assert.match(bootstrap, /automountServiceAccountToken: false/u);
   assert.match(bootstrap, /secretName: zglosto-object-storage-operations-credentials/u);
 });

@@ -17,7 +17,7 @@ function hash(values: readonly unknown[]): string {
 export function incidentCreationReceiptIdentity(
   command: CreateIncidentCommand,
 ): ReceiptIdentity | null {
-  if (command.idempotencyKey === undefined) return null;
+  if (command.idempotencyKey == null) return null;
   return [
     hash(
       command.reporterUserId === null

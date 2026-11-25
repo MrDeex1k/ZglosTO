@@ -52,20 +52,20 @@ test('backs off requeues for database and retry publication errors, then resets 
     const nack = vi.fn();
     const message = { ack, nack, properties: {} } as unknown as AMQPMessage;
 
-    let finishFirstDelay: (() => void) | undefined;
+    const firstDelay: { finish?: () => void } = {};
     waitForRetry
       .mockImplementationOnce(
         () =>
-          new Promise((resolve) => {
-            finishFirstDelay = resolve;
+          new Promise<void>((resolve) => {
+            firstDelay.finish = resolve;
           }),
       )
-      .mockResolvedValue(undefined);
+      .mockImplementation(async () => {});
     deliver(message);
     await vi.waitFor(() => expect(waitForRetry).toHaveBeenCalledOnce());
     expect(nack).not.toHaveBeenCalled();
-    expect(finishFirstDelay).toBeDefined();
-    finishFirstDelay?.();
+    expect(firstDelay.finish).toBeDefined();
+    firstDelay.finish?.();
     await vi.waitFor(() => expect(nack).toHaveBeenCalledExactlyOnceWith(true));
 
     deliver(message);

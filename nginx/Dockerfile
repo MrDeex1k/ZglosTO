@@ -1,6 +1,6 @@
-# syntax=docker/dockerfile:1.28.0
+# syntax=docker/dockerfile:1.29.0
 
-ARG NGINX_IMAGE=nginx:1.31.8-alpine3.24-slim
+ARG NGINX_IMAGE=nginx:1.31.10-alpine3.24-slim
 
 FROM ${NGINX_IMAGE}
 

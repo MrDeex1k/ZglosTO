@@ -61,7 +61,7 @@ export class ResidentsUseCases {
     return this.incidents.createIncident({
       address: request.adres_zgloszenia,
       description: request.opis_zgloszenia,
-      ...(idempotencyKey === undefined ? {} : { idempotencyKey }),
+      ...(idempotencyKey == null ? {} : { idempotencyKey }),
       imageUploadId: request.zdjecie_incydentu_zglaszanego_upload_id,
       latitude: request.latitude,
       longitude: request.longitude,

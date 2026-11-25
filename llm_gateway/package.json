@@ -16,21 +16,21 @@
     "typecheck": "bun run --bun tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@hono/node-server": "2.1.8",
+    "@hono/node-server": "2.1.11",
     "@zglosto/contracts": "workspace:*",
     "@zglosto/observability": "workspace:*",
     "@zglosto/transient-store": "workspace:*",
     "@zglosto/workload-auth": "workspace:*",
-    "hono": "4.13.18",
+    "hono": "4.13.22",
     "zod": "4.6.7"
   },
   "devDependencies": {
-    "@types/node": "26.6.6",
+    "@types/node": "26.6.10",
     "typescript": "7.0.2",
-    "vitest": "5.1.0"
+    "vitest": "5.1.2"
   },
   "engines": {
-    "bun": "1.4.4",
+    "bun": "1.4.5",
     "node": ">=26.8.1"
   }
 }
