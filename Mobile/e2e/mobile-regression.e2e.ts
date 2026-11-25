@@ -35,7 +35,9 @@ async function fillLoginField(fill: () => Promise<unknown>) {
   } catch (error: unknown) {
     if (
       !(error instanceof Error) ||
-      !error.message.includes('text entry read-back did not match')
+      !/text entry read-back did not match|no text input found at the provided coordinates/.test(
+        error.message,
+      )
     ) {
       throw error;
     }
@@ -45,19 +47,23 @@ async function fillLoginField(fill: () => Promise<unknown>) {
 
 async function logIn(screen: Screen, device: Device, role: 'resident' | 'service' | 'admin') {
   const account = credentials.user(role);
+  const email = screen.getByTestId('login-email');
+  const password = screen.getByTestId('login-password');
+  const ios = process.env.AGENT_DEVICE_PLATFORM === 'ios';
+
   await screen.getByText(/^(Zaloguj się|Sign in)$/i).tap();
-  await expect(screen.getByTestId('login-email')).toBeVisible();
-  await fillLoginField(() => screen.getByTestId('login-email').fill(account.username));
-  await fillLoginField(() => screen.getByTestId('login-password').fill(account.password));
-  const submit = screen.getByTestId('login-submit');
-  if (process.env.AGENT_DEVICE_PLATFORM === 'ios') {
-    const dismissStrongPassword = screen.getByTestId('xmark');
-    await expect(dismissStrongPassword.or(submit).first()).toBeVisible();
-    if (await dismissStrongPassword.isVisible()) await dismissStrongPassword.tap();
+  await expect(email).toBeVisible();
+  await fillLoginField(() => email.fill(account.username));
+  if (ios) await email.press('Enter');
+  await fillLoginField(() => password.fill(account.password));
+  if (ios) {
+    // Submit through the keyboard to avoid moving form controls during keyboard animations.
+    await password.press('Enter');
+  } else {
+    await screen.getByTestId('login-submit').tap();
+    await device.dismissKeyboard();
   }
-  await submit.tap();
-  if (process.env.AGENT_DEVICE_PLATFORM === 'android') await device.dismissKeyboard();
-  if (process.env.AGENT_DEVICE_PLATFORM === 'ios') {
+  if (ios) {
     const savePassword = screen.getByText(declineSavedPassword).first();
     // The system sheet may appear after the account screen becomes visible.
     const shouldDismiss = await savePassword.waitFor({ timeout: 8_000 }).then(
