@@ -1,0 +1,23 @@
+{
+  "name": "zglosto-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ZgłosTO operations panel for municipal services and administrators",
+  "license": "SEE LICENSE IN ../LICENSE",
+  "author": "ZgłosTO",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "bun run --bun tsc -p tsconfig.json",
+    "typecheck": "bun run --bun tsc -p tsconfig.json --noEmit",
+    "test": "bun test src",
+    "dev": "bun run build && electron .",
+    "package": "bun run build && bun scripts/configure-release.ts && electron-packager . --out=out --asar --overwrite --app-bundle-id=pl.zglosto.desktop --ignore='^/(src|scripts|out|node_modules)(/|$)' --ignore='^/tsconfig.json$'",
+    "install:runtime": "install-electron",
+    "make:mac": "bun run package && bun scripts/make-dmg.ts"
+  },
+  "devDependencies": {
+    "@electron/packager": "20.3.0",
+    "electron": "45.5.0"
+  },
+  "productName": "ZgłosTO Desktop"
+}

@@ -6,6 +6,7 @@
   "workspaces": [
     "docs-site",
     "frontend",
+    "desktop",
     "backend",
     "authorization",
     "llm_gateway",

@@ -1,6 +1,7 @@
 import type { UserRole } from '@zglosto/contracts';
 
 export type DashboardPath = '/dashboard/admin' | '/dashboard/sluzby' | '/dashboard/mieszkaniec';
+export const operationsSessionKey = ['operations', 'session'] as const;
 
 export function getDashboardPath(userRole: UserRole): DashboardPath {
   switch (userRole) {

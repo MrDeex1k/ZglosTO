@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
+import { Route as OperacjeRouteImport } from './routes/operacje'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppLoginRouteImport } from './routes/_app.login'
@@ -23,6 +24,11 @@ import { Route as OpenIncidentsIdRouteImport } from './routes/open.incidents.$id
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OperacjeRoute = OperacjeRouteImport.update({
+  id: '/operacje',
+  path: '/operacje',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -78,6 +84,7 @@ const OpenIncidentsIdRoute = OpenIncidentsIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
+  '/operacje': typeof OperacjeRoute
   '/dashboard': typeof AppDashboardRouteWithChildren
   '/login': typeof AppLoginRoute
   '/register': typeof AppRegisterRoute
@@ -89,6 +96,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/': typeof AppDashboardIndexRoute
 }
 export interface FileRoutesByTo {
+  '/operacje': typeof OperacjeRoute
   '/login': typeof AppLoginRoute
   '/register': typeof AppRegisterRoute
   '/auth/email-verified': typeof AuthEmailVerifiedRoute
@@ -102,6 +110,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
+  '/operacje': typeof OperacjeRoute
   '/_app/dashboard': typeof AppDashboardRouteWithChildren
   '/_app/login': typeof AppLoginRoute
   '/_app/register': typeof AppRegisterRoute
@@ -117,6 +126,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/operacje'
     | '/dashboard'
     | '/login'
     | '/register'
@@ -128,6 +138,7 @@ export interface FileRouteTypes {
     | '/dashboard/'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/operacje'
     | '/login'
     | '/register'
     | '/auth/email-verified'
@@ -140,6 +151,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_app'
+    | '/operacje'
     | '/_app/dashboard'
     | '/_app/login'
     | '/_app/register'
@@ -154,6 +166,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
+  OperacjeRoute: typeof OperacjeRoute
   AuthEmailVerifiedRoute: typeof AuthEmailVerifiedRoute
   OpenIncidentsIdRoute: typeof OpenIncidentsIdRoute
 }
@@ -165,6 +178,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/operacje': {
+      id: '/operacje'
+      path: '/operacje'
+      fullPath: '/operacje'
+      preLoaderRoute: typeof OperacjeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/': {
@@ -276,6 +296,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
+  OperacjeRoute: OperacjeRoute,
   AuthEmailVerifiedRoute: AuthEmailVerifiedRoute,
   OpenIncidentsIdRoute: OpenIncidentsIdRoute,
 }

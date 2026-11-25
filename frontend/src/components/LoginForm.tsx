@@ -14,7 +14,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 
 interface LoginFormProps {
-  onRegisterClick: () => void;
+  onRegisterClick?: () => void;
   onLoginSuccess: (userRole: UserRole, email: string) => void | Promise<void>;
 }
 
@@ -139,9 +139,11 @@ export function LoginForm({ onRegisterClick, onLoginSuccess }: LoginFormProps) {
               )}
             </form.Subscribe>
 
-            <Button type="button" variant="outline" className="w-full" onClick={onRegisterClick}>
-              {t(($) => $.auth.registerAction)}
-            </Button>
+            {onRegisterClick && (
+              <Button type="button" variant="outline" className="w-full" onClick={onRegisterClick}>
+                {t(($) => $.auth.registerAction)}
+              </Button>
+            )}
           </form>
         </div>
       </div>
