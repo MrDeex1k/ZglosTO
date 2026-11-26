@@ -1,9 +1,12 @@
 import {
   formatIncidentRevisionEtag,
   parseCurrentCreateIncidentResponse,
-  parseCurrentIncidentList,
+  AdminIncidentStatisticsItemSchema,
+  CurrentIncidentPageSchema,
   parseCurrentResolvedIncidents,
-  parseServiceIncidentList,
+  ServiceIncidentPageSchema,
+  ServiceIncidentListItemSchema,
+  ServiceIncidentStatisticsItemSchema,
   ServiceIncidentMutationResponseSchema,
   UpdateUserPermissionsRequestSchema,
   InitiateImageUploadResponseSchema,
@@ -13,6 +16,7 @@ import {
   type CurrentResolvedIncidentDto,
   type IncidentStatusCode,
   type InitiateImageUploadRequest,
+  type IncidentPage,
   type UpdateIncidentServiceRequest,
   type UpdateIncidentStatusRequest,
   type UpdateIncidentVerificationRequest,
@@ -107,14 +111,45 @@ export async function fetchResolvedIncidents(
   return parseCurrentResolvedIncidents(await readJson(response));
 }
 
+export interface IncidentPageParameters {
+  cursor: string | null;
+  status?: IncidentStatusCode;
+  serviceKey?: string;
+}
+
+function privateIncidentPage(path: string, page: IncidentPageParameters, signal: AbortSignal) {
+  const query = new URLSearchParams({ limit: '10' });
+  if (page.cursor !== null) query.set('cursor', page.cursor);
+  if (page.status !== undefined) query.set('status', page.status);
+  if (page.serviceKey !== undefined) query.set('serviceKey', page.serviceKey);
+  return fetch(`${API_BASE_URL}/${path}?${query}`, { signal, credentials: 'include' }).then(
+    readJson,
+  );
+}
+
 export async function fetchAllIncidents(
-  signal?: AbortSignal,
-): Promise<CurrentIncidentListItemDto[]> {
-  const response = await fetch(`${API_BASE_URL}/admin/incydenty`, {
-    signal: signal ?? null,
+  page: IncidentPageParameters,
+  signal: AbortSignal,
+): Promise<IncidentPage<CurrentIncidentListItemDto>> {
+  return CurrentIncidentPageSchema.parse(
+    await privateIncidentPage('admin/incydenty', page, signal),
+  );
+}
+
+export async function fetchAdminIncidentStatistics(signal: AbortSignal) {
+  const response = await fetch(`${API_BASE_URL}/admin/statystyki`, {
+    signal,
     credentials: 'include',
   });
-  return parseCurrentIncidentList(await readJson(response));
+  return AdminIncidentStatisticsItemSchema.array().parse(await readJson(response));
+}
+
+export async function fetchServiceIncidentStatistics(signal: AbortSignal) {
+  const response = await fetch(`${API_BASE_URL}/sluzby/statystyki`, {
+    signal,
+    credentials: 'include',
+  });
+  return ServiceIncidentStatisticsItemSchema.array().parse(await readJson(response));
 }
 
 export async function updateIncidentStatus(
@@ -152,13 +187,25 @@ export async function updateUserPermissions(
 }
 
 export async function fetchServiceIncidents(
-  signal?: AbortSignal,
-): Promise<ServiceIncidentListItemDto[]> {
-  const response = await fetch(`${API_BASE_URL}/sluzby/incydenty`, {
-    signal: signal ?? null,
-    credentials: 'include',
-  });
-  return parseServiceIncidentList(await readJson(response));
+  page: IncidentPageParameters,
+  signal: AbortSignal,
+): Promise<IncidentPage<ServiceIncidentListItemDto>> {
+  return ServiceIncidentPageSchema.parse(
+    await privateIncidentPage('sluzby/incydenty', page, signal),
+  );
+}
+
+export async function fetchServiceIncident(
+  incidentId: string,
+): Promise<ServiceIncidentListItemDto | null> {
+  const response = await fetch(
+    `${API_BASE_URL}/sluzby/incydenty/${encodeURIComponent(incidentId)}`,
+    {
+      credentials: 'include',
+    },
+  );
+  if (response.status === 404) return null;
+  return ServiceIncidentListItemSchema.parse(await readJson(response));
 }
 
 async function patchServiceIncident(path: string, body: object, revision: number): Promise<number> {
@@ -209,13 +256,12 @@ export async function attachResolvedImageService(
 }
 
 export async function fetchUserIncidents(
-  signal?: AbortSignal,
-): Promise<CurrentIncidentListItemDto[]> {
-  const response = await fetch(`${API_BASE_URL}/mieszkaniec/incydenty`, {
-    signal: signal ?? null,
-    credentials: 'include',
-  });
-  return parseCurrentIncidentList(await readJson(response));
+  page: IncidentPageParameters,
+  signal: AbortSignal,
+): Promise<IncidentPage<CurrentIncidentListItemDto>> {
+  return CurrentIncidentPageSchema.parse(
+    await privateIncidentPage('mieszkaniec/incydenty', page, signal),
+  );
 }
 
 export async function createIncident(

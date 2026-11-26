@@ -18,6 +18,7 @@ import {
   CurrentCreateIncidentResponseSchema,
   CurrentIncidentListItemSchema,
   CurrentIncidentPageSchema,
+  INCIDENT_STATUSES,
   IncidentListQuerySchema,
   type IncidentListQuery,
   type IncidentPage,
@@ -91,6 +92,8 @@ export class ResidentsController {
     schema: { type: 'integer', minimum: 1, maximum: 100 },
   })
   @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiQuery({ name: 'status', required: false, enum: INCIDENT_STATUSES })
+  @ApiQuery({ name: 'serviceKey', required: false, type: String })
   @ApiContract({
     authenticated: true,
     errorStatuses: [400, 401, 403, 500, 503],

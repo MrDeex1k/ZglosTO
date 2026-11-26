@@ -78,7 +78,9 @@ describe('dashboard query guard', () => {
 
   it('loads the private list for the dashboard owned by the user', async () => {
     const client = new QueryClient();
-    const ensure = vi.spyOn(client, 'ensureQueryData').mockResolvedValue([]);
+    const ensure = vi
+      .spyOn(client, 'ensureInfiniteQueryData')
+      .mockResolvedValue({ pages: [], pageParams: [] });
 
     await ensureDashboardIncidentData(client, authenticatedResident, 'mieszkaniec');
 
@@ -91,7 +93,9 @@ describe('dashboard query guard', () => {
 
   it('scopes the service loader cache to the assigned service key', async () => {
     const client = new QueryClient();
-    const ensure = vi.spyOn(client, 'ensureQueryData').mockResolvedValue([]);
+    const ensure = vi
+      .spyOn(client, 'ensureInfiniteQueryData')
+      .mockResolvedValue({ pages: [], pageParams: [] });
     const viewer = { ...authenticatedResident, role: 'sluzby', serviceKey: 'roads' } as const;
 
     await ensureDashboardIncidentData(client, viewer, 'sluzby');

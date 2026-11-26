@@ -10,7 +10,8 @@ import { submitClientForm } from '../forms/submit';
 import { useServiceIncidentMutation } from '../hooks/use-incident-mutations';
 import { getCurrentLocale } from '../i18n';
 import { getIncidentStatusLabel } from '../lib/incident-status';
-import { ApiResponseError } from '../services/api';
+import { ApiResponseError, fetchServiceIncident } from '../services/api';
+import { mapServiceIncident } from '../queries/incidents';
 import type { ServiceIncident } from '../types/incident';
 import { formatPolishDate } from '../utils/dateUtils';
 import { FieldErrors } from './forms/field-errors';
@@ -28,7 +29,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 interface ServiceIncidentDialogProps {
   incident: ServiceIncident;
   onClose: () => void;
-  refreshIncidents: () => Promise<ServiceIncident[] | null>;
 }
 
 function SelectedResolutionImagePreview({ file }: Readonly<{ file: File }>) {
@@ -223,7 +223,6 @@ function ServiceIncidentSaveFeedback({
 export function ServiceIncidentDialog({
   incident: initialIncident,
   onClose,
-  refreshIncidents,
 }: Readonly<ServiceIncidentDialogProps>) {
   const { t } = useTranslation();
   const mutation = useServiceIncidentMutation();
@@ -264,14 +263,16 @@ export function ServiceIncidentDialog({
 
   const refreshDraft = async () => {
     setRefreshState('loading');
-    const refreshedIncidents = await refreshIncidents();
-    if (refreshedIncidents === null) {
+    let latest: ServiceIncident;
+    try {
+      const row = await fetchServiceIncident(incident.id);
+      if (row === null) {
+        onClose();
+        return;
+      }
+      latest = mapServiceIncident(row);
+    } catch {
       setRefreshState('failed');
-      return;
-    }
-    const latest = refreshedIncidents.find(({ id }) => id === incident.id);
-    if (latest === undefined) {
-      onClose();
       return;
     }
     const draft = form.state.values;

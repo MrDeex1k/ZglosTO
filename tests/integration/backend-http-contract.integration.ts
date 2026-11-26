@@ -11,7 +11,7 @@ function openApiPath(internalPath: string): string {
 }
 
 async function run(): Promise<void> {
-  assert.equal(BACKEND_HTTP_CONTRACT.length, 23, 'post-cutover backend route inventory');
+  assert.equal(BACKEND_HTTP_CONTRACT.length, 24, 'backend route inventory');
 
   const contract = BACKEND_HTTP_CONTRACT;
   for (const entry of contract) {
@@ -57,7 +57,7 @@ async function run(): Promise<void> {
   }
 
   console.log(
-    `[integration] PASS: ${contract.length} backend HTTP routes match the Phase 6 baseline on ${runtime}`,
+    `[integration] PASS: ${contract.length} backend HTTP routes verified on ${runtime}`,
   );
 }
 

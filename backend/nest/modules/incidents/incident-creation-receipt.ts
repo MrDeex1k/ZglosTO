@@ -46,7 +46,11 @@ export async function readIncidentCreationReceipt(
     [scope, key],
   );
   if (rows.length === 0) return null;
-  const receipt = expectRecord(rows[0], 'incidentCreationReceipt');
+  return parseReceipt(rows[0], fingerprint);
+}
+
+function parseReceipt(row: unknown, fingerprint: string): CurrentCreateIncidentResponse {
+  const receipt = expectRecord(row, 'incidentCreationReceipt');
   if (receipt.fingerprint !== fingerprint) {
     throw conflict('Idempotency-Key was already used with a different incident request');
   }
@@ -59,16 +63,15 @@ export async function createWithIncidentReceipt(
   identity: ReceiptIdentity,
   create: () => Promise<CurrentCreateIncidentResponse>,
 ): Promise<CurrentCreateIncidentResponse> {
-  const { rowCount } = await client.query(
+  const { rows } = await client.query(
     `INSERT INTO incident_creation_receipts (scope, key, fingerprint)
-     VALUES ($1, $2, $3) ON CONFLICT (scope, key) DO NOTHING`,
+     VALUES ($1, $2, $3) ON CONFLICT (scope, key) DO SELECT
+     RETURNING OLD.key IS NULL AS inserted, fingerprint, response`,
     identity,
   );
-  if (rowCount === 0) {
-    const replay = await readIncidentCreationReceipt(client, identity);
-    if (replay === null) throw new Error('Incident creation receipt disappeared');
-    return replay;
-  }
+  const receipt = expectRecord(rows[0], 'incidentCreationReceipt');
+  if (receipt.inserted === false) return parseReceipt(receipt, identity[2]);
+  if (receipt.inserted !== true) throw new Error('Missing incident creation reservation result');
 
   const response = await create();
   const [scope, key] = identity;

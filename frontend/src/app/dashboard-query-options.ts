@@ -2,7 +2,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import type { UserRole } from '@zglosto/contracts';
 
 import {
-  adminIncidentsQueryOptions,
+  adminIncidentStatisticsQueryOptions,
   residentIncidentsQueryOptions,
   serviceIncidentsQueryOptions,
 } from '../queries/incidents';
@@ -17,12 +17,14 @@ export async function ensureDashboardIncidentData(
 
   switch (expectedRole) {
     case 'admin':
-      await queryClient.ensureQueryData(adminIncidentsQueryOptions(user.email));
+      await queryClient.ensureQueryData(adminIncidentStatisticsQueryOptions(user.email));
       return;
     case 'mieszkaniec':
-      await queryClient.ensureQueryData(residentIncidentsQueryOptions(user.email));
+      await queryClient.ensureInfiniteQueryData(residentIncidentsQueryOptions(user.email));
       return;
     case 'sluzby':
-      await queryClient.ensureQueryData(serviceIncidentsQueryOptions(user.email, user.serviceKey));
+      await queryClient.ensureInfiniteQueryData(
+        serviceIncidentsQueryOptions(user.email, user.serviceKey),
+      );
   }
 }

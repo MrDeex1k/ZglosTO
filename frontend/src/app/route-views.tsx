@@ -68,6 +68,7 @@ export function ResidentDashboardRouteView({
       userDisplayName={getUserDisplayName(viewer)}
       isEmailVerified={viewer.emailVerified}
       incidents={state.residentIncidents}
+      pagination={state.residentPagination}
       onIncidentClick={state.openIncident}
       selectedIncident={state.selectedIncident}
       isOpen={state.isDetailsDialogOpen}
@@ -87,12 +88,10 @@ export function ServiceDashboardRouteView({
       userDisplayName={getUserDisplayName(viewer)}
       serviceKey={viewer.serviceKey}
       incidents={state.serviceIncidents}
-      incidentsError={state.serviceIncidentsError}
-      refreshIncidents={state.refreshServiceIncidents}
+      pagination={state.servicePagination}
+      statistics={state.serviceStatistics}
       statusFilter={state.serviceStatusFilter}
-      visibleCount={state.visibleServiceIncidents}
       onStatusFilterChange={state.setServiceStatusFilter}
-      onShowMore={state.showMoreServiceIncidents}
     />
   );
 }
@@ -103,7 +102,7 @@ export function AdminDashboardRouteView() {
   return (
     <AppShell navigation={state.navigation}>
       <main className="flex-1 container mx-auto px-4">
-        <AdminPanel incidents={state.allIncidents} owner={state.userEmail} />
+        <AdminPanel owner={state.userEmail} />
       </main>
     </AppShell>
   );

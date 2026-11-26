@@ -62,6 +62,10 @@ export abstract class IncidentDomainPort {
   abstract listResidentIncidents(userId: string): Promise<readonly CurrentIncidentListItemDto[]>;
   abstract getResolvedIncident(incidentId: string): Promise<CurrentResolvedIncidentDto | null>;
   abstract listResolvedIncidents(): Promise<readonly CurrentResolvedIncidentDto[]>;
+  abstract getServiceIncident(
+    serviceKey: string,
+    incidentId: string,
+  ): Promise<ServiceIncidentListItemDto | null>;
   abstract listServiceIncidents(serviceKey: string): Promise<readonly ServiceIncidentListItemDto[]>;
   abstract listServiceStatistics(
     serviceKey: string,
@@ -150,6 +154,13 @@ export class PendingIncidentInfrastructureAdapter extends IncidentDomainPort {
   }
 
   listResolvedIncidents(): Promise<readonly CurrentResolvedIncidentDto[]> {
+    return this.pending();
+  }
+
+  getServiceIncident(
+    _serviceKey: string,
+    _incidentId: string,
+  ): Promise<ServiceIncidentListItemDto | null> {
     return this.pending();
   }
 

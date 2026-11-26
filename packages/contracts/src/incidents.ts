@@ -259,6 +259,8 @@ export const IncidentListQuerySchema = z.object({
     .transform(Number)
     .optional(),
   cursor: IncidentCursorTokenSchema.optional(),
+  status: IncidentStatusSchema.optional(),
+  serviceKey: z.string().min(1).max(64).optional(),
 });
 
 export type IncidentListQuery = z.infer<typeof IncidentListQuerySchema>;

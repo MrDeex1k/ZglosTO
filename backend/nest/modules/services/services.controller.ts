@@ -19,6 +19,7 @@ import {
   ServiceIncidentStatisticsItemSchema,
   ServiceIncidentListItemSchema,
   ServiceIncidentPageSchema,
+  INCIDENT_STATUSES,
   IncidentListQuerySchema,
   type IncidentListQuery,
   type IncidentPage,
@@ -71,6 +72,8 @@ export class ServicesController {
     schema: { type: 'integer', minimum: 1, maximum: 100 },
   })
   @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiQuery({ name: 'status', required: false, enum: INCIDENT_STATUSES })
+  @ApiQuery({ name: 'serviceKey', required: false, type: String })
   @ApiContract({
     authenticated: true,
     errorStatuses: [400, 401, 403, 500, 503],
@@ -106,6 +109,20 @@ export class ServicesController {
       this.authContext.requireServiceKey(request),
       body,
     );
+  }
+
+  @Get('incydenty/:id')
+  @ApiOperation({ summary: 'Get an incident assigned to the authenticated service' })
+  @ApiContract({
+    authenticated: true,
+    errorStatuses: [400, 401, 403, 404, 500, 503],
+    successSchema: ServiceIncidentListItemSchema,
+  })
+  get(
+    @Param({ schema: IncidentIdParamsSchema }) params: IncidentIdParams,
+    @Req() request: Request,
+  ): Promise<ServiceIncidentListItemDto> {
+    return this.useCases.get(this.authContext.requireServiceKey(request), params.id);
   }
 
   @Get('statystyki')

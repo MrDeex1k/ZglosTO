@@ -13,13 +13,23 @@ type IncidentCursor = z.infer<typeof IncidentCursorSchema>;
 export interface IncidentPageRequest {
   limit: number;
   after: IncidentCursor | null;
+  status?: IncidentListQuery['status'];
+  serviceKey?: IncidentListQuery['serviceKey'];
 }
 
 export function incidentPageRequest(query: IncidentListQuery): IncidentPageRequest | null {
-  if (query.limit == null && query.cursor == null) return null;
+  if (
+    query.limit == null &&
+    query.cursor == null &&
+    query.status == null &&
+    query.serviceKey == null
+  )
+    return null;
   return {
     limit: query.limit ?? 50,
     after: query.cursor == null ? null : decodeCursor(query.cursor),
+    ...(query.status === undefined ? {} : { status: query.status }),
+    ...(query.serviceKey === undefined ? {} : { serviceKey: query.serviceKey }),
   };
 }
 

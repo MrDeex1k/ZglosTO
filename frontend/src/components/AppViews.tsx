@@ -1,13 +1,19 @@
-import type { IncidentStatusCode, UserRole } from '@zglosto/contracts';
+import type {
+  IncidentStatusCode,
+  ServiceIncidentStatisticsItem,
+  UserRole,
+} from '@zglosto/contracts';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getServiceLabel } from '../config/services';
 import { getCurrentLocale } from '../i18n';
 import { getIncidentStatusLabel } from '../lib/incident-status';
+import { incidentCount } from '../queries/incidents';
 import type { Incident, NewIncidentDraft, ServiceIncident } from '../types/incident';
 import { Footer } from './Footer';
 import { Header } from './Header';
 import { OperationsShell } from './OperationsShell';
+import { IncidentPageControls, type IncidentPagination } from './IncidentPageControls';
 import { IncidentCard } from './IncidentCard';
 import { getIncidentStatusFilterClassName } from './incident-status-styles';
 import { IncidentDetailsDialog } from './IncidentDetailsDialog';
@@ -65,6 +71,7 @@ interface ResidentDashboardProps extends IncidentDialogProps {
   userDisplayName: string;
   isEmailVerified: boolean;
   incidents: Incident[];
+  pagination: IncidentPagination;
   onIncidentClick: (incident: Incident) => void;
 }
 
@@ -73,6 +80,7 @@ export function ResidentDashboard({
   userDisplayName,
   isEmailVerified,
   incidents,
+  pagination,
   onIncidentClick,
   selectedIncident,
   isOpen,
@@ -92,7 +100,7 @@ export function ResidentDashboard({
           )}
           <div className="mb-2 lg:mb-8">
             <h3 className="text-gray-900 mb-6">Twoje zgłoszenia</h3>
-            {incidents.length === 0 ? (
+            {incidents.length === 0 && !pagination.isPending && !pagination.isLoadingError ? (
               <div className="text-center py-12 bg-white rounded-lg border">
                 <p className="text-gray-500">Nie masz jeszcze żadnych zgłoszeń</p>
                 <Button
@@ -113,6 +121,7 @@ export function ResidentDashboard({
                 ))}
               </div>
             )}
+            <IncidentPageControls pagination={pagination} />
           </div>
         </div>
       </main>
@@ -130,12 +139,10 @@ interface ServiceDashboardProps {
   userDisplayName: string;
   serviceKey: string | null;
   incidents: ServiceIncident[];
-  incidentsError: boolean;
-  refreshIncidents: () => Promise<ServiceIncident[] | null>;
+  pagination: IncidentPagination;
+  statistics: ServiceIncidentStatisticsItem[] | undefined;
   statusFilter: 'ALL' | IncidentStatusCode;
-  visibleCount: number;
   onStatusFilterChange: (status: 'ALL' | IncidentStatusCode) => void;
-  onShowMore: () => void;
 }
 
 export function ServiceDashboard({
@@ -143,21 +150,13 @@ export function ServiceDashboard({
   userDisplayName,
   serviceKey,
   incidents,
-  incidentsError,
-  refreshIncidents,
+  pagination,
+  statistics,
   statusFilter,
-  visibleCount,
   onStatusFilterChange,
-  onShowMore,
 }: ServiceDashboardProps) {
-  const { t } = useTranslation();
-  const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
-  const selectedIncident = incidents.find(({ id }) => id === selectedIncidentId);
-  const closeIncident = () => setSelectedIncidentId(null);
-  const filteredIncidents =
-    statusFilter === 'ALL'
-      ? incidents
-      : incidents.filter((incident) => incident.adminStatus === statusFilter);
+  const [selectedIncident, setSelectedIncident] = useState<ServiceIncident | null>(null);
+  const closeIncident = () => setSelectedIncident(null);
   const filters: Array<'ALL' | IncidentStatusCode> = ['ALL', 'reported', 'in_progress', 'resolved'];
 
   return (
@@ -174,69 +173,47 @@ export function ServiceDashboard({
             }
           />
           <h3 className="text-gray-900 mb-6">Zgłoszenia dla Twojej służby</h3>
-          {incidentsError ? (
-            <div className="rounded-lg border bg-card p-6 text-center">
-              <p role="alert">{t(($) => $.incidents.management.loadFailed)}</p>
-              <Button
-                type="button"
-                variant="outline"
-                className="mt-3"
-                onClick={() => void refreshIncidents()}
-              >
-                {t(($) => $.home.retry)}
-              </Button>
-            </div>
-          ) : incidents.length === 0 ? (
+          <div className="mb-6 flex items-center gap-3 flex-wrap">
+            <span className="text-gray-700">Filtruj po statusie:</span>
+            {filters.map((filter) => {
+              const count = incidentCount(statistics, filter === 'ALL' ? undefined : filter);
+              return (
+                <Button
+                  key={filter}
+                  variant="outline"
+                  size="sm"
+                  aria-pressed={statusFilter === filter}
+                  className={getIncidentStatusFilterClassName(filter, statusFilter === filter)}
+                  onClick={() => onStatusFilterChange(filter)}
+                >
+                  {filter === 'ALL' ? 'Wszystkie' : getIncidentStatusLabel(filter)}
+                  {count === undefined ? '' : ` (${count})`}
+                </Button>
+              );
+            })}
+          </div>
+          {incidents.length === 0 && !pagination.isPending && !pagination.isLoadingError && (
             <div className="text-center py-12 bg-white rounded-lg border">
-              <p className="text-gray-500">Brak zgłoszeń dla tej służby</p>
+              <p className="text-gray-500">Brak zgłoszeń spełniających wybrane kryteria</p>
             </div>
-          ) : (
-            <>
-              <div className="mb-6 flex items-center gap-3 flex-wrap">
-                <span className="text-gray-700">Filtruj po statusie:</span>
-                {filters.map((filter) => (
-                  <Button
-                    key={filter}
-                    variant="outline"
-                    size="sm"
-                    aria-pressed={statusFilter === filter}
-                    className={getIncidentStatusFilterClassName(filter, statusFilter === filter)}
-                    onClick={() => onStatusFilterChange(filter)}
-                  >
-                    {filter === 'ALL' ? 'Wszystkie' : getIncidentStatusLabel(filter)} (
-                    {filter === 'ALL'
-                      ? incidents.length
-                      : incidents.filter((incident) => incident.adminStatus === filter).length}
-                    )
-                  </Button>
-                ))}
-              </div>
-              <div className="mb-2 space-y-4 lg:mb-6">
-                {filteredIncidents.slice(0, visibleCount).map((incident) => (
-                  <IncidentCard
-                    key={incident.id}
-                    incident={incident}
-                    onClick={() => setSelectedIncidentId(incident.id)}
-                  />
-                ))}
-              </div>
-              {visibleCount < filteredIncidents.length && (
-                <div className="text-center">
-                  <Button variant="outline" onClick={onShowMore}>
-                    Wczytaj więcej
-                  </Button>
-                </div>
-              )}
-            </>
           )}
+          <div className="mb-2 space-y-4 lg:mb-6">
+            {incidents.map((incident) => (
+              <IncidentCard
+                key={incident.id}
+                incident={incident}
+                onClick={() => setSelectedIncident(incident)}
+              />
+            ))}
+          </div>
+          <IncidentPageControls pagination={pagination} />
         </div>
       </main>
-      {selectedIncident !== undefined && (
+      {selectedIncident !== null && (
         <ServiceIncidentDialog
           key={selectedIncident.id}
           incident={selectedIncident}
           onClose={closeIncident}
-          refreshIncidents={refreshIncidents}
         />
       )}
     </AppShell>

@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.29.0
 
-ARG POSTGRES_IMAGE=postgres:18.7-alpine3.24
+ARG POSTGRES_IMAGE=postgres:19.0-alpine3.24
 
 FROM golang:1.27.4-alpine3.24@sha256:70bd7ddea8b6cbe5d6943cde279d6b67feb10cc924fb9100d1d8757c1575b280 AS privilege-dropper
 # Keep the upstream gosu behavior, rebuilding its embedded standard library.
@@ -8,7 +8,14 @@ RUN CGO_ENABLED=0 GOBIN=/out go install github.com/tianon/gosu@1.19
 
 FROM ${POSTGRES_IMAGE} AS extensions
 
-RUN apk add --no-cache pgbackrest postgresql-pg_cron
+# Compile against the server in the final image. Alpine 3.24 packages target PostgreSQL 18.
+ADD https://github.com/citusdata/pg_cron.git#5cedfa472ccc83567aa23ec645925ed8489a7797 /src/pg_cron
+ADD --checksum=sha256:c6d8190fee982f0febdd2ca5ca112f83b4b0905ef9949e9cf64a46a6cc138026 https://github.com/pgbackrest/pgbackrest/releases/download/release%2F2.60.1/pgbackrest-2.60.1.tar.gz /tmp/pgbackrest.tar.gz
+RUN apk add --no-cache build-base bzip2-dev curl-dev libxml2-dev lz4-dev meson openssl-dev libssh2-dev zlib-dev zstd-dev \
+ && make -C /src/pg_cron with_llvm=no install DESTDIR=/out \
+ && tar -xzf /tmp/pgbackrest.tar.gz -C /src \
+ && meson setup /build/pgbackrest /src/pgbackrest-2.60.1 --prefix=/usr/local --sysconfdir=/etc \
+ && DESTDIR=/out meson install -C /build/pgbackrest
 
 FROM ${POSTGRES_IMAGE}
 
@@ -21,9 +28,9 @@ RUN apk add --no-cache libbz2 libssh2 \
  && echo "archive_command = 'pgbackrest --stanza=zglosto_db archive-push %p'" >> /usr/local/share/postgresql/postgresql.conf.sample \
  && echo "restore_command = 'pgbackrest --stanza=zglosto_db archive-get %f %p'" >> /usr/local/share/postgresql/postgresql.conf.sample
 
-COPY --from=extensions /usr/bin/pgbackrest /usr/local/bin/pgbackrest
-COPY --from=extensions /usr/lib/postgresql18/pg_cron.so /usr/local/lib/postgresql/pg_cron.so
-COPY --from=extensions /usr/share/postgresql18/extension/pg_cron* /usr/local/share/postgresql/extension/
+COPY --from=extensions /out/usr/local/bin/pgbackrest /usr/local/bin/pgbackrest
+COPY --from=extensions /out/usr/local/lib/postgresql/pg_cron.so /usr/local/lib/postgresql/pg_cron.so
+COPY --from=extensions /out/usr/local/share/postgresql/extension/pg_cron* /usr/local/share/postgresql/extension/
 
 COPY database/pgbackrest.conf /etc/pgbackrest/pgbackrest.conf
 COPY database/pg_hba.conf /etc/postgresql/pg_hba.conf

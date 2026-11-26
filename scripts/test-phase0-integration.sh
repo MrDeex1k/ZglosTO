@@ -377,7 +377,7 @@ log "Running Phase 0 API scenarios"
 INTEGRATION_BASE_URL="http://127.0.0.1:$HTTP_PORT" \
   bun "$ROOT_DIR/tests/integration/phase0.integration.ts"
 
-log "Verifying the active 22-route NestJS contract, structured errors and OpenAPI through Nginx"
+log "Verifying the active NestJS routes, structured errors and OpenAPI through Nginx"
 INTEGRATION_BACKEND_RUNTIME=nest \
 INTEGRATION_PUBLIC_API_PREFIX=/api \
 INTEGRATION_BASE_URL="http://127.0.0.1:$HTTP_PORT" \

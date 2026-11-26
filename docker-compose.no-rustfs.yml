@@ -10,7 +10,7 @@ services:
       DATABASE_AUTH_PASSWORD_FILE: /run/secrets/database_auth_password
       DATABASE_BACKEND_PASSWORD_FILE: /run/secrets/database_backend_password
       DATABASE_MEDIA_WORKER_PASSWORD_FILE: /run/secrets/database_media_worker_password
-      PGDATA: /var/lib/postgresql/18/docker
+      PGDATA: /var/lib/postgresql/19/docker
       POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}

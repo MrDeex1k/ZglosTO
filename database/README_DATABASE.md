@@ -1,14 +1,14 @@
-# PostgreSQL 18 Database
+# PostgreSQL 19 Database
 
-Ten folder zawiera konfigurację bazy danych PostgreSQL 18 dla projektu ZglosTO.
+Ten folder zawiera konfigurację bazy danych PostgreSQL 19 dla projektu ZglosTO.
 
-Obraz bazowy jest przypięty do PostgreSQL `18.7`. Zgodnie z układem oficjalnego obrazu PostgreSQL 18 wolumen danych jest montowany w `/var/lib/postgresql`, a `PGDATA` i `pgBackRest` wskazują `/var/lib/postgresql/18/docker`.
+Obraz bazowy jest przypięty do PostgreSQL `19.0`. Zgodnie z układem oficjalnego obrazu PostgreSQL 19 wolumen danych jest montowany w `/var/lib/postgresql`, a `PGDATA` i `pgBackRest` wskazują `/var/lib/postgresql/19/docker`.
 
 ## Struktura
 
 ```
 database/
-├── Dockerfile              # Obraz Docker dla PostgreSQL 18
+├── Dockerfile              # Obraz Docker dla PostgreSQL 19
 ├── init-scripts/          # Skrypty inicjalizacyjne SQL (wykonywane w kolejności alfabetycznej)
 │   ├── 01-init.sql       # Główny skrypt inicjalizacyjny (rozszerzenia; bazę i admina tworzy entrypoint)
 │   ├── 02-create-auth.sql       # Tworzenie tabel autoryzacji (Better Auth)
@@ -29,7 +29,7 @@ Baza danych składa się z czterech głównych części inicjalizowanych w kolej
 3. **Tabele aplikacji** (`03-create-dbtables.sql`) - tabele biznesowe (incydenty, użytkownicy rozszerzeni)
 4. **Backup bazy danych** (`04-setup-backup.sql`) - automatyczne tworzenie kopii zapasowych
 
-Poniżej znajduje się opis struktury bazy (PostgreSQL 18) używanej przez aplikację.
+Poniżej znajduje się opis struktury bazy (PostgreSQL 19) używanej przez aplikację.
 
 ### Typy ENUM i katalog usług
 
@@ -282,9 +282,28 @@ docker compose exec database psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
 
 Lokalny klient bazodanowy może łączyć się przez port PostgreSQL opublikowany wyłącznie dla środowiska developerskiego. W środowisku produkcyjnym należy używać kontrolowanego tunelu i konta read-only.
 
-### Migracja wolumenu z wcześniejszego układu
+### Migracja z PostgreSQL 18 do 19
 
-Zmiana z `/var/lib/postgresql/data/pgdata` na `/var/lib/postgresql/18/docker` zmienia katalog danych. Projekt nie jest obecnie używany produkcyjnie, dlatego dopuszczony jest start na czystym wolumenie. Jeżeli lokalny wolumen zawiera dane do zachowania, przed aktualizacją należy wykonać `pg_dump`, a po uruchomieniu PostgreSQL 18.6 odtworzyć go przez `psql`. Nie należy kopiować surowego katalogu danych między układami bez testu restore.
+1. Na PostgreSQL 18 upewnij się, że zastosowano aktualny schemat, w tym
+   [tabelę potwierdzeń zgłoszeń](init-scripts/07-incident-creation-receipts.sql). Zatrzymaj
+   procesy zapisujące przed uruchomieniem skryptu backupu, aby skrypt nie wznowił ich po
+   eksporcie. Utwórz spójną kopię bazy i Object Storage według
+   [runbooka](../docs/backup-restore.md). Zachowaj wolumen danych i repozytorium pgBackRest
+   PostgreSQL 18 do końca migracji.
+2. Uruchom nowy obraz na pustym wolumenie PostgreSQL i pustym repozytorium pgBackRest,
+   z tymi samymi sekretami, nazwą bazy i konfiguracją instancji. Procesy zapisujące
+   pozostają zatrzymane. PostgreSQL 19 używa
+   `/var/lib/postgresql/19/docker`. Zmiana tagu obrazu nie konwertuje fizycznych danych wersji 18.
+3. Odtwórz backup logiczny zgodnie z runbookiem. Jeśli aktualizowana instalacja nie miała jeszcze
+   indeksów paginacji z audytu backendu, zastosuj
+   [migrację 20261124-backend-audit.sql](migrations/20261124-backend-audit.sql) jako właściciel bazy.
+   Uruchom `ANALYZE` po odtworzeniu, aby odświeżyć statystyki planera.
+4. Sprawdź logowanie, odczyty i zapisy przez PgBouncer, działanie zadań `pg_cron` oraz
+   wykonaj i przetestuj pełny backup pgBackRest **po odtworzeniu danych**. Włącz zapisy po
+   walidacji. Do momentu włączenia zapisów możesz wrócić do zachowanego klastra PostgreSQL 18.
+
+Alternatywnie można zaplanować migrację fizyczną przez `pg_upgrade` z binariami obu wersji
+i zgodnymi rozszerzeniami. Opis metod zawiera [dokumentacja PostgreSQL 19](https://www.postgresql.org/docs/19/upgrading.html).
 
 ### Backup i przywracanie
 
@@ -366,7 +385,7 @@ docker-compose up -d database
 
 ## Wersja PostgreSQL
 
-Ten projekt używa **PostgreSQL 18** - najnowszej wersji z ulepszoną wydajnością i nowymi funkcjami.
+Projekt używa PostgreSQL 19.0. Rezerwacja klucza idempotencji korzysta z `INSERT … ON CONFLICT DO SELECT`.
 
 ### Uwaga o init-scripts
 
@@ -443,7 +462,7 @@ roli runtime będącej właścicielem obiektów.
 Produkcyjny wrapper wdrożenia stosuje provisioning jako jawny krok przed startem
 procesów aplikacji.
 Restore dumpa z `--no-privileges` ponownie nakłada granty przed uruchomieniem aplikacji.
-Test `bun test database/tests/runtime-roles.test.ts` używa osobnego PG18.7/PgBouncera,
+Test `bun test database/tests/runtime-roles.test.ts` używa osobnego PG19.0/PgBouncera,
 dedykowanej sieci, efemerycznych certyfikatów i losowego portu wyłącznie localhost; weryfikuje loginy,
 CRUD/provisioning, idempotencję, jawny wrapper oraz odmowy operacji administracyjnych.
 
@@ -512,7 +531,7 @@ Uruchamia osobny, jednorazowy PostgreSQL z pustym katalogiem danych i skryptami
 `01-init.sql`, `02-create-auth.sql`, `03-create-dbtables.sql`,
 `05-user-provisioning.sql` i `06-runtime-roles.sh` wykonywanymi przez oficjalny
 entrypoint wraz z aktualnymi grantami, bez migracji schematu. Bez sieci i portów hosta; wymaga lokalnie
-obrazu `postgres:18.7-alpine3.24` (test nie pobiera go automatycznie).
+obrazu `postgres:19.0-alpine3.24` (test nie pobiera go automatycznie).
 
 ### Aktualizacja istniejącej bazy po audycie backendu
 

@@ -76,7 +76,7 @@ beforeAll(async () => {
       '-e',
       `DATABASE_${role}_PASSWORD_FILE=/runtime-secrets/${role.toLowerCase().replaceAll('_', '-')}-password`,
     ]),
-    'postgres:18.7-alpine3.24',
+    'postgres:19.0-alpine3.24',
   ]);
   expect(launch.code, launch.stderr).toBe(0);
   started = true;
