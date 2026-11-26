@@ -155,7 +155,7 @@ export class ResidentsController {
     @Req() request: Request,
     @Headers('idempotency-key') idempotencyKey?: string,
   ): Promise<CurrentCreateIncidentResponse> {
-    if (idempotencyKey !== undefined && !z.uuidv4().safeParse(idempotencyKey).success) {
+    if (idempotencyKey != null && !z.uuidv4().safeParse(idempotencyKey).success) {
       throw badRequest('Idempotency-Key must be a UUID v4');
     }
     return this.useCases.create(body, this.authContext.user(request), idempotencyKey);

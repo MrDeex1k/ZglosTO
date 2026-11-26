@@ -9,7 +9,7 @@ oraz najczęstsze problemy.
 
 Do uruchomienia pełnego WEB/API przez Docker Compose potrzebujesz:
 
-- Bun <code>1.4.2</code>;
+- Bun <code>1.4.5</code>;
 - Docker Engine;
 - <code>openssl</code> i <code>curl</code>.
 
@@ -299,9 +299,9 @@ Pełny zestaw integracyjny uruchamia własny, izolowany Compose:
 bun run test:integration
 ```
 
-### Testy przeglądarkowe WEB
+### Testy WEB i Desktop
 
-Flashwright uruchamia scenariusze w Chromium i WebKit. Repozytorium przypina
+[Flashwright](https://github.com/xcodebeast/flashwright) uruchamia scenariusze w Chromium i WebKit. Repozytorium przypina
 `flashwright-test` przez alias npm `@playwright/test`, dlatego importy, konfiguracja
 `playwright.config.ts` i nazwa CLI pozostają zgodne z Playwright.
 
@@ -317,6 +317,12 @@ język, reguły wejścia do paneli oraz zgłaszanie z i bez zdjęcia, 112 i bł�
 Na Linux CI zależności systemowe przeglądarek można zainstalować przez
 `bun run test:browser:install --with-deps`. Raport HTML trafia do
 `playwright-report/`, a ślady nieudanych testów do `test-results/`.
+
+Testy panelu `/operacje` obejmują także odmowę dla mieszkańca i nieaktywnej służby oraz zamknięcie widoku po utracie uprawnień. Uruchomienie, pakowanie i test Electron opisuje [przewodnik Desktop](desktop.md).
+
+### Testy E2E Mobile
+
+Polecenie `bun run mobile:regression` uruchamia e2e. Scenariusze używają tego samego demo i kont syntetycznych na obu platformach. Przygotowanie development buildu, wskazanie urządzenia i odczyt śladów opisuje [README Mobile](../Mobile/README.md#regresja-e2e-mobile).
 
 ## 9. Cleanup
 
@@ -399,6 +405,8 @@ docker compose up -d --build
 
 ### Demo nie może utworzyć danych
 
+Jeżeli równoległy smoke test lub integracja wygenerowały ponownie lokalne certyfikaty, odtwórz kontenery demo, aby zamontowały bieżące pliki. Wykonaj `bun run mobile:demo:down`, a potem `bun run mobile:demo:up` z tymi samymi ustawieniami projektu. Wolumeny pozostają na miejscu.
+
 Sprawdź healthcheck i status bazy, a następnie ponów seed:
 
 ```bash
@@ -423,6 +431,6 @@ wygaśnięcie cache albo odtwórz wyłącznie kontener Nginx projektu demo.
 
 ## Migracja istniejącego checkoutu na Bun
 
-Przed pierwszą instalacją Bun usuń wygenerowane katalogi `node_modules` w root i workspace albo przenieś je poza repozytorium. Nie mieszaj instalacji pnpm z Bun. Następnie wykonaj `bun install --frozen-lockfile` i `bun run check`. Pin to Bun 1.4.4; Node >=26.8.1 pozostaje wymagany dla toolchainu Expo. Usługi, skrypty, build web, testy i typecheck wykonuje Bun. Polecenie `bun run test` uruchamia Vitest pod Bun; `bun test` jest używany wyłącznie dla wskazanych testów infrastruktury i polityki zależności. Główny bunfig wyłącza automatyczne ładowanie `.env`; konfigurację narzędzi przekazuj jawnie.
+Przed pierwszą instalacją Bun usuń wygenerowane katalogi `node_modules` w root i workspace albo przenieś je poza repozytorium. Nie mieszaj instalacji pnpm z Bun. Następnie wykonaj `bun install --frozen-lockfile` i `bun run check`. Pin to Bun 1.4.5; Node >=26.8.1 pozostaje wymagany dla toolchainu Expo. Usługi, skrypty, build web, testy i typecheck wykonuje Bun. Polecenie `bun run test` uruchamia Vitest pod Bun; `bun test` jest używany wyłącznie dla wskazanych testów infrastruktury i polityki zależności. Główny bunfig wyłącza automatyczne ładowanie `.env`; konfigurację narzędzi przekazuj jawnie.
 
 Backend NestJS w trybie dev jest kompilowany przez `tsc --watch`, a Bun obserwuje wynikowe `dist`. Zachowuje to metadane dekoratorów potrzebne dependency injection. Authorization i gateway wykonują TypeScript bezpośrednio przez Bun. Testy Vitest i pozostałe narzędzia również wykonuje Bun.

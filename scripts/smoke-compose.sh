@@ -242,7 +242,7 @@ assert_contains "Authorization readiness" "$authorization_health" '"config":{'
 assert_contains "Authorization config" "$authorization_health" '"status":"valid"'
 
 log "Checking internal frontend readiness artifact"
-frontend_health="$(compose exec -T frontend wget -q -O - http://127.0.0.1/health/ready)"
+frontend_health="$(compose exec -T frontend wget -q -O - http://127.0.0.1:8080/health/ready)"
 assert_contains "Frontend readiness" "$frontend_health" '"service":"frontend"'
 assert_contains "Frontend readiness" "$frontend_health" '"config":{'
 assert_contains "Frontend config" "$frontend_health" '"status":"valid"'
@@ -265,7 +265,7 @@ log "Checking anonymous incident persistence with structured LLM fallback"
 anonymous_incident="$(curl --fail --silent --show-error \
   --request POST \
   --header 'Content-Type: application/json' \
-  --data '{"opis_zgloszenia":"Uszkodzona latarnia","mail_zglaszajacego":"  SMOKE.Resident@Example.COM ","adres_zgloszenia":"ul. Testowa 1","typ_sluzby":"roads"}' \
+  --data '{"opis_zgloszenia":"Uszkodzona latarnia","mail_zglaszajacego":"  SMOKE.Resident@Example.COM ","adres_zgloszenia":"ul. Testowa 1"}' \
   "$BASE_URL/api/mieszkaniec/incydenty")"
 assert_contains "Anonymous incident" "$anonymous_incident" '"mail_zglaszajacego":"smoke.resident@example.com"'
 assert_contains "Anonymous incident" "$anonymous_incident" '"reporter_user_id":null'

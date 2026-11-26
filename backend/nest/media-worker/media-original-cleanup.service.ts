@@ -78,7 +78,7 @@ export class MediaOriginalCleanupService {
             [row.id],
           );
           const upload = removed.rows[0];
-          if (upload !== undefined) {
+          if (upload != null) {
             await this.storage.deleteObject(ClaimedUploadRowSchema.parse(upload).object_key);
           }
         });

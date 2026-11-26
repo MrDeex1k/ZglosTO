@@ -24,7 +24,7 @@ RPO, pojemność i zachowanie pod obciążeniem zostaną zmierzone w Fazie 12.
 
 ## Wymagania hosta
 
-- Linux `amd64` albo `arm64`, Docker Engine z Compose v2 i Buildx, Bun `1.4.2`, `curl` i nftables;
+- Linux `amd64` albo `arm64`, Docker Engine z Compose v2 i Buildx, Bun `1.4.5`, `curl` i nftables;
 - konto systemowe `zglosto`, którego członkostwo w grupie `docker` daje uprawnienia
   równoważne root i musi być ograniczone administracyjnie;
 - checkout dokładnego, podpisanego lub świadomie zatwierdzonego tagu Git w

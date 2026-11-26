@@ -139,3 +139,7 @@ temp/
 
 # Local AI-agent configuration
 .agents/
+
+# Electron installer and packaged application
+/desktop/out/
+/Mobile/.e2e/

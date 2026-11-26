@@ -25,6 +25,13 @@ export const plPLTranslation = {
   footer: {
     responsibility: 'Miasto {{city}} dziękuje za bycie odpowiedzialnym obywatelem',
   },
+  operations: {
+    checkingSession: 'Sprawdzanie sesji…',
+    sessionUnavailable: 'Nie udało się sprawdzić sesji',
+    retry: 'Spróbuj ponownie',
+    accessDenied: 'Brak dostępu do panelu operacyjnego',
+    accessRequirements: 'Zaloguj się jako administrator lub pracownik aktywnej służby.',
+  },
   home: {
     title: 'Zgłoś problem w Twoim mieście',
     description:
@@ -526,6 +533,13 @@ export const enTranslation = {
   footer: {
     responsibility: 'The city of {{city}} thanks you for being a responsible resident',
   },
+  operations: {
+    checkingSession: 'Checking your session…',
+    sessionUnavailable: 'Could not verify your session',
+    retry: 'Try again',
+    accessDenied: 'You do not have access to the operations panel',
+    accessRequirements: 'Sign in as an administrator or a member of an active service.',
+  },
   home: {
     title: 'Report a problem in your city',
     description:
@@ -578,7 +592,7 @@ export const enTranslation = {
       reloadReport: 'Reload current data',
       removeDraftPhoto: 'Remove selected photo',
       reviewDraft:
-        'Current report: {{status}}, {{verified}}. Review the form and save any remaining changes.',
+        'Current report: {{status}}, {{verified}}. Review the form and save your remaining changes.',
       verified: 'verified',
       unverified: 'unverified',
       saveUnconfirmed:

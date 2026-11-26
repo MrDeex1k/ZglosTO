@@ -82,7 +82,10 @@ it('keeps the service revision returned by the list contract', async () => {
   await expect(fetchServiceIncidents()).resolves.toEqual([
     expect.objectContaining({ revision: 7 }),
   ]);
-  expect(fetch).toHaveBeenCalledWith('/api/sluzby/incydenty', expect.any(Object));
+  expect(fetch).toHaveBeenCalledWith('/api/sluzby/incydenty', {
+    signal: null,
+    credentials: 'include',
+  });
 });
 
 it('uses the returned revision in the next PATCH instead of guessing it', async () => {
@@ -179,7 +182,7 @@ it('uploads the photo to staging before changing status or verification', async 
   expect(fetch).toHaveBeenCalledTimes(1);
   expect(fetch).toHaveBeenCalledWith(
     '/api/sluzby/incydenty/report-1/obrazy/uploads',
-    expect.any(Object),
+    expect.objectContaining({ method: 'POST', credentials: 'include' }),
   );
 });
 

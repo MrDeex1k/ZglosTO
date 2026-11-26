@@ -16,10 +16,10 @@ export interface IncidentPageRequest {
 }
 
 export function incidentPageRequest(query: IncidentListQuery): IncidentPageRequest | null {
-  if (query.limit === undefined && query.cursor === undefined) return null;
+  if (query.limit == null && query.cursor == null) return null;
   return {
     limit: query.limit ?? 50,
-    after: query.cursor === undefined ? null : decodeCursor(query.cursor),
+    after: query.cursor == null ? null : decodeCursor(query.cursor),
   };
 }
 

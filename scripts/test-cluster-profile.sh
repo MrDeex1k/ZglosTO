@@ -98,8 +98,8 @@ images=(
     "zglosto/llm-gateway:$TAG"
     "zglosto/frontend:$TAG"
     "zglosto/nginx:$TAG"
-    "rustfs/rustfs:1.0.5"
-    "redis:8.10.3-alpine3.23"
+    "rustfs/rustfs:1.0.6"
+    "redis:8.12.0-alpine3.23"
 )
 
 if [ "$PROFILE" = "kubernetes" ]; then

@@ -1,5 +1,7 @@
 # Pracownik służby: obsługa zgłoszeń w WEB
 
+Na macOS i Windows ten sam panel otwiera [ZgłosTO Desktop](desktop.md).
+
 Panel służby pokazuje sprawy przypisane do aktywnej służby powiązanej z kontem. Nie jest
 widokiem wszystkich zgłoszeń miasta. Przypisanie konta przygotowuje administrator w
 [panelu WEB](using-web-admin.md); bez właściwej roli i klucza służby potrzebna jest

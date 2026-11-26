@@ -1,5 +1,7 @@
 # Administrator: sprawy i uprawnienia w WEB
 
+Na macOS i Windows ten sam panel otwiera [ZgłosTO Desktop](desktop.md).
+
 Panel administratora działa w przeglądarce. W Mobile 1.0 administrator dostaje
 komunikat o konieczności użycia komputera, a nie mobilny panel administracyjny.
 Do wejścia potrzebna jest sesja z rolą `admin`; zwykła rejestracja mieszkańca nie

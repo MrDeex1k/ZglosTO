@@ -7,6 +7,7 @@ import { getIncidentStatusLabel } from '../lib/incident-status';
 import type { Incident, NewIncidentDraft, ServiceIncident } from '../types/incident';
 import { Footer } from './Footer';
 import { Header } from './Header';
+import { OperationsShell } from './OperationsShell';
 import { IncidentCard } from './IncidentCard';
 import { getIncidentStatusFilterClassName } from './incident-status-styles';
 import { IncidentDetailsDialog } from './IncidentDetailsDialog';
@@ -25,6 +26,7 @@ import {
 } from './ui/dialog';
 
 export interface NavigationProps {
+  operations?: boolean;
   isLoggedIn: boolean;
   userRole: UserRole;
   onLoginClick: () => void;
@@ -40,6 +42,9 @@ export function AppShell({
   navigation: NavigationProps;
   children: React.ReactNode;
 }) {
+  if (navigation.operations) {
+    return <OperationsShell onLogout={navigation.onLogoutClick}>{children}</OperationsShell>;
+  }
   return (
     <div className="flex min-h-dvh flex-col bg-gray-50">
       <Header {...navigation} />

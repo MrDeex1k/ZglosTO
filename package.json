@@ -6,6 +6,7 @@
   "workspaces": [
     "docs-site",
     "frontend",
+    "desktop",
     "backend",
     "authorization",
     "llm_gateway",
@@ -57,7 +58,7 @@
     "mobile:demo:seed": "./scripts/mobile-demo.sh seed",
     "mobile:demo:status": "./scripts/mobile-demo.sh status",
     "mobile:demo:up": "./scripts/mobile-demo.sh up",
-    "mobile:regression": "./Mobile/scripts/run-phase7-regression.sh",
+    "mobile:regression": "sh ./Mobile/scripts/run-mobile-e2e.sh",
     "lint": "bun run --bun oxlint",
     "lint:fix": "bun run --bun oxlint --fix",
     "format": "bun run --bun oxfmt",
@@ -110,16 +111,16 @@
   "devDependencies": {
     "@commitlint/cli": "21.2.4",
     "@commitlint/config-conventional": "21.2.4",
-    "@oxlint/plugins": "1.93.0",
+    "@oxlint/plugins": "1.95.0",
     "@playwright/test": "npm:flashwright-test@1.64.1-flashwright.12",
     "@shadcn/lint": "0.2.5",
-    "@types/node": "26.6.6",
+    "@types/node": "26.6.10",
     "husky": "9.1.7",
-    "knip": "6.45.1",
-    "oxfmt": "0.78.0",
-    "oxlint": "1.93.0",
+    "knip": "6.48.0",
+    "oxfmt": "0.80.0",
+    "oxlint": "1.95.0",
     "sfw": "2.0.6",
-    "turbo": "2.11.11",
+    "turbo": "2.11.13",
     "typescript": "7.0.2"
   },
   "overrides": {
@@ -149,7 +150,7 @@
   "engines": {
     "node": ">=26.8.1"
   },
-  "packageManager": "bun@1.4.4",
+  "packageManager": "bun@1.4.5",
   "trustedDependencies": [
     "@nestjs/core",
     "esbuild",

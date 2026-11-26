@@ -16,11 +16,11 @@ import {
 import type { NavigationProps } from '../components/AppViews';
 import { Toaster } from '../components/ui/sonner';
 import { useIncidentData } from '../hooks/use-incident-data';
-import { signOut, useSession } from '../lib/auth-client';
+import { signOut, useSession, type AuthSession } from '../lib/auth-client';
 import { isMobileOrTablet } from '../lib/device';
 import { incidentQueryKeys } from '../queries/incidents';
 import type { Incident, ServiceIncident } from '../types/incident';
-import { getDashboardPath } from './app-route-paths';
+import { getDashboardPath, operationsSessionKey } from './app-route-paths';
 import { homePathForUser, parseLocalRedirect } from './route-access';
 
 interface AppRouteState {
@@ -61,19 +61,46 @@ interface AppRouteState {
 const AppRouteStateContext = createContext<AppRouteState | null>(null);
 
 export function AppRouteStateProvider({ children }: Readonly<{ children: ReactNode }>) {
-  const { data: session } = useSession();
+  const { data: session, isPending } = useSession();
+  return (
+    <ScopedAppRouteStateProvider
+      key={sessionScope(session)}
+      session={session}
+      isSessionLoading={isPending}
+    >
+      {children}
+    </ScopedAppRouteStateProvider>
+  );
+}
+
+interface SessionAppRouteStateProps {
+  children: ReactNode;
+  session: AuthSession | null;
+  isSessionLoading?: boolean;
+  operations?: boolean;
+}
+
+export function SessionAppRouteStateProvider(props: Readonly<SessionAppRouteStateProps>) {
+  return <ScopedAppRouteStateProvider key={sessionScope(props.session)} {...props} />;
+}
+
+function sessionScope(session: AuthSession | null): string {
   // Remount local dialogs/forms at the session boundary: query eviction alone does
   // not discard a selected private incident or an unfinished report from React state.
-  const scope = JSON.stringify([
+  return JSON.stringify([
     session?.session.id ?? null,
     session?.user.id ?? null,
     session?.user.uprawnienia ?? null,
     session?.user.serviceKey ?? null,
   ]);
-  return <ScopedAppRouteStateProvider key={scope}>{children}</ScopedAppRouteStateProvider>;
 }
 
-function ScopedAppRouteStateProvider({ children }: Readonly<{ children: ReactNode }>) {
+function ScopedAppRouteStateProvider({
+  children,
+  session,
+  isSessionLoading = false,
+  operations = false,
+}: Readonly<SessionAppRouteStateProps>) {
   const pathname = useRouterState({
     select: (state) => state.location.pathname.replace(/\/+$/, '') || '/',
   });
@@ -86,7 +113,6 @@ function ScopedAppRouteStateProvider({ children }: Readonly<{ children: ReactNod
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [serviceStatusFilter, setServiceStatusFilter] = useState<'ALL' | IncidentStatusCode>('ALL');
-  const { data: session, isPending: isSessionLoading } = useSession();
   const sessionUser = session?.user;
   const isLoggedIn = Boolean(sessionUser);
   const userEmail = sessionUser?.email ?? '';
@@ -105,7 +131,7 @@ function ScopedAppRouteStateProvider({ children }: Readonly<{ children: ReactNod
     incidentsError,
     retryIncidents,
   } = useIncidentData({
-    pathname,
+    pathname: operations ? getDashboardPath(userRole) : pathname,
     isLoggedIn,
     userEmail,
     userRole,
@@ -132,6 +158,10 @@ function ScopedAppRouteStateProvider({ children }: Readonly<{ children: ReactNod
   const logout = async () => {
     await signOut();
     queryClient.removeQueries({ queryKey: incidentQueryKeys.private });
+    if (operations) {
+      await queryClient.invalidateQueries({ queryKey: operationsSessionKey });
+      return;
+    }
     await router.invalidate();
     await navigate({ to: '/' });
   };
@@ -145,6 +175,7 @@ function ScopedAppRouteStateProvider({ children }: Readonly<{ children: ReactNod
     await navigate({ to: getDashboardPath(role) });
   };
   const navigation: NavigationProps = {
+    operations,
     isLoggedIn,
     userRole,
     onLoginClick: navigateToLogin,

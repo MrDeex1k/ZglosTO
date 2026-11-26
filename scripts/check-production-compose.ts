@@ -450,7 +450,7 @@ function validateModes(
 
     if (
       provision.image !==
-        'rustfs/rc:v0.1.37@sha256:7e93fd410a8fe51514f89373e093392c92095b98dc6140335fcfe956810c4c80' ||
+        'rustfs/rc:v0.1.38@sha256:3c080aff53f0d3b06554fd08711d05c80be40bd7e56001874d7df5e18d5ec88a' ||
       backendEnvironment.S3_AUTO_CREATE_BUCKET !== 'false' ||
       workerEnvironment.S3_AUTO_CREATE_BUCKET !== 'false'
     ) {
@@ -461,7 +461,7 @@ function validateModes(
       fail('local RustFS API must remain private on the internal Docker network');
     }
     if (
-      rustfs.image !== 'rustfs/rustfs:1.0.5' ||
+      rustfs.image !== 'rustfs/rustfs:1.0.6' ||
       backendEnvironment.S3_ENDPOINT !== 'http://rustfs:9000' ||
       workerEnvironment.S3_ENDPOINT !== 'http://rustfs:9000' ||
       rustfsEnvironment.RUSTFS_ACCESS_KEY_FILE !== '/run/secrets/rustfs-root/access-key-id' ||

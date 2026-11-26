@@ -685,10 +685,17 @@ async function run(): Promise<void> {
     jar: serviceJar,
     body: { uploadId: secondResolutionUploadId },
   });
+  const afterPhotos = await request('/api/sluzby/incydenty', { jar: serviceJar });
+  const revisionAfterPhotos = parseIncidentList(afterPhotos.payload).find(
+    (incident) => incident.id_zgloszenia === incidentId,
+  )?.revision;
+  assert.ok(
+    typeof revisionAfterPhotos === 'number' && revisionAfterPhotos > inProgressMutation.revision,
+  );
   const resolved = await request(`/api/sluzby/incydenty/${incidentId}/status`, {
     method: 'PATCH',
     jar: serviceJar,
-    headers: { 'If-Match': `"incident-${inProgressMutation.revision}"` },
+    headers: { 'If-Match': `"incident-${revisionAfterPhotos}"` },
     body: { status_incydentu: 'resolved' },
   });
   assert.equal(parseUpdatedStatus(resolved.payload).status, 'resolved');

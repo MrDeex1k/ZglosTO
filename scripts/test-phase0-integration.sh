@@ -578,6 +578,12 @@ compose up --detach --no-deps --wait --wait-timeout "$WAIT_TIMEOUT" backend >/de
 test "$(curl -sS -o /dev/null -w '%{http_code}' "http://127.0.0.1:$HTTP_PORT/api/protected")" = "404"
 test "$(curl -sS -o /dev/null -w '%{http_code}' "http://127.0.0.1:$HTTP_PORT/api/openapi.json")" = "200"
 
+if [ "${INTEGRATION_BROWSER:-0}" = "1" ]; then
+  log "Running Flashwright against the isolated Compose stack"
+  BROWSER_COMPOSE_URL="http://localhost:$HTTP_PORT" FLASHWRIGHT_SESSION=0 \
+    bun run --bun playwright test
+fi
+
 if [ "${INTEGRATION_OBSERVABILITY:-0}" = "1" ]; then
   log "Flushing service telemetry and checking cross-service traces"
   compose stop --timeout 30 backend authorization media_worker llm_gateway >/dev/null
