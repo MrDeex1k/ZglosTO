@@ -254,6 +254,18 @@ export class PostgresIncidentAdapter extends IncidentDomainPort {
     );
   }
 
+  async getServiceIncident(
+    serviceKey: string,
+    incidentId: string,
+  ): Promise<ServiceIncidentListItemDto | null> {
+    await this.ready();
+    const { rows } = await this.database.query(
+      `${INCIDENT_LIST_SELECT} WHERE i.service_key = $1 AND i.id_zgloszenia = $2`,
+      [serviceKey, incidentId],
+    );
+    return rows.length === 0 ? null : parseServiceIncidentListRow(rows[0], 'serviceIncident');
+  }
+
   async listServiceIncidents(serviceKey: string): Promise<readonly ServiceIncidentListItemDto[]> {
     await this.ready();
     const result = await this.database.query(
@@ -300,6 +312,14 @@ export class PostgresIncidentAdapter extends IncidentDomainPort {
     if (scope !== null) {
       parameters.push(scope.value);
       predicates.push(`i.${scope.column} = $${parameters.length}`);
+    }
+    if (page.status !== undefined) {
+      parameters.push(page.status);
+      predicates.push(`i.status_incydentu = $${parameters.length}`);
+    }
+    if (page.serviceKey !== undefined) {
+      parameters.push(page.serviceKey);
+      predicates.push(`i.service_key = $${parameters.length}`);
     }
     if (page.after !== null) {
       const start = parameters.length + 1;

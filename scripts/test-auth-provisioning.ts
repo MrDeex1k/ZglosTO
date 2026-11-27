@@ -39,7 +39,7 @@ try {
     '/var/lib/postgresql',
     '-e',
     'POSTGRES_HOST_AUTH_METHOD=trust',
-    'postgres:18.7-alpine3.24',
+    'postgres:19.0-alpine3.24',
   ]);
   started = true;
   let ready = false;

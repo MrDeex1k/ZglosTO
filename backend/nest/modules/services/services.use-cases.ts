@@ -35,6 +35,12 @@ export class ServicesUseCases {
       : this.incidents.pageServiceIncidents(serviceKey, page);
   }
 
+  async get(serviceKey: string, incidentId: string): Promise<ServiceIncidentListItemDto> {
+    const incident = await this.incidents.getServiceIncident(serviceKey, incidentId);
+    if (incident === null) throw notFound('Incident not found');
+    return incident;
+  }
+
   statistics(serviceKey: string): Promise<readonly ServiceIncidentStatisticsItem[]> {
     return this.incidents.listServiceStatistics(serviceKey);
   }

@@ -34,7 +34,9 @@ test('redirects a resident from the service dashboard to their own dashboard', a
       },
     }),
   );
-  await page.route('**/api/mieszkaniec/incydenty', (route) => route.fulfill({ json: [] }));
+  await page.route(/\/api\/mieszkaniec\/incydenty\?/, (route) =>
+    route.fulfill({ json: { items: [], nextCursor: null } }),
+  );
   await page.goto('/dashboard/sluzby');
   await expect(page).toHaveURL('/dashboard/mieszkaniec');
   await expect(page.getByRole('heading', { name: 'Panel Mieszkańca' })).toBeVisible();
@@ -122,9 +124,24 @@ test('keeps service edits open and retries against the refreshed incident revisi
   let currentIncident = incident;
   let canRefresh = true;
   const writes: Array<{ revision: string | null; body: unknown }> = [];
-  await page.route('**/api/sluzby/incydenty', (route) =>
+  const olderIncident = {
+    ...incident,
+    id_zgloszenia: 'cb453cdd-8389-42da-8e49-b1281edd0aa5',
+    opis_zgloszenia: 'Starsze zgłoszenie',
+  };
+  await page.route(/\/api\/sluzby\/incydenty\?/, (route) => {
+    const cursor = new URL(route.request().url()).searchParams.get('cursor');
+    return route.fulfill({
+      json:
+        cursor === 'next'
+          ? { items: [olderIncident], nextCursor: null }
+          : { items: [currentIncident], nextCursor: 'next' },
+    });
+  });
+  await page.route('**/api/sluzby/statystyki', (route) => route.fulfill({ json: [] }));
+  await page.route(`**/api/sluzby/incydenty/${incident.id_zgloszenia}`, (route) =>
     canRefresh
-      ? route.fulfill({ json: [currentIncident] })
+      ? route.fulfill({ json: currentIncident })
       : route.fulfill({ status: 503, json: { error: 'Unavailable' } }),
   );
   await page.route('**/api/sluzby/incydenty/*/sprawdzenie', async (route) => {
@@ -148,6 +165,12 @@ test('keeps service edits open and retries against the refreshed incident revisi
   });
 
   await page.goto('/dashboard/sluzby');
+  const olderCard = page.getByRole('button', {
+    name: 'Otwórz szczegóły zgłoszenia Starsze zgłoszenie',
+  });
+  await expect(olderCard).toHaveCount(0);
+  await page.getByRole('button', { name: 'Pokaż więcej', exact: true }).click();
+  await expect(olderCard).toBeVisible();
   await page
     .getByRole('button', { name: 'Otwórz szczegóły zgłoszenia Uszkodzona nawierzchnia' })
     .click();

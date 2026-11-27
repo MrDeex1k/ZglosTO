@@ -138,7 +138,7 @@ beforeAll(async () => {
       '-e',
       `DATABASE_${role}_PASSWORD_FILE=/runtime-secrets/${role.toLowerCase().replaceAll('_', '-')}-password`,
     ]),
-    'postgres:18.7-alpine3.24',
+    'postgres:19.0-alpine3.24',
     'sh',
     '-ec',
     'cp /certs/server.key /tmp/server.key; chown postgres /tmp/server.key; chmod 600 /tmp/server.key; exec docker-entrypoint.sh postgres -c ssl=on -c ssl_cert_file=/certs/server.crt -c ssl_key_file=/tmp/server.key -c ssl_min_protocol_version=TLSv1.3',

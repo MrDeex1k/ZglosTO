@@ -1,9 +1,14 @@
-import type { IncidentStatusCode, UserRole } from '@zglosto/contracts';
+import type {
+  IncidentStatusCode,
+  ServiceIncidentStatisticsItem,
+  UserRole,
+} from '@zglosto/contracts';
 import { useForm } from '@tanstack/react-form';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { AlertCircle, ChevronDown, ChevronUp, FileText, UserCog, X } from 'lucide-react';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { AlertCircle, FileText, UserCog, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { assignableServices, getFallbackServiceLabel, isFallbackService } from '../config/services';
+import { whiteLabelConfig } from '../config/white-label';
 import { getCurrentLocale } from '../i18n';
 import {
   useAdminIncidentServiceMutation,
@@ -16,11 +21,17 @@ import {
   type RolePermissionFormValues,
 } from '../forms/schemas';
 import { submitClientForm } from '../forms/submit';
-import { incidentQueryKeys } from '../queries/incidents';
+import {
+  adminIncidentsQueryOptions,
+  adminIncidentStatisticsQueryOptions,
+  incidentCount,
+  incidentQueryKeys,
+} from '../queries/incidents';
 import { updateUserPermissions } from '../services/api';
 import type { Incident } from '../types/incident';
 import { AdminIncidentDialog } from './AdminIncidentDialog';
 import { FieldErrors } from './forms/field-errors';
+import { IncidentPageControls, type IncidentPagination } from './IncidentPageControls';
 import { IncidentCard } from './IncidentCard';
 import { getIncidentStatusFilterClassName } from './incident-status-styles';
 import { Badge } from './ui/badge';
@@ -43,31 +54,26 @@ const ROLE_DEFAULT_VALUES: RolePermissionFormValues = {
   serviceKey: '',
 };
 
-interface AdminPanelProps {
-  incidents: Incident[];
-  owner: string;
-}
-
 interface AdminMenuProps {
-  incidentCount: number;
-  unassignedCount: number;
+  totalCount: number | undefined;
+  unassignedCount: number | undefined;
   onViewChange: (view: AdminView) => void;
 }
 
-function AdminMenu({ incidentCount, unassignedCount, onViewChange }: AdminMenuProps) {
+function AdminMenu({ totalCount, unassignedCount, onViewChange }: AdminMenuProps) {
   const entries = [
     {
       view: 'all' as const,
       title: 'Zobacz wszystkie zgłoszenia',
       description: 'Przeglądaj i zarządzaj wszystkimi zgłoszeniami w systemie',
-      count: `${incidentCount} zgłoszeń`,
+      count: totalCount === undefined ? null : `${totalCount} zgłoszeń`,
       icon: FileText,
     },
     {
       view: 'unassigned' as const,
       title: 'Sprawdź nieprzypisane zgłoszenia',
       description: `Zgłoszenia „${getFallbackServiceLabel(getCurrentLocale())}” wymagają przypisania`,
-      count: `${unassignedCount} nieprzypisanych`,
+      count: unassignedCount === undefined ? null : `${unassignedCount} nieprzypisanych`,
       icon: AlertCircle,
     },
     {
@@ -112,11 +118,11 @@ interface IncidentListViewProps {
   selectedIncident: Incident | null;
   showStatusFilters: boolean;
   statusFilter: 'ALL' | IncidentStatusCode;
-  showAll: boolean;
+  statistics: readonly ServiceIncidentStatisticsItem[] | undefined;
+  pagination: IncidentPagination;
   onBack: () => void;
   onSelect: (incident: Incident | null) => void;
   onFilterChange: (filter: 'ALL' | IncidentStatusCode) => void;
-  onShowAllChange: (showAll: boolean) => void;
   onUpdateService: (incidentId: string, service: string) => Promise<void>;
   onUpdate: (incident: Incident, values: IncidentStatusFormValues) => Promise<void>;
 }
@@ -127,25 +133,22 @@ function IncidentListView({
   selectedIncident,
   showStatusFilters,
   statusFilter,
-  showAll,
+  statistics,
+  pagination,
   onBack,
   onSelect,
   onFilterChange,
-  onShowAllChange,
   onUpdateService,
   onUpdate,
 }: IncidentListViewProps) {
-  const filtered =
-    statusFilter === 'ALL'
-      ? incidents
-      : incidents.filter((incident) => incident.adminStatus === statusFilter);
-  const displayed = showAll ? filtered : filtered.slice(0, 10);
+  const total = incidentCount(statistics, statusFilter === 'ALL' ? undefined : statusFilter);
 
   return (
     <div className="mx-auto max-w-6xl px-4 pt-8 pb-4 lg:py-12">
       <div className="mb-6 flex items-center justify-between gap-4">
         <h2 className="text-gray-900">
-          {title} ({filtered.length})
+          {title}
+          {total === undefined ? '' : ` (${total})`}
         </h2>
         <Button variant="outline" onClick={onBack}>
           Powrót do menu
@@ -154,25 +157,25 @@ function IncidentListView({
       {showStatusFilters && (
         <div className="mb-6 flex items-center gap-3 flex-wrap">
           <span className="text-gray-700">Filtruj po statusie:</span>
-          {INCIDENT_STATUS_FILTERS.map((filter) => (
-            <Button
-              key={filter}
-              variant="outline"
-              size="sm"
-              aria-pressed={statusFilter === filter}
-              className={getIncidentStatusFilterClassName(filter, statusFilter === filter)}
-              onClick={() => onFilterChange(filter)}
-            >
-              {filter === 'ALL' ? 'Wszystkie' : getIncidentStatusLabel(filter)} (
-              {filter === 'ALL'
-                ? incidents.length
-                : incidents.filter((incident) => incident.adminStatus === filter).length}
-              )
-            </Button>
-          ))}
+          {INCIDENT_STATUS_FILTERS.map((filter) => {
+            const count = incidentCount(statistics, filter === 'ALL' ? undefined : filter);
+            return (
+              <Button
+                key={filter}
+                variant="outline"
+                size="sm"
+                aria-pressed={statusFilter === filter}
+                className={getIncidentStatusFilterClassName(filter, statusFilter === filter)}
+                onClick={() => onFilterChange(filter)}
+              >
+                {filter === 'ALL' ? 'Wszystkie' : getIncidentStatusLabel(filter)}
+                {count === undefined ? '' : ` (${count})`}
+              </Button>
+            );
+          })}
         </div>
       )}
-      {filtered.length === 0 ? (
+      {incidents.length === 0 && !pagination.isPending && !pagination.isLoadingError ? (
         <Card className="p-12 text-center">
           <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-gray-900 mb-2">Brak zgłoszeń</h3>
@@ -180,30 +183,16 @@ function IncidentListView({
         </Card>
       ) : (
         <div className="space-y-4">
-          {displayed.map((incident) => (
+          {incidents.map((incident) => (
             <IncidentCard
               key={incident.id}
               incident={incident}
               onClick={() => onSelect(incident)}
             />
           ))}
-          {filtered.length > 10 && (
-            <div className="flex justify-center pt-4">
-              <Button variant="outline" onClick={() => onShowAllChange(!showAll)}>
-                {showAll ? (
-                  <>
-                    <ChevronUp className="w-4 h-4" /> Pokaż mniej
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="w-4 h-4" /> Wczytaj więcej
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
         </div>
       )}
+      <IncidentPageControls pagination={pagination} />
       <AdminIncidentDialog
         incident={selectedIncident}
         open={selectedIncident !== null}
@@ -388,17 +377,26 @@ function PermissionsView({ onBack }: { onBack: () => void }) {
   );
 }
 
-export function AdminPanel({ incidents, owner }: AdminPanelProps) {
+export function AdminPanel({ owner }: { owner: string }) {
   const [view, setView] = useState<AdminView>('menu');
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
-  const [showAll, setShowAll] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'ALL' | IncidentStatusCode>('ALL');
   const statusMutation = useAdminIncidentStatusMutation();
   const serviceMutation = useAdminIncidentServiceMutation(owner);
-  const unassignedIncidents = incidents.filter((incident) => isFallbackService(incident.service));
+  const { data: statistics } = useQuery(adminIncidentStatisticsQueryOptions(owner));
+  const unassignedStatistics = statistics?.filter((row) => isFallbackService(row.typ_sluzby));
+  const filters =
+    view === 'unassigned'
+      ? { serviceKey: whiteLabelConfig.routing.fallbackServiceKey }
+      : statusFilter === 'ALL'
+        ? {}
+        : { status: statusFilter };
+  const incidentsQuery = useInfiniteQuery({
+    ...adminIncidentsQueryOptions(owner, filters),
+    enabled: view === 'all' || view === 'unassigned',
+  });
   const backToMenu = () => {
     setView('menu');
-    setShowAll(false);
     setStatusFilter('ALL');
   };
   const updateIncident = async (incident: Incident, values: IncidentStatusFormValues) => {
@@ -411,8 +409,8 @@ export function AdminPanel({ incidents, owner }: AdminPanelProps) {
   if (view === 'menu') {
     return (
       <AdminMenu
-        incidentCount={incidents.length}
-        unassignedCount={unassignedIncidents.length}
+        totalCount={incidentCount(statistics)}
+        unassignedCount={incidentCount(unassignedStatistics)}
         onViewChange={setView}
       />
     );
@@ -423,15 +421,15 @@ export function AdminPanel({ incidents, owner }: AdminPanelProps) {
   return (
     <IncidentListView
       title={view === 'all' ? 'Wszystkie zgłoszenia' : 'Nieprzypisane zgłoszenia'}
-      incidents={view === 'all' ? incidents : unassignedIncidents}
+      incidents={incidentsQuery.data?.pages.flatMap((page) => page.items) ?? []}
       selectedIncident={selectedIncident}
       showStatusFilters={view === 'all'}
       statusFilter={statusFilter}
-      showAll={showAll}
+      pagination={incidentsQuery}
+      statistics={view === 'all' ? statistics : unassignedStatistics}
       onBack={backToMenu}
       onSelect={setSelectedIncident}
       onFilterChange={setStatusFilter}
-      onShowAllChange={setShowAll}
       onUpdateService={updateService}
       onUpdate={updateIncident}
     />

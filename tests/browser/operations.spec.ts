@@ -40,7 +40,7 @@ for (const role of ['mieszkaniec', 'sluzby'] as const) {
 
 test('shows the administrator panel for an administrator', async ({ page }) => {
   await page.route('**/api/auth/get-session', (route) => route.fulfill({ json: session('admin') }));
-  await page.route('**/api/admin/incydenty', (route) => route.fulfill({ json: [] }));
+  await page.route('**/api/admin/statystyki', (route) => route.fulfill({ json: [] }));
   await page.goto('/operacje');
   await expect(page.getByRole('heading', { name: 'Panel Administratorski' })).toBeVisible();
   await expect(page.getByText('Nadaj uprawnienia służb')).toBeVisible();
@@ -50,7 +50,10 @@ test('closes the service panel when the session loses its role', async ({ page }
   let current = session('sluzby', 'roads');
   await page.clock.install();
   await page.route('**/api/auth/get-session', (route) => route.fulfill({ json: current }));
-  await page.route('**/api/sluzby/incydenty', (route) => route.fulfill({ json: [] }));
+  await page.route(/\/api\/sluzby\/incydenty\?/, (route) =>
+    route.fulfill({ json: { items: [], nextCursor: null } }),
+  );
+  await page.route('**/api/sluzby/statystyki', (route) => route.fulfill({ json: [] }));
   await page.goto('/operacje');
   await expect(page.getByRole('heading', { name: 'Panel Służby' })).toBeVisible();
   current = session('mieszkaniec');

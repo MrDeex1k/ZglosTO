@@ -248,14 +248,18 @@ test('replays the committed response when reservation loses a concurrent insert'
   } as const;
   const query = vi
     .fn<(sql: string, values?: readonly DatabaseParameter[]) => Promise<DatabaseQueryResult>>()
-    .mockResolvedValueOnce({ rows: [], rowCount: 0 })
-    .mockResolvedValue({ rows: [{ fingerprint: identity[2], response }], rowCount: 1 });
+    .mockResolvedValue({
+      rows: [{ inserted: false, fingerprint: identity[2], response }],
+      rowCount: 1,
+    });
   const create = vi.fn(async () => response);
 
   await expect(createWithIncidentReceipt({ query }, identity, create)).resolves.toEqual(response);
   expect(create).not.toHaveBeenCalled();
-  expect(query.mock.calls[0]?.[0]).toContain('ON CONFLICT (scope, key) DO NOTHING');
-  expect(query.mock.calls[1]?.[1]).toEqual(identity.slice(0, 2));
+  expect(query).toHaveBeenCalledExactlyOnceWith(
+    expect.stringContaining('ON CONFLICT (scope, key) DO SELECT'),
+    identity,
+  );
   const changedRequest = incidentCreationReceiptIdentity({ ...command, description: 'Changed' })!;
   await expect(readIncidentCreationReceipt({ query }, changedRequest)).rejects.toMatchObject({
     statusCode: 409,

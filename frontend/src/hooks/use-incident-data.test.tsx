@@ -6,6 +6,7 @@ const { query } = vi.hoisted(() => ({ query: vi.fn(() => ({})) }));
 vi.mock('@tanstack/react-query', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@tanstack/react-query')>()),
   useQuery: query,
+  useInfiniteQuery: query,
 }));
 vi.mock('../config/services', () => ({ normalizeServiceKey: (key: string) => key }));
 vi.mock('../lib/incident-status', () => ({ toIncidentDisplayStatus: (status: string) => status }));
@@ -17,13 +18,12 @@ function Probe({ pathname }: { pathname: string }) {
     isLoggedIn: true,
     userEmail: 'resident@example.com',
     userRole: 'mieszkaniec',
-    canLoadAdminData: false,
   });
   return createElement('span', null, String(isLoadingIncidents));
 }
 
 describe('route-scoped incident loading', () => {
-  beforeEach(() => query.mockReset());
+  beforeEach(() => query.mockReset().mockReturnValue({}));
   it.each([
     ['/dashboard/mieszkaniec', true, false],
     ['/', true, true],

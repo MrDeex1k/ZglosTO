@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 const baseUrl = process.env.INTEGRATION_BASE_URL ?? 'http://127.0.0.1:11335';
 const origin = baseUrl.replace('127.0.0.1', 'localhost');
@@ -364,13 +364,14 @@ interface CreateIncidentOptions {
   description: string;
   email: string;
   serviceKey?: string;
+  idempotencyKey?: string;
   jar?: CookieJar;
   coordinates?: { latitude: number; longitude: number } | null;
 }
 
 async function createIncident(options: CreateIncidentOptions): Promise<CreateIncidentResult> {
   const imageUploadId = await uploadImage('/api/mieszkaniec/obrazy/uploads', options.jar);
-  const { payload } = await request('/api/mieszkaniec/incydenty', {
+  const input: RequestOptions = {
     method: 'POST',
     ...(options.jar == null ? {} : { jar: options.jar }),
     expected: 201,
@@ -383,7 +384,27 @@ async function createIncident(options: CreateIncidentOptions): Promise<CreateInc
       typ_sluzby: options.serviceKey ?? 'roads',
       zdjecie_incydentu_zglaszanego_upload_id: imageUploadId,
     },
-  });
+    ...(options.idempotencyKey === undefined
+      ? {}
+      : { headers: { 'Idempotency-Key': options.idempotencyKey } }),
+  };
+  const path = '/api/mieszkaniec/incydenty';
+  const firstRequest = request(path, input);
+  if (options.idempotencyKey !== undefined) {
+    const [created, replayed] = await Promise.all([firstRequest, request(path, input)]);
+    assert.deepEqual(
+      replayed.payload,
+      created.payload,
+      'concurrent retries must return the stored response',
+    );
+    await request(path, {
+      ...input,
+      expected: 409,
+      body: { ...input.body, opis_zgloszenia: 'Zmieniona treść' },
+    });
+    return parseCreateIncidentResult(created.payload);
+  }
+  const { payload } = await firstRequest;
   return parseCreateIncidentResult(payload);
 }
 
@@ -483,6 +504,7 @@ async function run(): Promise<void> {
   });
   const anonymous = await createIncident({
     description: '[municipal] Dziura w jezdni',
+    idempotencyKey: randomUUID(),
     email: '  PHASE0.RESIDENT@EXAMPLE.COM ',
     coordinates: { latitude: 54.352, longitude: 18.6466 },
   });
@@ -644,12 +666,46 @@ async function run(): Promise<void> {
   assert.equal(serviceIncidents.length, 4);
 
   console.log('[integration] status codes, service isolation and photos');
+  const fallbackIncident = fallbackIncidents[2];
+  assert.ok(fallbackIncident);
   const incidentId = anonymous.incydent.id_zgloszenia;
   const serviceIncident = serviceIncidents.find(
     (incident) => incident.id_zgloszenia === incidentId,
   );
   assert.ok(serviceIncident);
   assert.equal(typeof serviceIncident.revision, 'number');
+  const detail = await request(`/api/sluzby/incydenty/${incidentId}`, { jar: serviceJar });
+  assert.deepEqual(parseListedIncident(detail.payload, 'service detail'), serviceIncident);
+  await request(`/api/sluzby/incydenty/${fallbackIncident.id_zgloszenia}`, {
+    jar: serviceJar,
+    expected: 404,
+  });
+  const filteredPath = '/api/sluzby/incydenty?limit=1&status=reported';
+  const firstPage = expectRecord(
+    (await request(filteredPath, { jar: serviceJar })).payload,
+    'first page',
+  );
+  const nextCursor = expectString(firstPage.nextCursor, 'first page cursor');
+  const nextPage = expectRecord(
+    (await request(`${filteredPath}&cursor=${encodeURIComponent(nextCursor)}`, { jar: serviceJar }))
+      .payload,
+    'next page',
+  );
+  const firstItems = parseIncidentList(firstPage.items);
+  const nextItems = parseIncidentList(nextPage.items);
+  assert.equal(firstItems.length, 1);
+  assert.equal(nextItems.length, 1);
+  assert.notEqual(firstItems[0]?.id_zgloszenia, nextItems[0]?.id_zgloszenia);
+  assert.ok([...firstItems, ...nextItems].every((item) => item.status_incydentu === 'reported'));
+  const unassignedPage = expectRecord(
+    (await request(`/api/admin/incydenty?limit=10&serviceKey=other`, { jar: adminJar })).payload,
+    'unassigned page',
+  );
+  assert.ok(
+    parseIncidentList(unassignedPage.items).some(
+      (item) => item.id_zgloszenia === fallbackIncident.id_zgloszenia,
+    ),
+  );
   const incidentRevision = serviceIncident.revision;
   await request(`/api/sluzby/incydenty/${incidentId}/status`, {
     method: 'PATCH',
@@ -700,8 +756,6 @@ async function run(): Promise<void> {
   });
   assert.equal(parseUpdatedStatus(resolved.payload).status, 'resolved');
 
-  const fallbackIncident = fallbackIncidents[2];
-  assert.ok(fallbackIncident);
   await request(`/api/sluzby/incydenty/${fallbackIncident.id_zgloszenia}/status`, {
     method: 'PATCH',
     jar: serviceJar,

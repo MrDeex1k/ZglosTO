@@ -1,4 +1,4 @@
-import { QueryClient } from '@tanstack/react-query';
+import { InfiniteQueryObserver, QueryClient } from '@tanstack/react-query';
 import type { CurrentIncidentListItemDto, CurrentResolvedIncidentDto } from '@zglosto/contracts';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -57,17 +57,28 @@ describe('incident cache updates', () => {
   it('updates the matching incident without replacing the remaining list', () => {
     const queryClient = new QueryClient();
     const queryKey = incidentQueryKeys.service('service@example.com');
-    queryClient.setQueryData(queryKey, [incident, { ...incident, id: 'incident-2' }]);
+    queryClient.setQueryData(queryKey, {
+      pages: [{ items: [incident, { ...incident, id: 'incident-2' }], nextCursor: 'next' }],
+      pageParams: [null],
+    });
 
     updateIncidentCache(queryClient, queryKey, incident.id, (current) => ({
       ...current,
       checked: true,
     }));
 
-    expect(queryClient.getQueryData<Incident[]>(queryKey)).toEqual([
-      { ...incident, checked: true },
-      { ...incident, id: 'incident-2' },
-    ]);
+    expect(queryClient.getQueryData(queryKey)).toEqual({
+      pages: [
+        {
+          items: [
+            { ...incident, checked: true },
+            { ...incident, id: 'incident-2' },
+          ],
+          nextCursor: 'next',
+        },
+      ],
+      pageParams: [null],
+    });
   });
 
   it('does not create placeholder data for a cache that was never fetched', () => {
@@ -159,17 +170,17 @@ describe('query cancellation reaches the HTTP request', () => {
     {
       queryKey: incidentQueryKeys.resident('resident@example.com'),
       start: (client: QueryClient) =>
-        client.fetchQuery(residentIncidentsQueryOptions('resident@example.com')),
+        client.fetchInfiniteQuery(residentIncidentsQueryOptions('resident@example.com')),
     },
     {
       queryKey: incidentQueryKeys.admin('admin@example.com'),
       start: (client: QueryClient) =>
-        client.fetchQuery(adminIncidentsQueryOptions('admin@example.com')),
+        client.fetchInfiniteQuery(adminIncidentsQueryOptions('admin@example.com')),
     },
     {
       queryKey: incidentQueryKeys.service('service@example.com'),
       start: (client: QueryClient) =>
-        client.fetchQuery(serviceIncidentsQueryOptions('service@example.com')),
+        client.fetchInfiniteQuery(serviceIncidentsQueryOptions('service@example.com')),
     },
   ])('aborts $queryKey without leaving cached data', async (options) => {
     const client = createAppQueryClient();
@@ -203,8 +214,38 @@ it('isolates cached queues after a service reassignment for the same account', (
   const oldScope = serviceIncidentsQueryOptions('worker@example.test', 'roads');
   const newScope = serviceIncidentsQueryOptions('worker@example.test', 'water');
   const serviceIncident = { ...incident, revision: 1 };
-  client.setQueryData(oldScope.queryKey, [serviceIncident]);
+  const cached = { pages: [{ items: [serviceIncident], nextCursor: null }], pageParams: [null] };
+  client.setQueryData(oldScope.queryKey, cached);
   expect(client.getQueryData(newScope.queryKey)).toBeUndefined();
-  expect(client.getQueryData(oldScope.queryKey)).toEqual([serviceIncident]);
+  expect(client.getQueryData(oldScope.queryKey)).toEqual(cached);
   client.clear();
+});
+
+it('requests a second page only when asked and keeps its server filter', async () => {
+  const fetch = vi
+    .fn<typeof globalThis.fetch>()
+    .mockResolvedValueOnce(Response.json({ items: [], nextCursor: 'next' }))
+    .mockResolvedValueOnce(Response.json({ items: [], nextCursor: null }));
+  vi.stubGlobal('fetch', fetch);
+  const client = createAppQueryClient();
+  const observer = new InfiniteQueryObserver(
+    client,
+    adminIncidentsQueryOptions('admin@example.com', { status: 'resolved' }),
+  );
+
+  try {
+    await observer.refetch();
+    expect(observer.getCurrentResult().hasNextPage).toBe(true);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    const next = await observer.fetchNextPage();
+    expect(next.data?.pages).toHaveLength(2);
+    expect(next.hasNextPage).toBe(false);
+    expect(fetch.mock.calls.map(([url]) => url)).toEqual([
+      '/api/admin/incydenty?limit=10&status=resolved',
+      '/api/admin/incydenty?limit=10&cursor=next&status=resolved',
+    ]);
+  } finally {
+    client.clear();
+    vi.unstubAllGlobals();
+  }
 });

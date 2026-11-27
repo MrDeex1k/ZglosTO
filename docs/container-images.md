@@ -2,7 +2,7 @@
 
 ## Aktualny baseline
 
-Od 2026-11-25 projekt używa następujących przypiętych obrazów:
+Projekt używa następujących przypiętych obrazów:
 
 | Obszar                                          | Obraz                                                                                          |
 | ----------------------------------------------- | ---------------------------------------------------------------------------------------------- |
@@ -11,7 +11,7 @@ Od 2026-11-25 projekt używa następujących przypiętych obrazów:
 | minimalny runtime usług Bun                     | `alpine:3.24.4` + binarny Bun 1.4.5                                                            |
 | publiczny Nginx i runtime statycznego frontendu | `nginx:1.31.10-alpine3.24-slim`                                                                |
 | opcjonalny model DMR                            | `zglosto/basal-2.0-mini:q5_k_m`                                                                |
-| baza własnego obrazu database                   | `postgres:18.7-alpine3.24`                                                                     |
+| baza własnego obrazu database                   | `postgres:19.0-alpine3.24`                                                                     |
 | własny obraz poolera                            | `pgbouncer/Dockerfile` bazujący na `edoburu/pgbouncer:v1.26.1-p0`                              |
 | trwały broker bez panelu management             | `rabbitmq:4.4.1-alpine`                                                                        |
 | opcjonalny lokalny Redis                        | `redis:8.12.0-alpine3.23`                                                                      |
@@ -45,10 +45,10 @@ kopiuje konfigurację TLS i healthcheck, wyłącza listener plaintext `5672`, ni
 pluginu ani listenera management i utrzymuje dane w osobnym wolumenie. Plugin Prometheus
 pozostaje dostępny wyłącznie w sieci prywatnej.
 
-PostgreSQL korzysta z wariantu Alpine. Etap pomocniczy instaluje pakiety `pg_cron` i
-pgBackRest wraz z systemowym PostgreSQL wyłącznie na czas budowania. Do finalnego obrazu
-trafiają tylko `pg_cron.so`, pliki kontrolne rozszerzenia, binarny pgBackRest oraz jego dwie
-brakujące biblioteki runtime, więc obraz nie zawiera drugiej instalacji serwera.
+PostgreSQL korzysta z wariantu Alpine. Etap pomocniczy buduje `pg_cron` 1.6.8 przy użyciu
+`pg_config` z obrazu PostgreSQL 19 i kompiluje pgBackRest 2.60.1 z archiwum zweryfikowanego
+przez SHA-256. Finalny obraz zawiera `pg_cron.so`, pliki rozszerzenia, binarny pgBackRest
+oraz wymagane biblioteki runtime.
 
 Model DMR to oficjalny Basal 2.0 Mini 1,5B Q5_K_M, z przypiętą rewizją
 Hugging Face i SHA-256 GGUF. Przygotowanie przez `scripts/prepare-basal-dmr.sh` oraz
@@ -65,13 +65,13 @@ duplikowanie zależności i kodu infrastrukturalnego. Pipeline workera używa do
 przypiętego `sharp@0.35.5`; natywne binaria libvips są instalowane przez Bun dla platformy
 obrazu podczas builda, a test obrazu wykonuje rzeczywiste kodowanie WebP.
 
-## PostgreSQL 18
+## PostgreSQL 19
 
-PostgreSQL 18 używa docelowego układu danych zgodnego z oficjalnym obrazem:
+PostgreSQL 19 używa docelowego układu danych zgodnego z oficjalnym obrazem:
 
 - wolumen jest montowany w `/var/lib/postgresql`;
-- `PGDATA=/var/lib/postgresql/18/docker`;
-- `pgBackRest` używa `pg1-path=/var/lib/postgresql/18/docker`;
+- `PGDATA=/var/lib/postgresql/19/docker`;
+- `pgBackRest` używa `pg1-path=/var/lib/postgresql/19/docker`;
 - smoke test montuje `tmpfs` na `/var/lib/postgresql`.
 
 Przy danych wymagających zachowania aktualizacja musi przebiegać przez sprawdzony backup i restore. Obecne środowisko nie jest produkcyjne, dlatego można również świadomie utworzyć czysty wolumen.

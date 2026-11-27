@@ -1,5 +1,9 @@
 /* oxlint-disable react/jsx-no-constructed-context-values -- React Compiler stabilizuje wartość bez ręcznego useMemo. */
-import type { IncidentStatusCode, UserRole } from '@zglosto/contracts';
+import type {
+  IncidentStatusCode,
+  ServiceIncidentStatisticsItem,
+  UserRole,
+} from '@zglosto/contracts';
 import { isUserRole } from '@zglosto/contracts';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useRouter, useRouterState } from '@tanstack/react-router';
@@ -13,11 +17,11 @@ import {
   type SetStateAction,
 } from 'react';
 
+import type { IncidentPagination } from '../components/IncidentPageControls';
 import type { NavigationProps } from '../components/AppViews';
 import { Toaster } from '../components/ui/sonner';
 import { useIncidentData } from '../hooks/use-incident-data';
 import { signOut, useSession, type AuthSession } from '../lib/auth-client';
-import { isMobileOrTablet } from '../lib/device';
 import { incidentQueryKeys } from '../queries/incidents';
 import type { Incident, ServiceIncident } from '../types/incident';
 import { getDashboardPath, operationsSessionKey } from './app-route-paths';
@@ -32,10 +36,10 @@ interface AppRouteState {
   serviceKey: string | null;
   incidents: Incident[];
   residentIncidents: Incident[];
-  allIncidents: Incident[];
+  residentPagination: IncidentPagination;
   serviceIncidents: ServiceIncident[];
-  serviceIncidentsError: boolean;
-  refreshServiceIncidents: () => Promise<ServiceIncident[] | null>;
+  servicePagination: IncidentPagination;
+  serviceStatistics: ServiceIncidentStatisticsItem[] | undefined;
   isLoadingIncidents: boolean;
   incidentsError: boolean;
   retryIncidents: () => void;
@@ -43,8 +47,6 @@ interface AppRouteState {
   setIsReportDialogOpen: Dispatch<SetStateAction<boolean>>;
   visibleIncidents: number;
   showAllVisibleIncidents: () => void;
-  visibleServiceIncidents: number;
-  showMoreServiceIncidents: () => void;
   serviceStatusFilter: 'ALL' | IncidentStatusCode;
   setServiceStatusFilter: Dispatch<SetStateAction<'ALL' | IncidentStatusCode>>;
   selectedIncident: Incident | null;
@@ -109,7 +111,6 @@ function ScopedAppRouteStateProvider({
   const queryClient = useQueryClient();
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const [visibleIncidents, setVisibleIncidents] = useState(5);
-  const [visibleServiceIncidents, setVisibleServiceIncidents] = useState(10);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [serviceStatusFilter, setServiceStatusFilter] = useState<'ALL' | IncidentStatusCode>('ALL');
@@ -119,14 +120,13 @@ function ScopedAppRouteStateProvider({
   const userRole: UserRole = isUserRole(sessionUser?.uprawnienia)
     ? sessionUser.uprawnienia
     : 'mieszkaniec';
-  const canLoadAdminData = userRole !== 'admin' || !isMobileOrTablet();
   const {
     incidents,
     residentIncidents,
-    allIncidents,
+    residentPagination,
     serviceIncidents,
-    serviceIncidentsError,
-    refreshServiceIncidents,
+    servicePagination,
+    serviceStatistics,
     isLoadingIncidents,
     incidentsError,
     retryIncidents,
@@ -135,7 +135,7 @@ function ScopedAppRouteStateProvider({
     isLoggedIn,
     userEmail,
     userRole,
-    canLoadAdminData,
+    ...(serviceStatusFilter === 'ALL' ? {} : { serviceStatusFilter }),
     serviceKey: sessionUser?.serviceKey ?? null,
   });
   const navigateToLogin = () => {
@@ -191,7 +191,6 @@ function ScopedAppRouteStateProvider({
     setIsReportDialogOpen(false);
   };
   const showAllVisibleIncidents = () => setVisibleIncidents(15);
-  const showMoreServiceIncidents = () => setVisibleServiceIncidents((count) => count + 10);
   const value: AppRouteState = {
     navigation,
     isLoggedIn,
@@ -201,10 +200,10 @@ function ScopedAppRouteStateProvider({
     serviceKey: sessionUser?.serviceKey ?? null,
     incidents,
     residentIncidents,
-    allIncidents,
+    residentPagination,
     serviceIncidents,
-    serviceIncidentsError,
-    refreshServiceIncidents,
+    servicePagination,
+    serviceStatistics,
     isLoadingIncidents,
     incidentsError,
     retryIncidents,
@@ -212,8 +211,6 @@ function ScopedAppRouteStateProvider({
     setIsReportDialogOpen,
     visibleIncidents,
     showAllVisibleIncidents,
-    visibleServiceIncidents,
-    showMoreServiceIncidents,
     serviceStatusFilter,
     setServiceStatusFilter,
     selectedIncident,

@@ -1,13 +1,29 @@
-import { queryOptions, type QueryClient, type QueryKey } from '@tanstack/react-query';
-import type { CurrentIncidentListItemDto, CurrentResolvedIncidentDto } from '@zglosto/contracts';
+import {
+  infiniteQueryOptions,
+  queryOptions,
+  type InfiniteData,
+  type QueryClient,
+  type QueryKey,
+} from '@tanstack/react-query';
+import type {
+  CurrentIncidentListItemDto,
+  CurrentResolvedIncidentDto,
+  IncidentPage,
+  IncidentStatusCode,
+  ServiceIncidentStatisticsItem,
+  ServiceIncidentListItemDto,
+} from '@zglosto/contracts';
 
 import { normalizeServiceKey } from '../config/services';
 import { toIncidentDisplayStatus } from '../lib/incident-status';
 import {
+  fetchAdminIncidentStatistics,
   fetchAllIncidents,
   fetchResolvedIncidents,
+  fetchServiceIncidentStatistics,
   fetchServiceIncidents,
   fetchUserIncidents,
+  type IncidentPageParameters,
 } from '../services/api';
 import type { Incident, ServiceIncident } from '../types/incident';
 
@@ -60,35 +76,80 @@ export function mapIncident(apiIncident: CurrentIncidentListItemDto): Incident {
   };
 }
 
+export function mapServiceIncident(incident: ServiceIncidentListItemDto): ServiceIncident {
+  return { ...mapIncident(incident), revision: incident.revision };
+}
+
 export const resolvedIncidentsQueryOptions = () =>
   queryOptions({
     queryKey: incidentQueryKeys.resolved(),
     queryFn: async ({ signal }) => (await fetchResolvedIncidents(signal)).map(mapResolvedIncident),
   });
 
+type IncidentFilters = Omit<IncidentPageParameters, 'cursor'>;
+
 function privateIncidentQueryOptions<TDto, TIncident extends Incident>(
   queryKey: QueryKey,
-  queryFn: (signal?: AbortSignal) => Promise<TDto[]>,
+  queryFn: (page: IncidentPageParameters, signal: AbortSignal) => Promise<IncidentPage<TDto>>,
   map: (item: TDto) => TIncident,
+  filters: IncidentFilters = {},
 ) {
-  return queryOptions({
-    queryKey,
-    queryFn: async ({ signal }) => (await queryFn(signal)).map(map),
+  return infiniteQueryOptions({
+    queryKey: Object.keys(filters).length === 0 ? queryKey : [...queryKey, filters],
+    initialPageParam: null as string | null,
+    queryFn: async ({ pageParam, signal }) => {
+      const page = await queryFn({ ...filters, cursor: pageParam }, signal);
+      return { items: page.items.map(map), nextCursor: page.nextCursor };
+    },
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
   });
 }
 
 export const residentIncidentsQueryOptions = (owner: string) =>
   privateIncidentQueryOptions(incidentQueryKeys.resident(owner), fetchUserIncidents, mapIncident);
 
-export const adminIncidentsQueryOptions = (owner: string) =>
-  privateIncidentQueryOptions(incidentQueryKeys.admin(owner), fetchAllIncidents, mapIncident);
+export const adminIncidentsQueryOptions = (owner: string, filters?: IncidentFilters) =>
+  privateIncidentQueryOptions(
+    incidentQueryKeys.admin(owner),
+    fetchAllIncidents,
+    mapIncident,
+    filters,
+  );
 
-export const serviceIncidentsQueryOptions = (owner: string, serviceKey: string | null = null) =>
+export const serviceIncidentsQueryOptions = (
+  owner: string,
+  serviceKey: string | null = null,
+  status?: IncidentStatusCode,
+) =>
   privateIncidentQueryOptions(
     incidentQueryKeys.service(owner, serviceKey),
     fetchServiceIncidents,
-    (incident): ServiceIncident => ({ ...mapIncident(incident), revision: incident.revision }),
+    mapServiceIncident,
+    status === undefined ? {} : { status },
   );
+
+export const adminIncidentStatisticsQueryOptions = (owner: string) =>
+  queryOptions({
+    queryKey: [...incidentQueryKeys.private, 'admin-statistics', owner],
+    queryFn: ({ signal }) => fetchAdminIncidentStatistics(signal),
+  });
+
+export const serviceIncidentStatisticsQueryOptions = (owner: string, serviceKey: string | null) =>
+  queryOptions({
+    queryKey: [...incidentQueryKeys.private, 'service-statistics', owner, serviceKey],
+    queryFn: ({ signal }) => fetchServiceIncidentStatistics(signal),
+  });
+
+export function incidentCount(
+  statistics: readonly ServiceIncidentStatisticsItem[] | undefined,
+  status?: IncidentStatusCode,
+): number | undefined {
+  return statistics?.reduce(
+    (total, row) =>
+      status === undefined || status === row.status_incydentu ? total + row.liczba : total,
+    0,
+  );
+}
 
 export function updateIncidentCache(
   queryClient: QueryClient,
@@ -96,8 +157,18 @@ export function updateIncidentCache(
   incidentId: string,
   update: (incident: Incident) => Incident,
 ): void {
-  queryClient.setQueryData<Incident[]>(queryKey, (incidents) =>
-    incidents?.map((incident) => (incident.id === incidentId ? update(incident) : incident)),
+  queryClient.setQueriesData<InfiniteData<IncidentPage<Incident>>>({ queryKey }, (data) =>
+    data === undefined
+      ? undefined
+      : {
+          ...data,
+          pages: data.pages.map((page) => ({
+            ...page,
+            items: page.items.map((incident) =>
+              incident.id === incidentId ? update(incident) : incident,
+            ),
+          })),
+        },
   );
 }
 

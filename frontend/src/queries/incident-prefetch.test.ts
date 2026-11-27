@@ -67,10 +67,13 @@ const resolvedIncident: CurrentResolvedIncidentDto = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  apiMocks.fetchAllIncidents.mockResolvedValue([privateIncident]);
+  apiMocks.fetchAllIncidents.mockResolvedValue({ items: [privateIncident], nextCursor: null });
   apiMocks.fetchResolvedIncidents.mockResolvedValue([resolvedIncident]);
-  apiMocks.fetchServiceIncidents.mockResolvedValue([{ ...privateIncident, revision: 7 }]);
-  apiMocks.fetchUserIncidents.mockResolvedValue([privateIncident]);
+  apiMocks.fetchServiceIncidents.mockResolvedValue({
+    items: [{ ...privateIncident, revision: 7 }],
+    nextCursor: null,
+  });
+  apiMocks.fetchUserIncidents.mockResolvedValue({ items: [privateIncident], nextCursor: null });
 });
 
 describe('incident route prefetching', () => {
@@ -108,25 +111,28 @@ describe('incident route prefetching', () => {
         data_godzina_rozwiazania: dates[index],
       })),
     );
-    apiMocks.fetchAllIncidents.mockResolvedValueOnce(
-      ids.map((id, index) => ({
+    apiMocks.fetchAllIncidents.mockResolvedValueOnce({
+      items: ids.map((id, index) => ({
         ...privateIncident,
         id_zgloszenia: id,
         data_godzina_zgloszenia: dates[index],
       })),
-    );
+      nextCursor: null,
+    });
 
     const resolved = await queryClient.fetchQuery(resolvedIncidentsQueryOptions());
-    const admin = await queryClient.fetchQuery(adminIncidentsQueryOptions('admin@example.com'));
+    const admin = await queryClient.fetchInfiniteQuery(
+      adminIncidentsQueryOptions('admin@example.com'),
+    );
     expect(resolved.map(({ id }) => id)).toEqual(ids);
-    expect(admin.map(({ id }) => id)).toEqual(ids);
+    expect(admin.pages[0]?.items.map(({ id }) => id)).toEqual(ids);
   });
 
   it('keeps private cache entries isolated between session owners', async () => {
     const queryClient = createAppQueryClient();
 
-    await queryClient.ensureQueryData(residentIncidentsQueryOptions('first@example.com'));
-    await queryClient.ensureQueryData(residentIncidentsQueryOptions('second@example.com'));
+    await queryClient.ensureInfiniteQueryData(residentIncidentsQueryOptions('first@example.com'));
+    await queryClient.ensureInfiniteQueryData(residentIncidentsQueryOptions('second@example.com'));
 
     expect(apiMocks.fetchUserIncidents).toHaveBeenCalledTimes(2);
     expect(queryClient.getQueryData(incidentQueryKeys.resident('first@example.com'))).toBeDefined();
@@ -138,12 +144,14 @@ describe('incident route prefetching', () => {
   it('uses the expected private endpoint for every dashboard role', async () => {
     const queryClient = createAppQueryClient();
 
-    await queryClient.ensureQueryData(adminIncidentsQueryOptions('admin@example.com'));
-    const service = await queryClient.ensureQueryData(
+    await queryClient.ensureInfiniteQueryData(adminIncidentsQueryOptions('admin@example.com'));
+    const service = await queryClient.ensureInfiniteQueryData(
       serviceIncidentsQueryOptions('service@example.com'),
     );
-    expect(service[0]?.revision).toBe(7);
-    await queryClient.ensureQueryData(residentIncidentsQueryOptions('resident@example.com'));
+    expect(service.pages[0]?.items[0]?.revision).toBe(7);
+    await queryClient.ensureInfiniteQueryData(
+      residentIncidentsQueryOptions('resident@example.com'),
+    );
 
     expect(apiMocks.fetchAllIncidents).toHaveBeenCalledTimes(1);
     expect(apiMocks.fetchServiceIncidents).toHaveBeenCalledTimes(1);
@@ -156,7 +164,7 @@ describe('incident route prefetching', () => {
     const privateOptions = adminIncidentsQueryOptions('admin@example.com');
 
     await queryClient.ensureQueryData(publicOptions);
-    await queryClient.ensureQueryData(privateOptions);
+    await queryClient.ensureInfiniteQueryData(privateOptions);
     await invalidateIncidentQueries(queryClient);
 
     expect(queryClient.getQueryState(publicOptions.queryKey)?.isInvalidated).toBe(true);

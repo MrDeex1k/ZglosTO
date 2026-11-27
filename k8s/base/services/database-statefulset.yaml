@@ -85,7 +85,7 @@ spec:
             - name: POSTGRES_TLS_KEY_PATH
               value: /run/secrets/database-tls/tls.key
             - name: PGDATA
-              value: /var/lib/postgresql/18/docker
+              value: /var/lib/postgresql/19/docker
             - name: POSTGRES_INITDB_ARGS
               value: --auth-host=scram-sha-256
             - name: PGSSLMODE

@@ -69,23 +69,33 @@ it('keeps the service revision returned by the list contract', async () => {
     ...listFields
   } = updatedIncident;
   const fetch = stubFetch().mockResolvedValueOnce(
-    Response.json([
-      {
-        ...listFields,
-        data_godzina_zgloszenia: incident.createdAt,
-        data_godzina_rozwiazania: null,
-        revision: 7,
-      },
-    ]),
+    Response.json({
+      items: [
+        {
+          ...listFields,
+          data_godzina_zgloszenia: incident.createdAt,
+          data_godzina_rozwiazania: null,
+          revision: 7,
+        },
+      ],
+      nextCursor: 'cursor',
+    }),
   );
+  const signal = new AbortController().signal;
 
-  await expect(fetchServiceIncidents()).resolves.toEqual([
-    expect.objectContaining({ revision: 7 }),
-  ]);
-  expect(fetch).toHaveBeenCalledWith('/api/sluzby/incydenty', {
-    signal: null,
-    credentials: 'include',
+  await expect(
+    fetchServiceIncidents({ cursor: 'previous', status: 'reported' }, signal),
+  ).resolves.toEqual({
+    items: [expect.objectContaining({ revision: 7 })],
+    nextCursor: 'cursor',
   });
+  expect(fetch).toHaveBeenCalledWith(
+    '/api/sluzby/incydenty?limit=10&cursor=previous&status=reported',
+    {
+      signal,
+      credentials: 'include',
+    },
+  );
 });
 
 it('uses the returned revision in the next PATCH instead of guessing it', async () => {

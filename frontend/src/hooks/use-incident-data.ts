@@ -1,12 +1,17 @@
-import { useQuery } from '@tanstack/react-query';
-import type { UserRole } from '@zglosto/contracts';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import type {
+  IncidentStatusCode,
+  ServiceIncidentStatisticsItem,
+  UserRole,
+} from '@zglosto/contracts';
 
 import {
-  adminIncidentsQueryOptions,
   residentIncidentsQueryOptions,
   resolvedIncidentsQueryOptions,
   serviceIncidentsQueryOptions,
+  serviceIncidentStatisticsQueryOptions,
 } from '../queries/incidents';
+import type { IncidentPagination } from '../components/IncidentPageControls';
 import type { Incident, ServiceIncident } from '../types/incident';
 
 interface UseIncidentDataOptions {
@@ -14,17 +19,17 @@ interface UseIncidentDataOptions {
   isLoggedIn: boolean;
   userEmail: string;
   userRole: UserRole;
-  canLoadAdminData: boolean;
+  serviceStatusFilter?: IncidentStatusCode;
   serviceKey?: string | null;
 }
 
 export interface IncidentData {
   incidents: Incident[];
   residentIncidents: Incident[];
-  allIncidents: Incident[];
+  residentPagination: IncidentPagination;
   serviceIncidents: ServiceIncident[];
-  serviceIncidentsError: boolean;
-  refreshServiceIncidents: () => Promise<ServiceIncident[] | null>;
+  servicePagination: IncidentPagination;
+  serviceStatistics: ServiceIncidentStatisticsItem[] | undefined;
   isLoadingIncidents: boolean;
   incidentsError: boolean;
   retryIncidents: () => void;
@@ -35,7 +40,7 @@ export function useIncidentData({
   isLoggedIn,
   userEmail,
   userRole,
-  canLoadAdminData,
+  serviceStatusFilter,
   serviceKey = null,
 }: UseIncidentDataOptions): IncidentData {
   const isPrivateDashboard =
@@ -44,29 +49,27 @@ export function useIncidentData({
     ...resolvedIncidentsQueryOptions(),
     enabled: pathname === '/',
   });
-  const residentQuery = useQuery({
+  const residentQuery = useInfiniteQuery({
     ...residentIncidentsQueryOptions(userEmail),
     enabled: isPrivateDashboard && userRole === 'mieszkaniec',
   });
-  const adminQuery = useQuery({
-    ...adminIncidentsQueryOptions(userEmail),
-    enabled: isPrivateDashboard && userRole === 'admin' && canLoadAdminData,
+  const serviceQuery = useInfiniteQuery({
+    ...serviceIncidentsQueryOptions(userEmail, serviceKey, serviceStatusFilter),
+    enabled: isPrivateDashboard && userRole === 'sluzby',
   });
-  const serviceQuery = useQuery({
-    ...serviceIncidentsQueryOptions(userEmail, serviceKey),
+
+  const serviceStatistics = useQuery({
+    ...serviceIncidentStatisticsQueryOptions(userEmail, serviceKey),
     enabled: isPrivateDashboard && userRole === 'sluzby',
   });
 
   return {
     incidents: resolvedQuery.data ?? [],
-    residentIncidents: residentQuery.data ?? [],
-    allIncidents: canLoadAdminData ? (adminQuery.data ?? []) : [],
-    serviceIncidents: serviceQuery.data ?? [],
-    serviceIncidentsError: serviceQuery.isError,
-    refreshServiceIncidents: async () => {
-      const result = await serviceQuery.refetch({ cancelRefetch: false });
-      return result.isSuccess ? result.data : null;
-    },
+    residentIncidents: residentQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    residentPagination: residentQuery,
+    serviceIncidents: serviceQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    servicePagination: serviceQuery,
+    serviceStatistics: serviceStatistics.data,
     isLoadingIncidents:
       pathname === '/' && resolvedQuery.isFetching && resolvedQuery.data === undefined,
     incidentsError: resolvedQuery.isError,
